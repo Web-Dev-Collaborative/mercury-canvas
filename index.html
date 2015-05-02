@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/main.css">
+
+    <title>White board</title>
+</head>
+
+<body ondragstart="return false;">
+    <div aria-busy="true" aria-label="Loading" role="progressbar" id="loader">
+        <div class="wire">
+            <div class="wire-l"></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div class="wire-r"></div>
+        </div>
+        <div class="swing">
+            <div class="swing-l"></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div class="swing-r"></div>
+        </div>
+        <div class="shadow">
+            <div class="shadow-l"></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div class="shadow-r"></div>
+        </div>
+    </div>
+
+
+    <div id="wrapper">
+        <div id="page-wrapper">
+            <div class="row">
+                <div class="col-lg-12">
+                    <!--<div id="wtPluginParent">
+                        <!--[if IE]>
+                    
+                        <object id='wtPlugin' classid='CLSID:092dfa86-5807-5a94-bf3b-5a53ba9e5308'>
+                        </object>
+                    
+                        <![endif]--><!--[if !IE]> <-->
+                    
+                        <!--<object id="wtPlugin" type="application/x-wacomtabletplugin">
+                            <param name="onload" value="pluginLoaded" />
+                        </object>-->
+                    
+                        <!--> <![endif]-->
+                        
+                        <!--<div id="wtPluginBG">
+                            Reincarca pagina
+                        </div>
+                    </div>-->
+                </div>
+            </div>
+            <div class="row" id="blackboard">
+                <div id="boardWrapper">
+                    
+                    <!--<div id="layersWrapper" class="layersOverlay">
+                        <div class="buttonsTop">
+                            <button id="addLayer" class="btn btn-default">Adaugă layer</button>
+                        </div>
+                        <ul>
+                            <li id="layer1">
+                                <div class="visibleCheckBox">
+                                    <input id="layer1" type="checkbox" checked>
+                                </div>
+                                <div class="layerName">
+                                    Layer 1
+                                </div>
+                                <div class="buttons">
+                                    <button class="btn btn-danger"><i class="fa fa-trash"></i></button>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>--> <!--for v2-->
+                    
+                    
+                    <ul id="currentTool">
+                        <li id="boardFullscreen" title="Ecran complet (F11)"><i class="fa fa-expand"></i></li>
+                        <li id="undo" class="disabled" title="Înapoi (CTRL + Z)"><i class="fa fa-undo"></i></li>
+                        <li id="redo" class="disabled" title="Înainte (CTRL + Y)"><i class="fa fa-repeat"></i></li>
+                        <!--<li>
+                            <div title="Schimbă mărimea pensulei" id="brushToolMenu" style="border: 1px solid #000;">
+                                Rethink this!
+                                <input type="range" id="brushSize" min="1" max="100">
+                                <input maxlength="4" type="number" value="15" id="brushSizeText">
+                            </div>
+                        </li>-->
+                        <li data-customSubmenu="textTool" class="customMenu disabled" id="textSize" title="Mărime text">
+                            <i class="fa fa-text-height"></i>
+                        </li>
+                        <li data-customSubmenu="textTool" class="customMenu" id="textItalic" title="Italic">
+                            <i class="fa fa-italic"></i>
+                        </li>
+                        <li data-customSubmenu="textTool" class="customMenu" id="textBold" title="Bold">
+                            <i class="fa fa-bold"></i>
+                        </li>
+                        <li data-customSubmenu="textTool" class="customMenu disabled" id="textUnderline" title="Subliniat">
+                            <i class="fa fa-underline"></i>
+                        </li>
+                        <li data-customSubmenu="textTool" class="customMenu" id="textFonts" title="Schimbă fontul">
+                            <i class="fa fa-font"></i>
+                            <ul class="submenu" id="fontList"></ul>
+                        </li>
+                        <li data-customSubmenu="textTool" class="customMenu disabled" id="textalignleft" title="Alinează stânga">
+                            <i class="left align fa fa-align-left"></i>
+                        </li>
+                        <li data-customSubmenu="textTool" class="customMenu disabled" id="textaligncenter" title="Alinează centru">
+                            <i class="center align fa fa-align-center"></i>
+                        </li>
+                        <li data-customSubmenu="textTool" class="customMenu disabled" id="textalignright" title="Alinează dreapta">
+                            <i class="right align fa fa-align-right"></i>
+                        </li>
+                        <li data-customSubmenu="textTool" class="customMenu disabled" id="textalignjustify" title="Alinează complet">
+                            <i class="fa fa-align-justify"></i>
+                        </li>
+                        <li data-customSubmenu="textTool" class="customMenu disabled" id="textlist" title="Listă">
+                            <i class="fa fa-list"></i>
+                        </li>
+                        <li data-customSubmenu="polyTool" class="customMenu" id="polySides" title="Numar de laturi poligon">
+                            <input type="number" maxlength="2" value="10">
+                        </li>
+                    </ul>
+                    
+                    <ul id="tools">
+                        <li id="new" title="Document nou (CTRL + N)"><i class="fa fa-file fa-fw"></i></li>
+                        <li id="none" title="Incarcă imaginea (O)">
+                            <i class="fa fa-folder-o fa-fw hasSubmenu"><i class="fa fa-caret-right fa-rotate-45"></i></i>
+                            <input type="file" id="uploadOld" style="display:none;opacity:0;">
+                            
+                            <div id="uploadoptions" class="submenu" style="width:220px;">
+                            
+                                <button class="btn btn-default btn-lg chooseFiles">Alege fișierele</button>
+                                <input id="oldInput" type="file" class="hidden" multiple>
+                                
+                                <button id="upload" class="btn btn-default">Incarca imaginea</button>
+                                <hr class="divider">
+                                <button id="dbload" class="btn btn-default" data-toggle="modal" data-target="#loadfromdb">Incarca din baza de date</button>
+                            </div>
+                        </li>
+                        <li id="eraser" title="Radiera (E)"><i class="fa fa-eraser fa-fw"></i></li>
+                        <li id="brush" title="Pensula (B)"><i class="fa fa-paint-brush fa-fw"></i></li>
+                        <li id="text" title="Insereaza text (T)">
+                            <i class="fa fa-font fa-fw"></i>
+                        </li>
+                        <li id="save" title="Salvează ca (S)">
+                            <i class="fa fa-floppy-o fa-fw hasSubmenu"><i class="fa fa-caret-right fa-rotate-45"></i></i>
+                            <div id="saveoptions" class="submenu" style="width:220px;">
+                                <a href="#" id="saveoffline" class="btn btn-default" download="tabla.png">Descarca imaginea</a>
+                                <hr class="divider">
+                                <div id="dbsave">
+                                    <input type="text" title="Nume" id="dbname" placeholder="Numele desenului">
+                                    <button class="btn btn-default" id="savetodb">Salveaza in baza de date</button>
+                                </div>
+                            </div>
+                        </li>
+                        <li id="geom" title="Forme geometrice (G)">
+                            <i class="fa fa-cube fa-fw hasSubmenu"><i class="fa fa-caret-right fa-rotate-45"></i></i>
+                            <ul class="submenu">
+                                <li><i class="fa fa-arrows-v rotate-315" title="Linie" id="line"></i></li>
+                                <li><i class="fa fa-circle-thin" title="Cerc" id="circle"></i></li>
+                                <li><i class="fa fa-square-o" title="Patrat" id="rect"></i></li>
+                                <li><i class="fa fa-poly" title="Poligon regulat" id="regpoly"></i></li>
+                            </ul>
+                        </li>
+                        <li id="pickerbtn" title="Alege culoarea (X)"><i class="fa fa-tint fa-fw"></i></li>
+                    </ul>
+                    <div id="sketch">
+                        <div class="dragndrop" style="display: none;">
+                            <div class="upload">Trageți fișierele aici pentru a le încărca</div>
+                        </div>
+                        <div id="canvasWrapper">
+                            <div id="cursor"></div>
+                            <canvas class="canvasLayer" id="canvas-background" height="500" width="600" border="0">Update your browser</canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /#wrapper -->
+    <div style="display: none;" class="modal fade" id="loadfromdb" tabindex="-1" role="dialog" aria-labelledby="modal" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                    <h4 class="modal-title" id="myModalLabel">Incarca imaginea din baza de date</h4>
+                </div>
+                <div class="modal-body">
+                    <table id="allcanvases" class="table table-striped table-bordered table-hover">
+                        <tr>
+                            <th>Nume</th>
+                            <th></th>
+                        </tr>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Anuleaza</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="myModal" role="dialog" aria-labelledby="modal" aria-hidden="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                    <h4 class="modal-title">Titlu inteligent</h4>
+                </div>
+                <div class="modal-body">
+                    ??
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="nobtnmodal" class="btn btn-default" data-dismiss="modal">Anuleaza</button>
+                    <button type="button" id="yesbtnmodal" class="btn btn-danger" data-dismiss="modal">Da, sterge</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="return"></div>
+
+    <div class="modal fade" id="mymodal" role="dialog" aria-labelledby="modal" aria-hidden="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                    <h4 class="modal-title"></h4>
+                </div>
+                <div class="modal-body">
+                    
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="nobtnmodal" class="btn btn-default" data-dismiss="modal">Anuleaza</button>
+                    <button type="button" id="yesbtnmodal" class="btn btn-danger" data-dismiss="modal">Da</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="backdrop"></div>
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+
+<script class="removeMe">
+    $('#canvas').attr('height', parseInt($('#canvas').parent().css('height')));
+    $('#canvas').attr('width', parseInt($('#canvas').parent().css('width')));
+    $('#brushSize').val('15');
+    $('#brushSizeText').val('15');
+    $('#polySides').val('10');
+    $('.removeMe').remove();
+</script>
+
+<script src="js/jquery.cookie.js"></script>
+<script src="js/throttle.js"></script>
+<script src="js/noty.js"></script>
+<script src="js/mercuryModal.js"></script>
+<script src="js/fontsDetect.js"></script>
+<script src="js/colorPicker.js"></script>
+<script src="js/mercuryCanvas.js"></script>
+<script src="main.js"></script>
+
+</body>
+</html>
