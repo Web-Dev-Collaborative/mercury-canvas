@@ -90,12 +90,12 @@
                     
                     
                     <ul id="currentTool">
-                        <li id="boardFullscreen" title="Ecran complet (F11)"><i class="fa fa-expand"></i></li>
-                        <li id="undo" class="disabled" title="Înapoi (CTRL + Z)"><i class="fa fa-undo"></i></li>
-                        <li id="redo" class="disabled" title="Înainte (CTRL + Y)"><i class="fa fa-repeat"></i></li>
+                        <li class="tool" data-action="new" title="Ecran complet (F11)"><i class="fa fa-expand"></i></li>
+                        <li class="disabled tool" data-action="undo" title="Înapoi (CTRL + Z)"><i class="fa fa-undo"></i></li>
+                        <li class="disabled tool" data-action="redo" title="Înainte (CTRL + Y)"><i class="fa fa-repeat"></i></li>
                         <!--<li>
                             <div title="Schimbă mărimea pensulei" id="brushToolMenu" style="border: 1px solid #000;">
-                                Rethink this!
+                                TODO: Rethink this!
                                 <input type="range" id="brushSize" min="1" max="100">
                                 <input maxlength="4" type="number" value="15" id="brushSizeText">
                             </div>

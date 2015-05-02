@@ -22,6 +22,9 @@
     var layersWrapper, background, temp, backgroundCtx, tempCtx;
     var clickPressed, startPos, dragged;
     var zIndex = 0;
+        
+    var undoStep = 0;
+    var undo = [];
     
     var mouse = {
         'document': false,
@@ -73,8 +76,9 @@
         ruler.innerHTML = '';
         return x;
     }
+    $.mercuryCanvas = {};
     
-    $.fn.rCanvas = function(options){
+    $.fn.mercuryCanvas = function(options){
         var defaults = {
             backgroundColor: '#fff',
             resizeDelay: 250,
@@ -127,6 +131,25 @@
         });
     }
 
+    $(function(){
+        $('#tools').children('li').tooltip({
+            placement: 'right',
+            container: 'body'
+        });
+        $('#currentTool').children('li').tooltip({
+            placement: 'bottom',
+            container: 'body'
+        });
+
+        $('.tool').on('click', function(){
+            if (!$(this).hasClass('disabled')) {
+                if($(this).attr('data-action')){
+                    Tool($(this).attr('data-action'));
+                }
+            }
+        });
+    });
+
     $(document).on({
         'mousedown': function(event){
             mouse.document = true;
@@ -157,9 +180,9 @@
                             console.log('Middle Mouse button pressed.');
                             break;
                         case 3:
-                            if(mouse.canvas.indexOf(1) == -1){
+                            /*if(mouse.canvas.indexOf(1) == -1){
                                 RemoveLayer(PositionToLayer(pos));
-                            }
+                            }*/
                             break;
                         default:
                             console.log('You have a strange Mouse!');
@@ -226,7 +249,12 @@
                             console.log('Middle Mouse button is not pressed anymore.');
                             break;
                         case 3:
-
+                            var _layer = PositionToLayer(pos);
+                            $(_layer[0]).hide();
+                            AddToUndo({
+                                action: 'hide',
+                                layer: _layer
+                            });
                             break;
                         default:
                             console.log('You have a strange Mouse!');
@@ -242,6 +270,22 @@
             dragged = false;
         }
     });
+    
+    /* TODO: remove orphan layers */
+    function checkForOrphanLayers(){
+        return;
+    }
+    
+    function Tool(tool){
+        switch (tool){
+            case 'undo':
+                Undo(1);
+                break;
+            case 'redo':
+                Undo(-1);
+                break;
+        }
+    }
 
     function DrawTemp(mouse){
         tempCtx.lineWidth = settings.lineWidth;
@@ -280,6 +324,84 @@
         tempCtx.stroke();
     }
 
+    function AddToUndo(options){
+        undo.splice(undoStep, undo.length, $.extend(true, {
+            action: 'draw',
+            layer:{
+                0: null,
+                x: 0,
+                y: 0,
+                width: 0,
+                height: 0
+            }
+        }, options));
+        undoStep ++;
+        if(undoStep > 0){
+            $('.tool[data-action="undo"]').removeClass('disabled');
+        }
+        if(undoStep == undo.length) {
+            $('.tool[data-action="redo"]').addClass('disabled');
+        }
+
+        if(undoStep != undo.length) {
+            console.warn('Undo step and undo.length not synced; undo:', undo, ', undo.length:', undo.length);
+        }
+
+        checkForOrphanLayers();
+    }
+
+    function Undo(steps){
+        if (steps > 0) {
+            for (var i = 0; i < steps; i++) {
+                if (undoStep > 0) {
+                    switch (undo[undoStep - 1].action) {
+                        case 'draw':
+                            $(undo[undoStep - 1].layer[0]).hide();
+                            break;
+                        case 'hide':
+                            $(undo[undoStep - 1].layer[0]).show();
+                            break;
+                    }
+                    undoStep --;
+                }
+                else{
+                    console.log('Too many undo steps');
+                }
+            }
+        }
+        else{
+            for (var i = 0; i < -1 * steps; i++) {
+                if (undoStep < undo.length) {
+                    switch (undo[undoStep].action) {
+                        case 'draw':
+                            $(undo[undoStep].layer[0]).show();
+                            break;
+                        case 'hide':
+                            $(undo[undoStep].layer[0]).hide();
+                            break;
+                    }
+                    undoStep ++;
+                }
+                else{
+                    console.log('Too many redo steps');
+                }
+            }
+        }
+
+        if(undoStep > 0) {
+            $('.tool[data-action="undo"]').removeClass('disabled');
+        }
+        else{
+            $('.tool[data-action="undo"]').addClass('disabled');
+        }
+        if(undoStep < undo.length){
+            $('.tool[data-action="redo"]').removeClass('disabled');
+        }
+        else{
+            $('.tool[data-action="redo"]').addClass('disabled');
+        }
+    }
+
     function MouseUp(startPos) {
         if (mouse.canvas.indexOf(1) != -1) {
             var newLayer = AddLayer({
@@ -294,6 +416,17 @@
             
             DrawTempCanvas(newLayer);
             ClearLayer('canvasTemp');
+
+            AddToUndo({
+                action: 'draw',
+                layer: {
+                    0: newLayer[0],
+                    x: newLayer.x,
+                    y: newLayer.y,
+                    width: newLayer.width,
+                    height: newLayer.height
+                }
+            })
         }
 
         mouse.canvas = [];
@@ -319,7 +452,7 @@
         settings.tool = newTool;
     }
 
-    $.RefreshSettings = function(){
+    $.mercuryCanvas.RefreshSettings = function(){
         tempCtx.lineWidth = settings.lineWidth;
     }
     

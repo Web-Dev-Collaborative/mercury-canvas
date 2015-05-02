@@ -38,12 +38,6 @@ function enableCustomMenu(tool){
     $('.customMenu[data-customSubmenu="'+ menu[tool] +'"]').css('display', 'inline-block');
 }
 
-$('#undo').on('click', function(){
-    if (!$(this).hasClass('disabled')) {
-        console.log('undo');
-    }
-});
-
 $(window).on('dragenter', function (e) {
     stopDefaultEvent(e);
     $('.dragndrop').show();
@@ -79,23 +73,13 @@ $('#oldInput').on('change', function(){
 });
 
 $(function(){
-    
-    $('#tools').children('li').tooltip({
-        placement: 'right',
-        container: 'body'
-    });
-    $('#currentTool').children('li').tooltip({
-        placement: 'bottom',
-        container: 'body'
-    });
-    
     // load fonts list 
     fontsAvailable.sort();
     for(var i = 0; i < fontsAvailable.length; i++){
         $('#fontList').append('<li class="font'+ (fontsAvailable[i] == fontsAvailable['selected'] ? ' selectedFont' : '') +'">'+ fontsAvailable[i] +'</li>');
     }
     
-    $('#canvasWrapper').rCanvas({
+    $('#canvasWrapper').mercuryCanvas({
         lineWidth: 20
     });
 });
