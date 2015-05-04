@@ -3,8 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
-    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="scss/bootstrap.min.css">
+    <link rel="stylesheet" href="scss/font-awesome.min.css">
+    <link rel="stylesheet" href="scss/ion.rangeSlider.css">
+    <link rel="stylesheet" href="scss/ion.rangeSlider.skinNice.css">
     <link rel="stylesheet" href="css/main.css">
 
     <title>White board</title>
@@ -88,48 +90,46 @@
                         </ul>
                     </div>--> <!--for v2-->
                     
-                    
+                    <!-- TODO: add tools with mercuryCanvas (jQuery) -->
+                    <!-- TODO: keep font awesome updated (v5 should have a cursor icon) -->
                     <ul id="currentTool">
-                        <li class="tool" data-action="new" title="Ecran complet (F11)"><i class="fa fa-expand"></i></li>
-                        <li class="disabled tool" data-action="undo" title="Înapoi (CTRL + Z)"><i class="fa fa-undo"></i></li>
-                        <li class="disabled tool" data-action="redo" title="Înainte (CTRL + Y)"><i class="fa fa-repeat"></i></li>
-                        <!--<li>
-                            <div title="Schimbă mărimea pensulei" id="brushToolMenu" style="border: 1px solid #000;">
-                                TODO: Rethink this!
-                                <input type="range" id="brushSize" min="1" max="100">
-                                <input maxlength="4" type="number" value="15" id="brushSizeText">
-                            </div>
-                        </li>-->
+                        <li class="tool" data-action="new" title="Ecran complet (F11)"><i class="fa fa-expand fa-fw"></i></li>
+                        <li class="disabled tool" data-action="undo" title="Înapoi (CTRL + Z)"><i class="fa fa-undo fa-fw"></i></li>
+                        <li class="disabled tool" data-action="redo" title="Înainte (CTRL + Y)"><i class="fa fa-repeat fa-fw"></i></li>
+
+                        <li data-customSubmenu="brush" class="customMenu" title="Mărime pensulă" style="display: inline-block; min-width: 200px; height: 39px; border-radius: 3px;">
+                            <input type="text" id="brushSizeSlider">
+                        </li>
                         <li data-customSubmenu="textTool" class="customMenu disabled" id="textSize" title="Mărime text">
-                            <i class="fa fa-text-height"></i>
+                            <i class="fa fa-text-height fa-fw"></i>
                         </li>
                         <li data-customSubmenu="textTool" class="customMenu" id="textItalic" title="Italic">
-                            <i class="fa fa-italic"></i>
+                            <i class="fa fa-italic fa-fw"></i>
                         </li>
                         <li data-customSubmenu="textTool" class="customMenu" id="textBold" title="Bold">
-                            <i class="fa fa-bold"></i>
+                            <i class="fa fa-bold fa-fw"></i>
                         </li>
                         <li data-customSubmenu="textTool" class="customMenu disabled" id="textUnderline" title="Subliniat">
-                            <i class="fa fa-underline"></i>
+                            <i class="fa fa-underline fa-fw"></i>
                         </li>
                         <li data-customSubmenu="textTool" class="customMenu" id="textFonts" title="Schimbă fontul">
-                            <i class="fa fa-font"></i>
+                            <i class="fa fa-font fa-fw"></i>
                             <ul class="submenu" id="fontList"></ul>
                         </li>
                         <li data-customSubmenu="textTool" class="customMenu disabled" id="textalignleft" title="Alinează stânga">
-                            <i class="left align fa fa-align-left"></i>
+                            <i class="left align fa fa-align-left fa-fw"></i>
                         </li>
                         <li data-customSubmenu="textTool" class="customMenu disabled" id="textaligncenter" title="Alinează centru">
-                            <i class="center align fa fa-align-center"></i>
+                            <i class="center align fa fa-align-center fa-fw"></i>
                         </li>
                         <li data-customSubmenu="textTool" class="customMenu disabled" id="textalignright" title="Alinează dreapta">
-                            <i class="right align fa fa-align-right"></i>
+                            <i class="right align fa fa-align-right fa-fw"></i>
                         </li>
                         <li data-customSubmenu="textTool" class="customMenu disabled" id="textalignjustify" title="Alinează complet">
-                            <i class="fa fa-align-justify"></i>
+                            <i class="fa fa-align-justify fa-fw"></i>
                         </li>
                         <li data-customSubmenu="textTool" class="customMenu disabled" id="textlist" title="Listă">
-                            <i class="fa fa-list"></i>
+                            <i class="fa fa-list fa-fw"></i>
                         </li>
                         <li data-customSubmenu="polyTool" class="customMenu" id="polySides" title="Numar de laturi poligon">
                             <input type="number" maxlength="2" value="10">
@@ -137,6 +137,7 @@
                     </ul>
                     
                     <ul id="tools">
+                        <li class="tool" title="Select (V)" data-action="select"><i class="fa fa-cursor fa-fw"></i></li>
                         <li id="new" title="Document nou (CTRL + N)"><i class="fa fa-file fa-fw"></i></li>
                         <li id="none" title="Incarcă imaginea (O)">
                             <i class="fa fa-folder-o fa-fw hasSubmenu"><i class="fa fa-caret-right fa-rotate-45"></i></i>
@@ -153,7 +154,7 @@
                             </div>
                         </li>
                         <li id="eraser" title="Radiera (E)"><i class="fa fa-eraser fa-fw"></i></li>
-                        <li id="brush" title="Pensula (B)"><i class="fa fa-paint-brush fa-fw"></i></li>
+                        <li class="tool" title="Pensula (B)" data-action="brush"><i class="fa fa-paint-brush fa-fw"></i></li>
                         <li id="text" title="Insereaza text (T)">
                             <i class="fa fa-font fa-fw"></i>
                         </li>
@@ -255,8 +256,10 @@
     <div class="backdrop"></div>
 
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
-<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+
+<script src="js/jquery.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/ion.rangeSlider.js"></script>
 
 <script class="removeMe">
     $('#canvas').attr('height', parseInt($('#canvas').parent().css('height')));
