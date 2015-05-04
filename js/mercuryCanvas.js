@@ -22,6 +22,8 @@
     var layersWrapper, background, temp, backgroundCtx, tempCtx;
     var clickPressed, startPos, dragged;
     var zIndex = 0;
+    var selectedLayer;
+    var dist = keys = {};
         
     var undoStep = 0;
     var undo = [];
@@ -86,7 +88,9 @@
             width: 600, // overwritten at the moment
             height: 500, // overwritten at the moment
             lineWidth: 5,
-            strokeColor: 'red'
+            strokeColor: 'red',
+            tool: 'brush',
+            handlerSize: 20
         };
         
         settings = $.extend({}, defaults, options);
@@ -111,6 +115,8 @@
             backgroundCtx.fill();
             
             tempCtx = temp.getContext('2d');
+            tempCtx.globalAlpha = 1;
+            // tempCtx.translate(0.5, 0.5); // remove anti-alias
 
             tempCtx.fillStyle = '#fff';
             tempCtx.strokeStyle = '#fff';
@@ -150,9 +156,28 @@
         });
     });
 
+    $.cUndo = function(){
+        console.log(undo);
+    }
+
     $(document).on({
+        'keydown': function(e){
+            keys[e.key] = true;
+            keys.ctrl = e.ctrlKey;
+            keys.atl = e.altKey;
+            keys.shift = e.shiftKey;
+        },
+        'keyup': function(e){
+            keys[e.key] = false;
+            keys.ctrl = e.ctrlKey;
+            keys.atl = e.altKey;
+            keys.shift = e.shiftKey;
+        },
         'mousedown': function(event){
             mouse.document = true;
+            if(!selectedLayer){
+                ClearLayer('canvasTemp');
+            }
 
             var calc = {};
             calc.start = $('#canvasBackground').offset();
@@ -162,46 +187,49 @@
             if(calc.start){
                 if(event.pageY > calc.start.top && event.pageY < calc.start.top + calc.height &&
                    event.pageX > calc.start.left && event.pageX < calc.start.left + calc.width){
-
                     var pos = CalculateCoords(event.pageX, event.pageY);
                     mouse.canvas.push(event.which);
-                    
-                    switch (event.which) {
-                        case 1:
-                            startPos = pos;
 
-                            points = [];
-                            points[0] = pos;
-                            setLimitPoints(event);
-                            
-                            DrawTemp(pos);
+                    switch(settings.tool){
+                        case 'brush':
+                            switch (event.which) {
+                                case 1:
+                                    startPos = pos;
+
+                                    points = [];
+                                    points[0] = pos;
+                                    setLimitPoints(event);
+                                    
+                                    DrawTemp(pos);
+                                    break;
+                                case 2:
+                                    console.log('Middle Mouse button pressed.');
+                                    break;
+                                case 3:
+                                    /*if(mouse.canvas.indexOf(1) == -1){
+                                        RemoveLayer(PositionToLayer(pos));
+                                    }*/
+                                    break;
+                                default:
+                                    console.log('You have a strange Mouse!');
+                            }
                             break;
-                        case 2:
-                            console.log('Middle Mouse button pressed.');
-                            break;
-                        case 3:
-                            /*if(mouse.canvas.indexOf(1) == -1){
-                                RemoveLayer(PositionToLayer(pos));
-                            }*/
-                            break;
-                        default:
-                            console.log('You have a strange Mouse!');
                     }
                 }
             }
         },
         'mousemove': function(event){
+            //$('.hoveredBySelect').removeClass('hoveredBySelect');
+            
             var calc = {};
-            calc.start = $('#canvasBackground').offset();
-            calc.width = $('#canvasBackground').width();
-            calc.height = $('#canvasBackground').height();
+            calc.start = $(background).offset();
+            calc.width = $(background).width();
+            calc.height = $(background).height();
 
-            if(calc.start){
-                if(event.pageY > calc.start.top && event.pageY < calc.start.top + calc.height &&
-                   event.pageX > calc.start.left && event.pageX < calc.start.left + calc.width){
-
-                    var pos = CalculateCoords(event.pageX, event.pageY);
-                    
+            var pos = CalculateCoords(event.pageX, event.pageY);
+            
+            switch(settings.tool){
+                case 'brush':
                     if (mouse.canvas.length) {
                         if (mouse.canvas.indexOf(1) != -1 && (Math.abs(pos.x - startPos.x) > settings.dragDetectSensibility || Math.abs(pos.y - startPos.y) > settings.dragDetectSensibility)) {
                             // drag left click
@@ -209,7 +237,7 @@
                             points[points.length] = pos;
                             setLimitPoints(event);
 
-                            switch(currentTool){
+                            switch(settings.tool){
                                 case 'brush':
                                     DrawTemp(pos);
                                     break;
@@ -219,77 +247,259 @@
                             }
                         }
                     }
-                    else{
-                        var hoveredLayer = PositionToLayer(pos);
-                        $('.hoveredLayer').removeClass('hoveredLayer');
-                        if (hoveredLayer) {
-                            hoveredLayer.addClass('hoveredLayer');
+                    break;
+                case 'select':
+                    /* TODO: add handlers for resize */
+                    if(!selectedLayer){
+                        ClearLayer('canvasTemp');
+                        var _layer = PositionToLayer(pos);
+                        if(_layer){
+                            tempCtx.strokeStyle="#000000";
+                            tempCtx.lineWidth = 1;
+                            tempCtx.strokeRect(_layer.x - 1, _layer.y - 1, _layer.width, _layer.height);
+                            $.mercuryCanvas.refreshSettings();
                         }
                     }
-                }
+                    else{
+                        var direction = ($(canvasTemp).css('cursor') == 'nwse-resize' ? true : false);
+                        var fromBottom = $(canvasTemp).hasClass('fromBottom');
+
+                        if (mouse.canvas.indexOf(1) != -1){
+                            var newWidth, newHeight, newX, newY;
+                            newWidth = selectedLayer.width;
+                            newHeight = selectedLayer.height;
+                            newX = selectedLayer.x;
+                            newY = selectedLayer.y;
+                            
+                            if(!dist.x || !dist.y){
+                                dist.x = pos.x - selectedLayer.x;
+                                dist.y = pos.y - selectedLayer.y;
+                            }
+                            if($(canvasTemp).css('cursor') == 'default'){
+                                newX = pos.x - dist.x;
+                                newY = pos.y - dist.y;
+                            }
+                            else{
+                                if(keys.shift){
+                                    newWidth = selectedLayer.width + (selectedLayer.x - pos.x);
+                                    newHeight = selectedLayer.height + (selectedLayer.y - pos.y);
+                                    // TODO: wtf I did here?
+                                    var temp = Math.max(newWidth * selectedLayer.height / selectedLayer.width, newHeight);
+                                    newWidth = temp * selectedLayer.width / selectedLayer.height;
+                                    newHeight = temp;
+                                    newX = pos.x;
+                                    newY = pos.y;
+                                }
+                                else{
+                                    if(direction && !fromBottom){
+                                        // top left
+                                        newWidth = selectedLayer.width + (selectedLayer.x - pos.x);
+                                        newHeight = selectedLayer.height + (selectedLayer.y - pos.y);
+                                        newX = Math.min(pos.x, selectedLayer.x + selectedLayer.width);
+                                        newY = Math.min(pos.y, selectedLayer.y + selectedLayer.height);
+                                    }
+                                    else if(!direction && !fromBottom){
+                                        // top right
+                                        newWidth = selectedLayer.width + (pos.x - (selectedLayer.x + selectedLayer.width));
+                                        newHeight = selectedLayer.height - (pos.y - selectedLayer.y);
+                                        newX = selectedLayer.x;
+                                        newY = Math.min(pos.y, selectedLayer.y + selectedLayer.height);
+                                    }
+                                    else if(direction && fromBottom){
+                                        // bottom left
+                                        newWidth = selectedLayer.width + (pos.x - selectedLayer.x - selectedLayer.width);
+                                        newHeight = selectedLayer.height + (pos.y - selectedLayer.y - selectedLayer.height);
+                                        newX = selectedLayer.x;
+                                        newY = selectedLayer.y;
+                                    }
+                                    else if(!direction && fromBottom){
+                                        newWidth = selectedLayer.width + (selectedLayer.x - pos.x);
+                                        newHeight = selectedLayer.height + (pos.y - selectedLayer.y - selectedLayer.height);
+                                        newX = Math.min(pos.x, selectedLayer.x + selectedLayer.width);
+                                        newY = selectedLayer.y;
+                                    }
+                                }
+                            }
+                            if(newWidth != selectedLayer.width || newHeight != selectedLayer.height || newX != selectedLayer.x || newY != selectedLayer.y){
+                                $(selectedLayer[0]).css({
+                                    top: newY,
+                                    left: newX,
+                                    width: newWidth,
+                                    height: newHeight
+                                });
+                                selectedLayer.x = parseInt($(selectedLayer[0]).css('left'));
+                                selectedLayer.y = parseInt($(selectedLayer[0]).css('top'));
+                                selectedLayer.width = $(selectedLayer[0]).width();
+                                selectedLayer.height = $(selectedLayer[0]).height();
+
+                                SelectLayer(selectedLayer);
+                            }
+                        }
+                        else{
+                            if (pos.x > selectedLayer.x - settings.handlerSize / 2 && pos.x < selectedLayer.x + settings.handlerSize / 2 &&
+                                pos.y > selectedLayer.y - settings.handlerSize / 2 && pos.y < selectedLayer.y + settings.handlerSize / 2){
+                                $('#canvasTemp').css('cursor', 'nwse-resize').removeClass('fromBottom');
+                            }
+                            else if (
+                                pos.x > selectedLayer.x + selectedLayer.width - settings.handlerSize / 2 && pos.x < selectedLayer.x + selectedLayer.width + settings.handlerSize / 2 &&
+                                pos.y > selectedLayer.y - settings.handlerSize / 2 && pos.y < selectedLayer.y + settings.handlerSize / 2){
+                                $('#canvasTemp').css('cursor', 'nesw-resize').removeClass('fromBottom');
+                            }
+                            else if (
+                                pos.x > selectedLayer.x + selectedLayer.width - settings.handlerSize / 2 && pos.x < selectedLayer.x + selectedLayer.width + settings.handlerSize / 2 &&
+                                pos.y > selectedLayer.y + selectedLayer.height - settings.handlerSize / 2 && pos.y < selectedLayer.y + selectedLayer.height + settings.handlerSize / 2){
+                                $('#canvasTemp').css('cursor', 'nwse-resize').addClass('fromBottom');
+                            }
+                            else if (
+                                pos.x > selectedLayer.x - settings.handlerSize / 2 && pos.x < selectedLayer.x + settings.handlerSize / 2 &&
+                                pos.y > selectedLayer.y + selectedLayer.height - settings.handlerSize / 2 && pos.y < selectedLayer.y + selectedLayer.height + settings.handlerSize / 2){
+                                $('#canvasTemp').css('cursor', 'nesw-resize').addClass('fromBottom');
+                            }
+                            else{
+                                $('#canvasTemp').css('cursor', 'default').removeClass('fromBottom');
+                            }
+                        }
+                    }
+                    break;
             }
         },
         'mouseup': function(event){
-            var calc = {};
-            calc.start = $(background).offset();
-            calc.width = $(background).width();
-            calc.height = $(background).height();
+            var pos = CalculateCoords(event.pageX, event.pageY);
+            switch(settings.tool){
+                case 'brush':
+                    var calc = {};
+                    calc.start = $(background).offset();
+                    calc.width = $(background).width();
+                    calc.height = $(background).height();
 
-            if(calc.start){
-                if(event.pageY > calc.start.top && event.pageY < calc.start.top + calc.height &&
-                   event.pageX > calc.start.left && event.pageX < calc.start.left + calc.width){
+                    if(calc.start){
+                        if(event.pageY > calc.start.top && event.pageY < calc.start.top + calc.height &&
+                           event.pageX > calc.start.left && event.pageX < calc.start.left + calc.width){
 
-                    var pos = CalculateCoords(event.pageX, event.pageY);
-                    
-                    switch (event.which) {
-                        case 1:
-                            MouseUp(minMousePos);
-                            break;
-                        case 2:
-                            console.log('Middle Mouse button is not pressed anymore.');
-                            break;
-                        case 3:
-                            var _layer = PositionToLayer(pos);
-                            $(_layer[0]).hide();
-                            AddToUndo({
-                                action: 'hide',
-                                layer: _layer
-                            });
-                            break;
-                        default:
-                            console.log('You have a strange Mouse!');
+                            switch (event.which) {
+                                case 1:
+                                    MouseUp(minMousePos);
+                                    break;
+                                case 2:
+                                    console.log('Middle Mouse button is not pressed anymore.');
+                                    break;
+                                case 3:
+                                    var _layer = PositionToLayer(pos);
+                                    $(_layer[0]).hide();
+                                    AddToUndo({
+                                        action: 'hide',
+                                        layer: _layer
+                                    });
+                                    break;
+                                default:
+                                    console.log('You have a strange Mouse!');
+                            }
+                        }
+                        else{
+                            MouseUp(minMousePos);  
+                        }
                     }
-                    if(mouse.canvas.indexOf(event.which) != -1) {
-                        mouse.canvas.splice(mouse.canvas.indexOf(event.which), 1);
+                    dragged = false;
+                    break;
+                case 'select':
+                    if(selectedLayer){
+                        selectedLayer.x = parseInt($(selectedLayer[0]).css('left'));
+                        selectedLayer.y = parseInt($(selectedLayer[0]).css('top'));
+                        selectedLayer.width = $(selectedLayer[0]).width();
+                        selectedLayer.height = $(selectedLayer[0]).height();
+
+                        SelectLayer(selectedLayer);
+                        dist.x = dist.y = 0;
                     }
-                }
-                else{
-                    MouseUp(minMousePos);  
-                }
+                    else{
+                        ClearLayer('canvasTemp');
+                        var _layer = PositionToLayer(pos);
+                        if(_layer){
+                            SelectLayer(_layer);
+                        }
+                    }
+                    break;
             }
-            dragged = false;
+            if(event.which == 1) {
+                mouse.document = false;
+            }
+            if(mouse.canvas.indexOf(event.which) != -1) {
+                mouse.canvas.splice(mouse.canvas.indexOf(event.which), 1);
+            }
         }
     });
-    
+
+    function SelectLayer(_layer){
+        selectedLayer = _layer;
+        ClearLayer('canvasTemp');
+
+        tempCtx.lineWidth = 1;
+        tempCtx.lineJoin = 'square';
+        tempCtx.lineCap = 'square';
+        tempCtx.strokeStyle="#000";
+        tempCtx.fillStyle="#FFF";
+        
+        // TODO: make this code prettier
+        // handlers
+        tempCtx.fillRect(_layer.x + _layer.width - settings.handlerSize / 2, _layer.y - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
+        tempCtx.strokeRect(_layer.x + _layer.width - settings.handlerSize / 2, _layer.y - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
+        tempCtx.fillRect(_layer.x - settings.handlerSize / 2, _layer.y - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
+        tempCtx.strokeRect(_layer.x - settings.handlerSize / 2, _layer.y - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
+        tempCtx.fillRect(_layer.x + _layer.width - settings.handlerSize / 2, _layer.y + _layer.height - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
+        tempCtx.strokeRect(_layer.x + _layer.width - settings.handlerSize / 2, _layer.y + _layer.height - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
+        tempCtx.fillRect(_layer.x - settings.handlerSize / 2, _layer.y + _layer.height - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
+        tempCtx.strokeRect(_layer.x - settings.handlerSize / 2, _layer.y + _layer.height - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
+
+        if(_layer.width > settings.handlerSize + 1 || _layer.height > settings.handlerSize + 1){
+            tempCtx.beginPath();
+            if(_layer.width > settings.handlerSize + 1){
+                // top left -> top right
+                tempCtx.moveTo(_layer.x + 1 + settings.handlerSize / 2, _layer.y);
+                tempCtx.lineTo(_layer.x - 1 - settings.handlerSize / 2 + _layer.width, _layer.y);
+                // bottom right -> bottom left
+                tempCtx.moveTo(_layer.x - 1 - settings.handlerSize / 2 + _layer.width, _layer.y + _layer.height);
+                tempCtx.lineTo(_layer.x + 1 + settings.handlerSize / 2, _layer.y + _layer.height);
+            }
+            if(_layer.height > settings.handlerSize + 1){
+                // top right -> bottom right
+                tempCtx.moveTo(_layer.x + _layer.width, _layer.y + 1 + settings.handlerSize / 2);
+                tempCtx.lineTo(_layer.x + _layer.width, _layer.y - 1 - settings.handlerSize / 2 + _layer.height);
+                // bottom left -> top left
+                tempCtx.moveTo(_layer.x, _layer.y - 1 - settings.handlerSize / 2 + _layer.height);
+                tempCtx.lineTo(_layer.x, _layer.y + 1 + settings.handlerSize / 2);
+            }
+            tempCtx.stroke();
+            tempCtx.closePath();
+        }
+        
+        $.mercuryCanvas.refreshSettings();
+    }
+        
     /* TODO: remove orphan layers */
     function checkForOrphanLayers(){
         return;
     }
     
     function Tool(tool){
-        switch (tool){
-            case 'undo':
-                Undo(1);
-                break;
-            case 'redo':
-                Undo(-1);
-                break;
+        if(!mouse.canvas.length){
+            switch (tool){
+                case 'undo':
+                    Undo(1);
+                    break;
+                case 'redo':
+                    Undo(-1);
+                    break;
+                default:
+                    settings.tool = tool;
+                    break;
+            }
         }
     }
 
     function DrawTemp(mouse){
         tempCtx.lineWidth = settings.lineWidth;
         tempCtx.strokeStyle = settings.strokeColor;
+        tempCtx.lineCap = tempCtx.lineJoin = 'round';
         
         if (points.length < 3) {
             tempCtx.fillStyle = settings.strokeColor;
@@ -447,12 +657,11 @@
             maxMousePos.y = points[points.length - 1].y;
         }
     }
-    
-    function ChangeTool(newTool){
-        settings.tool = newTool;
-    }
 
-    $.mercuryCanvas.RefreshSettings = function(){
+    $.mercuryCanvas.refreshSettings = function(){
+        if(!$('[data-customsubmenu="brush"]').hasClass('disabled')) {
+            settings.lineWidth = $('#brushSizeSlider').val();
+        }
         tempCtx.lineWidth = settings.lineWidth;
     }
     
@@ -548,8 +757,8 @@
         var ctx = layer[0].getContext('2d');
         
         layer.css({
-            'left': minMousePos.x - Math.remap(tempCtx.lineWidth / 4, 1, 100, 0.9, -2),
-            'top': minMousePos.y - Math.remap(tempCtx.lineWidth / 4, 1, 100, 0.9, -2)
+            'left': minMousePos.x - 0.5,
+            'top': minMousePos.y - 0.5
         }).attr({
             'width': canvas.width,
             'height': canvas.height
@@ -586,34 +795,33 @@
     }
     
     function CalculateCoords(pageX, pageY) {
-        var x0 = parseFloat(layersWrapper.offset()['left']);
-        var y0 = parseFloat(layersWrapper.offset()['top']);
-        
-        return {
-            'x': pageX - x0,
-            'y': pageY - y0
-        };
+        if(layersWrapper){
+            var x0 = parseFloat(layersWrapper.offset()['left']);
+            var y0 = parseFloat(layersWrapper.offset()['top']);
+            
+            return {
+                x: pageX - x0,
+                y: pageY - y0
+            };
+        }
+        return{x: 0, y: 0}
     }
     
     function ResizeCanvasBackground(){
         var height = layersWrapper.height();
         var width = layersWrapper.width();
-        $('#canvasBackground').height(height).width(width).attr('height', height).attr('width', width);
-        $('#canvasTemp').height(height).width(width).attr('height', height).attr('width', width);
+        if(height != $('#canvasTemp').height() || width != $('#canvasTemp').width()){
+            $('#canvasBackground').height(height).width(width).attr('height', height).attr('width', width);
+            $('#canvasTemp').height(height).width(width).attr('height', height).attr('width', width);
+        }
         
         return {
             height: height,
             width: width
         };
     }
-    var currentTool = 'brush';
-    ChangeTool('move');
     var points = [];
     var minMousePos = { 'x': 999999, 'y': 999999 }, maxMousePos = { 'x': -1, 'y': -1 };
-    
-    function Click(event) {
-        points = [];
-    }
     
     $(window).resize($.debounce(settings.resizeDelay, ResizeCanvasBackground));
     
