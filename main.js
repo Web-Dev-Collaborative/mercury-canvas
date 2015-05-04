@@ -8,6 +8,7 @@
 // e - eraser
 // t - text
 // x - color selector
+// V - select tool
 // O - open open menu
 // CTRL + O - upload image
 // SHIFT + O - load from database
@@ -18,15 +19,40 @@
 // CTRL + Z - undo
 // CTRL + Y / CTRL + SHIFT + Z - redo
 
-// brush (2 radio inputs round/square, size)
-// eraser (2 radio inputs round/square, size)
+// select tool (real time transform tool)
+// brush (2 radio inputs round/square, size) (brushes)
+// eraser (2 radio inputs round/square, size) (brushes)
 // textTool (bold, italic, font size, font family, underline) //aligning options if it would be usefull
 // {[rectangle, round rectangle, circle, polygon(number of sides)] (SHIFT will make shapes regular, CTRL is like alt in photoshop)
 // line tool} (it can both work with 2 clicks or with mouse down)
 // pen tool (like line tool, but with undefined points; it ends when the users presses enter)
 // something for math formulas (http://www.symbolab.com/solver/limit-calculator and how google makes graphs)
+// eyedropper tool (colors only from canvas)
+// crop tool (for layer)
+// locked layers (can't select, can't modify)
 
 // in the database should be some default images from biology(romedic), math, physics etc.
+
+if(!$.cookie('brushSize')){
+    $.cookie('brushSize', 10);
+}
+console.log(parseInt($.cookie('brushSize')));
+
+$('#brushSizeSlider').val($.cookie('brushSize'));
+$("#brushSizeSlider").ionRangeSlider({
+    force_edges: true,
+    min: 1,
+    max: 100,
+    from: parseInt($.cookie('brushSize')),
+    onChange: function(){
+        $.cookie('brushSize', $('#brushSizeSlider').val());
+        $.mercuryCanvas.refreshSettings();
+    },
+    onUpdate: function(){
+        $.cookie('brushSize', $('#brushSizeSlider').val());
+        $.mercuryCanvas.refreshSettings();
+    }
+});
 
 var menu = {
     'text': 'textTool',
@@ -82,6 +108,8 @@ $(function(){
     $('#canvasWrapper').mercuryCanvas({
         lineWidth: 20
     });
+
+    $.mercuryCanvas.refreshSettings();
 });
 
 
