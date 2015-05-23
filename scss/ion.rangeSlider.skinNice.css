@@ -15,7 +15,7 @@
     background: url(../img/sprite-skin-nice.png) repeat-x;
 }
 
-.irs.js-irs-0 {
+.irs[class*="js-irs"] {
     margin-top: 13px;
     top: -15px;
 }
