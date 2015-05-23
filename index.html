@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="scss/font-awesome.min.css">
     <link rel="stylesheet" href="scss/ion.rangeSlider.css">
     <link rel="stylesheet" href="scss/ion.rangeSlider.skinNice.css">
+    <link rel="stylesheet" href="scss/select2.css">
+    <link rel="stylesheet" href="scss/colpick.css">
     <link rel="stylesheet" href="css/main.css">
 
     <title>White board</title>
@@ -70,7 +72,6 @@
             </div>
             <div class="row" id="blackboard">
                 <div id="boardWrapper">
-                    
                     <!--<div id="layersWrapper" class="layersOverlay">
                         <div class="buttonsTop">
                             <button id="addLayer" class="btn btn-default">Adaugă layer</button>
@@ -93,52 +94,86 @@
                     <!-- TODO: add tools with mercuryCanvas (jQuery) -->
                     <!-- TODO: keep font awesome updated (v5 should have a cursor icon) -->
                     <ul id="currentTool">
-                        <li class="tool" data-action="new" title="Ecran complet (F11)"><i class="fa fa-expand fa-fw"></i></li>
-                        <li class="disabled tool" data-action="undo" title="Înapoi (CTRL + Z)"><i class="fa fa-undo fa-fw"></i></li>
-                        <li class="disabled tool" data-action="redo" title="Înainte (CTRL + Y)"><i class="fa fa-repeat fa-fw"></i></li>
+                        <li class="tool" data-action="fullScreen" title="Enter fullscreen (F11)"><i class="fa fa-expand fa-fw"></i></li>
+                        <li class="disabled tool" data-action="undo" title="Undo (CTRL + Z)"><i class="fa fa-undo fa-fw"></i></li>
+                        <li class="disabled tool" data-action="redo" title="Redo (CTRL + Y)"><i class="fa fa-repeat fa-fw"></i></li>
 
-                        <li data-customSubmenu="brush" class="customMenu" title="Mărime pensulă" style="display: inline-block; min-width: 200px; height: 39px; border-radius: 3px;">
+                        <li data-customSubmenu="select" class="customSubmenu ionSlider" title="Layer opacity">
+                            <input type="text" id="opacitySlider">
+                        </li>
+                        <li data-customSubmenu="select" class="customSubmenu select2parent" title="Layer blending mode">
+                            <select id="blendingModes">
+                                <option value="normal">         normal</option>
+                                <option value="dissolve">       dissolve</option>
+                                <option value="darken">         darken</option>
+                                <option value="multiply">       multiply</option>
+                                <option value="color-burn">     color-burn</option>
+                                <option value="linear-burn">    linear-burn</option>
+                                <option value="darker-color">   darker-color</option>
+                                <option value="lighten">        lighten</option>
+                                <option value="screen">         screen</option>
+                                <option value="color-dodge">    color-dodge</option>
+                                <option value="add">            add</option>
+                                <option value="lighter-color">  lighter-color</option>
+                                <option value="overlay">        overlay</option>
+                                <option value="soft-light">     soft-light</option>
+                                <option value="hard-light">     hard-light</option>
+                                <option value="vivid-light">    vivid-light</option>
+                                <option value="linear-light">   linear-light</option>
+                                <option value="pin-light">      pin-light</option>
+                                <option value="hard-mix">       hard-mix</option>
+                                <option value="difference">     difference</option>
+                                <option value="exclusion">      exclusion</option>
+                                <option value="substract">      substract</option>
+                                <option value="divide">         divide</option>
+                                <option value="hue">            hue</option>
+                                <option value="saturation">     saturation</option>
+                                <option value="color">          color</option>
+                                <option value="luminosity">     luminosity</option>
+                            </select>
+                        </li>
+                        <li data-customSubmenu="brush" class="customSubmenu ionSlider" title="Mărime pensulă">
                             <input type="text" id="brushSizeSlider">
                         </li>
-                        <li data-customSubmenu="textTool" class="customMenu disabled" id="textSize" title="Mărime text">
+                        <li data-customSubmenu="textTool" class="customSubmenu disabled" id="textSize" title="Mărime text">
                             <i class="fa fa-text-height fa-fw"></i>
                         </li>
-                        <li data-customSubmenu="textTool" class="customMenu" id="textItalic" title="Italic">
+                        <li data-customSubmenu="textTool" class="customSubmenu" id="textItalic" title="Italic">
                             <i class="fa fa-italic fa-fw"></i>
                         </li>
-                        <li data-customSubmenu="textTool" class="customMenu" id="textBold" title="Bold">
+                        <li data-customSubmenu="textTool" class="customSubmenu" id="textBold" title="Bold">
                             <i class="fa fa-bold fa-fw"></i>
                         </li>
-                        <li data-customSubmenu="textTool" class="customMenu disabled" id="textUnderline" title="Subliniat">
+                        <li data-customSubmenu="textTool" class="customSubmenu disabled" id="textUnderline" title="Subliniat">
                             <i class="fa fa-underline fa-fw"></i>
                         </li>
-                        <li data-customSubmenu="textTool" class="customMenu" id="textFonts" title="Schimbă fontul">
+                        <li data-customSubmenu="textTool" class="customSubmenu" id="textFonts" title="Schimbă fontul">
                             <i class="fa fa-font fa-fw"></i>
                             <ul class="submenu" id="fontList"></ul>
                         </li>
-                        <li data-customSubmenu="textTool" class="customMenu disabled" id="textalignleft" title="Alinează stânga">
+                        <li data-customSubmenu="textTool" class="customSubmenu disabled" id="textalignleft" title="Alinează stânga">
                             <i class="left align fa fa-align-left fa-fw"></i>
                         </li>
-                        <li data-customSubmenu="textTool" class="customMenu disabled" id="textaligncenter" title="Alinează centru">
+                        <li data-customSubmenu="textTool" class="customSubmenu disabled" id="textaligncenter" title="Alinează centru">
                             <i class="center align fa fa-align-center fa-fw"></i>
                         </li>
-                        <li data-customSubmenu="textTool" class="customMenu disabled" id="textalignright" title="Alinează dreapta">
+                        <li data-customSubmenu="textTool" class="customSubmenu disabled" id="textalignright" title="Alinează dreapta">
                             <i class="right align fa fa-align-right fa-fw"></i>
                         </li>
-                        <li data-customSubmenu="textTool" class="customMenu disabled" id="textalignjustify" title="Alinează complet">
+                        <li data-customSubmenu="textTool" class="customSubmenu disabled" id="textalignjustify" title="Alinează complet">
                             <i class="fa fa-align-justify fa-fw"></i>
                         </li>
-                        <li data-customSubmenu="textTool" class="customMenu disabled" id="textlist" title="Listă">
+                        <li data-customSubmenu="textTool" class="customSubmenu disabled" id="textlist" title="Listă">
                             <i class="fa fa-list fa-fw"></i>
                         </li>
-                        <li data-customSubmenu="polyTool" class="customMenu" id="polySides" title="Numar de laturi poligon">
+                        <li data-customSubmenu="polyTool" class="customSubmenu" id="polySides" title="Numar de laturi poligon">
                             <input type="number" maxlength="2" value="10">
                         </li>
                     </ul>
                     
                     <ul id="tools">
-                        <li class="tool" title="Select (V)" data-action="select"><i class="fa fa-cursor fa-fw"></i></li>
-                        <li id="new" title="Document nou (CTRL + N)"><i class="fa fa-file fa-fw"></i></li>
+                        <li class="tool" title="Select (V)" data-action="select"><i class="fa-cursor"></i></li>
+                        <li class="tool" title="Document nou (CTRL + N)" data-action="newDoc"><i class="fa fa-file fa-fw"></i></li>
                         <li id="none" title="Incarcă imaginea (O)">
                             <i class="fa fa-folder-o fa-fw hasSubmenu"><i class="fa fa-caret-right fa-rotate-45"></i></i>
                             <input type="file" id="uploadOld" style="display:none;opacity:0;">
@@ -178,9 +213,11 @@
                                 <li><i class="fa fa-poly" title="Poligon regulat" id="regpoly"></i></li>
                             </ul>
                         </li>
-                        <li id="pickerbtn" title="Alege culoarea (X)"><i class="fa fa-tint fa-fw"></i></li>
+                        <li id="pickerbtn" class="tool" title="Alege culoarea (X)"><i class="fa fa-tint fa-fw"></i></li>
+                        <li class="tool" data-action="eyeDropper" title="Eye dropper"><i class="fa fa-eyedropper fa-fw"></i></li>
                     </ul>
                     <div id="sketch">
+                        <div class="backdrop"></div>
                         <div class="dragndrop" style="display: none;">
                             <div class="upload">Trageți fișierele aici pentru a le încărca</div>
                         </div>
@@ -253,11 +290,12 @@
             </div>
         </div>
     </div>
-    <div class="backdrop"></div>
 
 
 
 <script src="js/jquery.min.js"></script>
+<script src="js/keypress.js"></script>
+<script src="js/select2.js"></script>
 <script src="js/bootstrap.min.js"></script>
 <script src="js/ion.rangeSlider.js"></script>
 
@@ -278,6 +316,5 @@
 <script src="js/colorPicker.js"></script>
 <script src="js/mercuryCanvas.js"></script>
 <script src="main.js"></script>
-
 </body>
 </html>
