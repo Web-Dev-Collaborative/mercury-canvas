@@ -36,33 +36,17 @@
 if(!$.cookie('brushSize')){
     $.cookie('brushSize', 10);
 }
-console.log(parseInt($.cookie('brushSize')));
+// console.log(parseInt($.cookie('brushSize')));
 
-$('#brushSizeSlider').val($.cookie('brushSize'));
-$("#brushSizeSlider").ionRangeSlider({
-    force_edges: true,
-    min: 1,
-    max: 100,
-    from: parseInt($.cookie('brushSize')),
-    onChange: function(){
-        $.cookie('brushSize', $('#brushSizeSlider').val());
-        $.mercuryCanvas.refreshSettings();
-    },
-    onUpdate: function(){
-        $.cookie('brushSize', $('#brushSizeSlider').val());
-        $.mercuryCanvas.refreshSettings();
-    }
-});
+
+// TODO: remove this part
+$('.fa').parent().addClass('disabled');
+$('.tool').removeClass('disabled');
 
 var menu = {
     'text': 'textTool',
     'poly': 'polyTool'
 };
-
-function enableCustomMenu(tool){
-    $('.customMenu').hide();
-    $('.customMenu[data-customSubmenu="'+ menu[tool] +'"]').css('display', 'inline-block');
-}
 
 $(window).on('dragenter', function (e) {
     stopDefaultEvent(e);
@@ -106,7 +90,8 @@ $(function(){
     }
     
     $('#canvasWrapper').mercuryCanvas({
-        lineWidth: 20
+        backgroundColor: '#FFF',
+        strokeColor: '#00ed7e'
     });
 
     $.mercuryCanvas.refreshSettings();
