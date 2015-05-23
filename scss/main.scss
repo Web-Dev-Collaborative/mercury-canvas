@@ -1,15 +1,84 @@
 @import "bourbon/bourbon";
 
 #cursor{
-    border:1px solid black;
-    box-shadow: 0 0 2px 2px #FFF, inset 0 0 2px 1px #FFF;
+    border: 1px solid #000;
+    box-shadow: 0 0 0px 2px #FFF;/*, inset 0 0 1px #fff;*/
     border-radius: 50%;
-    z-index:9999;
+    z-index: 1001;
     width:10px;
     height:10px;
     position:absolute;
     @include transform(translate(-50%, -50%));
     pointer-events:none;
+}
+
+#blendingModes option{
+    text-transform: capitalize;
+}
+
+.colpick{
+    top: 265px !important;
+    left: 64px !important;
+    width: 376px;
+    height: 180px;
+    z-index: 2090 !important; /*TODO: remake this zIndex to be like the others*/
+
+    .colpick_submit{
+        top: 149px !important;
+        left: 217px;
+        width: 150px;
+    }
+    .colpick_new_color,
+    .colpick_current_color{
+        width: 70px;
+        left: 217px;
+    }
+    .colpick_current_color{
+        left: 298px !important;
+    }
+    .colpick_field,
+    .colpick_hex_field{
+        width: 70px;
+    }
+    [class*="colpick_rgb_"],
+    .colpick_hex_field{
+        left: 217px;
+    }
+    [class*="colpick_hsb_"]{
+        left: 297px !important;
+    }
+    .colpick_field_letter{
+        width: 22px;
+    }
+    [class*="colpick_color"]{
+        height: 166px;
+        width: 166px;
+    }
+    .colpick_hue {
+        height: 166px;
+        left: 185px;
+    }
+
+}
+
+.select2-container:not(.select2){
+    z-index: 1069;
+}
+.select2parent{
+    background: rgba(0, 0, 0, 0) !important;
+    border: 0 solid rgba(0, 0, 0, 0) !important;
+    padding: 0 !important;
+    vertical-align: top !important;
+
+    .select2{
+        .select2-selection{
+            height: 39px !important;
+
+            *{
+                margin-top: 5px !important;
+            }
+        }
+    }
 }
 
 .fa-rotate-315{
@@ -18,13 +87,24 @@
 .fa-rotate-45{
     @include transform(rotate(45deg));
 }
+.fa-cursor{
+    padding: 15px;
+    background: rgba(0, 0, 0, 0) url("../img/cursor.png") no-repeat center;
+    background-size: contain;
+}
+
+.mercuryModal{
+    h2{
+        margin-top: 0;
+    }
+}
 
 .submenu{
     display: none;
 }
-.tooltip-inner{
+/*.tooltip-inner{
     outline: 1px solid #FFF !important;
-}
+}*/ /* outline has no border, maybe a box-shadow instead*/
 
 #currentTool{
     list-style: none !important;
@@ -33,6 +113,7 @@
     padding: 4px;
     margin-bottom: 0;
     font-size: 20px;
+    z-index: 1004;
     
     > li,
     > li > ul > li{
@@ -43,9 +124,6 @@
         border-radius: 10px;
         background-color: #fff;
     }
-    .customMenu{
-        display: none;
-    }
     .disabled{
         cursor: not-allowed;
         box-shadow: none;
@@ -54,13 +132,21 @@
     input{
         height: 28px;
     }
+    .ionSlider{
+        vertical-align: top;
+        min-width: 200px !important;
+        height: 39px !important;
+        border-radius: 3px !important;
+    }
 }
 
 #tools{
     @extend #currentTool;
+    min-height: calc(100% - 48px);
     width: 49px;
-    border-radius: 0 0 0 10px;
-    margin-top: -1px;
+    border-radius: 0;
+    border: 0;
+    border-right: 1px solid #eee;
     
     > li,
     > li > ul > li{
@@ -83,7 +169,7 @@
     }
 }
 #boardWrapper{
-    outline: 1px solid #000;
+    height: 100%;
     position: relative;
 }
 #sketch{
@@ -101,7 +187,7 @@
         @include transition(background-color 0.5s);
         border: 4px dashed #000;
         margin-bottom: 15px;
-        
+        z-index: 1002;
         
         &.over{
             background-color: rgba(0, 100, 200, 0.9);
@@ -133,16 +219,18 @@
                 z-index: 0;
             }
             &.canvasTop{
-                z-index: 99999;
-            }
-            &.hoveredLayer{
-                outline: 1px solid rgba(0, 0, 0, 0.8);
+                z-index: 1000;
             }
         }
     }
 }
-
-
+.row{
+    margin: 0;
+}
+#blackboard{
+    height: 100%;
+    width: 100%;
+}
 
 
 
@@ -177,6 +265,7 @@
 }*/
 
 body {
+    width: 100%;
     font-family: 'Ubuntu', sans-serif;
     font-weight: 400;
     -webkit-font-smoothing: antialiased;
@@ -294,7 +383,6 @@ li.divider:last-child{
 
 .tooltip{
     font-size: 14px;
-    z-index: 99999;
 }
 
 #loader {
@@ -302,7 +390,7 @@ li.divider:last-child{
     -webkit-transform: translate(-50%, 0);
             transform: translate(-50%, 0);
     display:block;
-    z-index: 1040;
+    z-index: 2010;
     top:50px;
     left:50%;
 }
@@ -517,12 +605,14 @@ li.divider:last-child{
 
 #wrapper {
     width: 100%;
+    height: 100%;
 }
 
 #page-wrapper {
+    height: 100%;
     position: inherit;
     margin: 0;
-    padding: 0 30px;
+    padding: 0;
     background-color: #fff;
     @include transition(all 1s);
     /*-webkit-transition: all 1s;
@@ -542,7 +632,7 @@ li.divider:last-child{
     left: 0;
     background: rgba(0, 0, 0, 0.5);
     @include transition(opacity 0.5s);
-    z-index:999;
+    z-index: 1003;
     cursor: pointer;
 }
 
