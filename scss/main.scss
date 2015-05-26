@@ -12,8 +12,21 @@
     pointer-events:none;
 }
 
+.popover {
+    z-index: 1030;
+    
+    .popover-content{
+        text-align: center;
+        padding: 10px 30px;
+    }
+}
+
 #blendingModes option{
     text-transform: capitalize;
+}
+
+.irs.disabled *{
+    cursor: not-allowed;
 }
 
 .colpick{
@@ -71,6 +84,8 @@
     vertical-align: top !important;
 
     .select2{
+        min-width: 200px;
+
         .select2-selection{
             height: 39px !important;
 
@@ -99,7 +114,8 @@
     }
 }
 
-.submenu{
+.submenu,
+.hidden{
     display: none;
 }
 /*.tooltip-inner{
@@ -143,6 +159,7 @@
 #tools{
     @extend #currentTool;
     min-height: calc(100% - 48px);
+    position: relative;
     width: 49px;
     border-radius: 0;
     border: 0;
@@ -169,6 +186,7 @@
     }
 }
 #boardWrapper{
+    outline: 1px solid #000;
     height: 100%;
     position: relative;
 }

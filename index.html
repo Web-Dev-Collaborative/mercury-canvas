@@ -174,19 +174,8 @@
                     <ul id="tools">
                         <li class="tool" title="Select (V)" data-action="select"><i class="fa-cursor"></i></li>
                         <li class="tool" title="Document nou (CTRL + N)" data-action="newDoc"><i class="fa fa-file fa-fw"></i></li>
-                        <li id="none" title="Incarcă imaginea (O)">
+                        <li data-action="menu-open" data-menu="open" title="Incarcă imaginea (O)">
                             <i class="fa fa-folder-o fa-fw hasSubmenu"><i class="fa fa-caret-right fa-rotate-45"></i></i>
-                            <input type="file" id="uploadOld" style="display:none;opacity:0;">
-                            
-                            <div id="uploadoptions" class="submenu" style="width:220px;">
-                            
-                                <button class="btn btn-default btn-lg chooseFiles">Alege fișierele</button>
-                                <input id="oldInput" type="file" class="hidden" multiple>
-                                
-                                <button id="upload" class="btn btn-default">Incarca imaginea</button>
-                                <hr class="divider">
-                                <button id="dbload" class="btn btn-default" data-toggle="modal" data-target="#loadfromdb">Incarca din baza de date</button>
-                            </div>
                         </li>
                         <li id="eraser" title="Radiera (E)"><i class="fa fa-eraser fa-fw"></i></li>
                         <li class="tool" title="Pensula (B)" data-action="brush"><i class="fa fa-paint-brush fa-fw"></i></li>
@@ -213,7 +202,7 @@
                                 <li><i class="fa fa-poly" title="Poligon regulat" id="regpoly"></i></li>
                             </ul>
                         </li>
-                        <li id="pickerbtn" class="tool" title="Alege culoarea (X)"><i class="fa fa-tint fa-fw"></i></li>
+                        <li class="tool" data-action="colorPicker" title="Alege culoarea (X)"><i class="fa fa-tint fa-fw"></i></li>
                         <li class="tool" data-action="eyeDropper" title="Eye dropper"><i class="fa fa-eyedropper fa-fw"></i></li>
                     </ul>
                     <div id="sketch">
@@ -290,7 +279,17 @@
             </div>
         </div>
     </div>
-
+<div class="hidden">
+    <div id="open">
+        <div data-customSubmenu="open" class="rightSubmenu">
+            <button class="btn btn-default btn-lg chooseFiles">Alege fișierele</button>
+            <input id="oldInput" type="file" class="hidden" multiple>
+            
+            <hr class="divider">
+            <button id="dbload" class="btn btn-default" data-toggle="modal" data-target="#loadfromdb">Incarca din baza de date</button>
+        </div>
+    </div>
+</div>
 
 
 <script src="js/jquery.min.js"></script>
