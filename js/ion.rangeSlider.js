@@ -460,7 +460,8 @@
                 this.appendDisableMask();
                 this.$cache.input[0].disabled = true;
             } else {
-                this.$cache.cont.removeClass("irs-disabled");
+                this.$cache.cont.removeClass("disabled");
+                this.$cache.cont.parent().removeClass("disabled");
                 this.$cache.input[0].disabled = false;
                 this.bindEvents();
             }
@@ -468,7 +469,8 @@
 
         appendDisableMask: function () {
             this.$cache.cont.append(disable_html);
-            this.$cache.cont.addClass("irs-disabled");
+            this.$cache.cont.addClass("disabled");
+            this.$cache.cont.parent().addClass("disabled");
         },
 
         remove: function () {
