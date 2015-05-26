@@ -40,8 +40,8 @@ if(!$.cookie('brushSize')){
 
 
 // TODO: remove this part
-$('.fa').parent().addClass('disabled');
-$('.tool').removeClass('disabled');
+$('li > .fa').parent().addClass('disabled');
+$('[data-action]').removeClass('disabled');
 
 var menu = {
     'text': 'textTool',
@@ -71,15 +71,6 @@ $('.dragndrop').on('drop', function (e) {
     
     var files = e.originalEvent.dataTransfer.files;
     handleFiles(files);
-});
-
-$('#chooseFiles').on('click', function(){
-    $('#oldInput').click();
-});
-$('#oldInput').on('change', function(){
-    handleFiles(document.getElementById('oldInput').files);
-    $(this).empty();
-    console.log('executed handleFiles on change');
 });
 
 $(function(){
