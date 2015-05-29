@@ -33,6 +33,9 @@
 
 // in the database should be some default images from biology(romedic), math, physics etc.
 
+
+// check if browser supports css blendings: var supportsMixBlendMode = window.getComputedStyle(document.body).mixBlendMode; (!undefined)
+
 if(!$.cookie('brushSize')){
     $.cookie('brushSize', 10);
 }
@@ -41,7 +44,7 @@ if(!$.cookie('brushSize')){
 
 // TODO: remove this part
 $('li > .fa').parent().addClass('disabled');
-$('[data-action]').removeClass('disabled');
+$('[data-action], .tool, .menu-open').removeClass('disabled');
 
 var menu = {
     'text': 'textTool',
