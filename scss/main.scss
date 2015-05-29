@@ -21,6 +21,14 @@
     }
 }
 
+.select2-results__option,
+.select2-selection__rendered{
+    text-transform: capitalize;
+}
+.select2-container--default .select2-results > .select2-results__options {
+    max-height: 370px;
+}
+
 #blendingModes option{
     text-transform: capitalize;
 }
@@ -31,7 +39,7 @@
 
 .colpick{
     top: 265px !important;
-    left: 64px !important;
+    left: 55px !important;
     width: 376px;
     height: 180px;
     z-index: 2090 !important; /*TODO: remake this zIndex to be like the others*/
