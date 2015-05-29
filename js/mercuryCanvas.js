@@ -1,4 +1,6 @@
 // TODO: after resizing the layer, layerToColor can be very wrong
+// TODO: problems with opacity on undo
+// TODO: eye dropper doesn't blending modes
 
 (function($) {
     // Define local aliases to frequently used properties
@@ -21,13 +23,15 @@
         };
     settings = {};
     var layers = {};
-    var layersWrapper, background, temp, backgroundCtx, tempCtx;
+    var layersWrapper, background, temp, backgroundCtx, tempCtx, $temp, $background;
     var clickPressed, startPos, dragged, actioned, selectStart;
     var zIndex = 0;
     var selectedLayer;
     var dist = keys = {};
     var transitionContent = 'all 0.5s ease';
     var transitionDuration = 500;
+    var boardWrapper;
+    var $blendingModes;
     var mousePos = {
         x: 0,
         y: 0
@@ -35,6 +39,7 @@
     var action, dir;
     var original = {};
     var ready = false;
+    var cursor;
         
     var undoStep = 0;
     var undo = [];
@@ -46,6 +51,7 @@
     
     $.MercuryModal.defaults.zIndex = 1080;
     $.MercuryModal.defaults.ready = function(){
+        ClosePopovers(null);
         if(shortcutListener) {
             shortcutListener.stop_listening();
         }
@@ -58,7 +64,24 @@
 
     var startOpacity, changedOpacity, opacitySliderFinished;
     var opacitySlider, brushSizeSlider;
-    var blendingModes = ['normal', 'dissolve', 'darken', 'multiply', 'color-burn', 'linear-burn', 'darker-color', 'lighten', 'screen', 'color-dodge', 'add', 'lighter-color', 'overlay', 'soft-light', 'hard-light', 'vivid-light', 'linear-light', 'pin-light', 'hard-mix', 'difference', 'exclusion', 'substract', 'divide', 'hue', 'saturation', 'color', 'luminosity'];
+    var blendingModes = [
+        'normal',
+        'darken', 
+        'multiply',
+        'color-burn', 
+        'lighten', 
+        'screen', 
+        'color-dodge', 
+        'overlay', 
+        'soft-light', 
+        'hard-light', 
+        'difference', 
+        'exclusion', 
+        'hue', 
+        'saturation', 
+        'color', 
+        'luminosity'
+    ];
     var connectedTools = {
         brush: ['color', 'eyeDropper']
     }
@@ -132,64 +155,79 @@
         
         settings = $.extend({}, defaults, options);
         
-        this.each(function() {
-            layersWrapper = $(this);
-            layersWrapper.html('').css({
-                width: '100%',
-                height: '100%'
-            });
-            layersWrapper.append('<div id="cursor"></div><div id="eyeDropperDisplay"></div>');
-            layersWrapper.append('<canvas class="canvasLayer canvasBottom" id="canvasBackground" height="0" width="0" border="0">Update your browser</canvas>');
-            layersWrapper.append('<canvas class="canvasLayer canvasTop" id="canvasTemp" height="0" width="0" border="0">Update your browser</canvas>');
-            
-            background = $('#canvasBackground')[0];
-            temp = $('#canvasTemp')[0];
-            
-            backgroundCtx = background.getContext('2d');
-            var newSize = ResizeCanvasBackground();
-            
-            tempCtx = temp.getContext('2d');
-            tempCtx.globalAlpha = 1;
-
-            tempCtx.fillStyle = '#fff';
-            tempCtx.strokeStyle = '#fff';
-            tempCtx.rect(0, 0, newSize.width, newSize.height);
-            tempCtx.fill();
-            tempCtx.lineWidth = settings.lineWidth;
-            tempCtx.lineJoin = 'round';
-            tempCtx.lineCap = 'round';
-            
-            layersWrapper.on('contextmenu', function(e){
-                e.preventDefault();
-                return false;
-            });
-            
-            $('.navbar').remove();
-            
-            init();
+        layersWrapper = $(this);
+        layersWrapper.html('').css({
+            width: '100%',
+            height: '100%'
         });
+        layersWrapper.append('<div id="cursor"></div><div id="eyeDropperDisplay"></div><canvas class="canvasLayer canvasBottom" id="canvasBackground" height="0" width="0" border="0">Update your browser</canvas><canvas class="canvasLayer canvasTop" id="canvasTemp" height="0" width="0" border="0">Update your browser</canvas>');
+        
+        $background = $('#canvasBackground');
+        $temp = $('#canvasTemp');
+        background = $background[0];
+        temp = $temp[0];
+        
+        backgroundCtx = background.getContext('2d');
+        var newSize = ResizeCanvasBackground();
+        
+        tempCtx = temp.getContext('2d');
+        tempCtx.globalAlpha = 1;
+
+        tempCtx.fillStyle = '#fff';
+        tempCtx.strokeStyle = '#fff';
+        tempCtx.rect(0, 0, newSize.width, newSize.height);
+        tempCtx.fill();
+        tempCtx.lineWidth = settings.lineWidth;
+        tempCtx.lineJoin = 'round';
+        tempCtx.lineCap = 'round';
+        
+        layersWrapper.on('contextmenu', function(e){
+            e.preventDefault();
+            return false;
+        });
+        
+        init();
     }
 
     function init(){
-        $('#tools > li').tooltip({
+        cursor = $('#cursor');
+        boardWrapper = $('#boardWrapper');
+        $('.menu-open', boardWrapper).popover({
+            html : true,
+            container: 'body',
+            placement: 'right',
+            template: '<div class="popover" role="tooltip"><div class="arrow"></div><div class="popover-content"></div></div>',
+            content: function(){
+                return $('#'+ $(this).attr('data-menu'))[0].innerHTML;
+            }
+        });
+        $('#tools', boardWrapper).children('li').tooltip({
             placement: 'right',
             container: 'body',
         });
-        $('#currentTool > li').tooltip({
+        $('#currentTool', boardWrapper).children('li').tooltip({
             placement: 'bottom',
             container: 'body'
         });
 
-        $(document).on('show.bs.tooltip', function(){
-            if(zIndex > 999){
-                $(this).css('z-index', 1070 + zIndex - 999);
+        $(document).on({
+            'show.bs.tooltip': function(){
+                if(zIndex > 999){
+                    $(this).css('z-index', 1070 + zIndex - 999);
+                }
+            },
+            'show.bs.popover': function(){
+                if(zIndex > 999){
+                    $(this).css('z-index', 1030 + zIndex - 999);
+                }
             }
         });
 
-        $('.tool').on('click', function(){
-            if (!$(this).hasClass('disabled')) {
-                if($(this).attr('data-action')){
-                    Tool($(this).attr('data-action'));
+        $('.tool', boardWrapper).on('click', function(){
+            var $this = $(this);
+            if (!$this.hasClass('disabled')) {
+                if($this.attr('data-action')){
+                    Tool($this.attr('data-action'));
                 }
             }
         });
@@ -197,16 +235,17 @@
         CheckUndoButtons();
         Tool('brush');
 
-        $('#blendingModes').select2({
-            dropdownParent: $('#blendingModes').parent(),
+        $('#blendingModes', boardWrapper).select2({
+            dropdownParent: $('#blendingModes', boardWrapper).parent(),
         }).on('change', function(){
             if(selectedLayer){
                 $(selectedLayer[0]).css('mix-blend-mode', $('#blendingModes option:checked').val());
+                selectedLayer.blendingMode = $('#blendingModes option:checked').val();
             }
         });
 
-        $('#brushSizeSlider').val($.cookie('brushSize'));
-        $("#brushSizeSlider").ionRangeSlider({
+        $('#brushSizeSlider', boardWrapper).val($.cookie('brushSize'));
+        $("#brushSizeSlider", boardWrapper).ionRangeSlider({
             force_edges: true,
             min: 1,
             max: 100,
@@ -226,10 +265,10 @@
                 }
             }
         });
-        brushSizeSlider = $('#brushSizeSlider').data('ionRangeSlider');
+        brushSizeSlider = $('#brushSizeSlider', boardWrapper).data('ionRangeSlider');
 
-        $('#opacitySlider').val(100);
-        $("#opacitySlider").ionRangeSlider({
+        $('#opacitySlider', boardWrapper).val(100);
+        $("#opacitySlider", boardWrapper).ionRangeSlider({
             force_edges: true,
             min: 0,
             max: 100,
@@ -239,18 +278,17 @@
                     opacitySliderFinished = false;
                     return;
                 }
-                if(!changedOpacity){
-                    changedOpacity = true;
-                    startOpacity = parseFloat($(selectedLayer[0]).css('opacity'));
-                }
                 if(selectedLayer) {
+                    if(!changedOpacity){
+                        changedOpacity = true;
+                        startOpacity = parseFloat($(selectedLayer[0]).css('opacity'));
+                    }
                     $(selectedLayer[0]).css('opacity', e.from / 100);
-                    // SelectLayer(selectedLayer);
+                    selectedLayer.alpha = e.from / 100;
                 }
             },
             onFinish: function(e){
                 if(selectedLayer){
-                    // SelectLayer(selectedLayer);
                     AddToUndo({
                         action: 'opacity',
                         before: startOpacity,
@@ -264,15 +302,15 @@
                 }
             },
             onUpdate: function(e){
-                // TODO: test this function (from undo/redo)
                 if(selectedLayer) {
                     $(selectedLayer[0]).css('opacity', e.from / 100);
+                    selectedLayer.alpha = e.from / 100;
                 }
             }
         });
-        opacitySlider = $('#opacitySlider').data("ionRangeSlider");
+        opacitySlider = $('#opacitySlider', boardWrapper).data("ionRangeSlider");
 
-        $('#pickerbtn').colpick({
+        $('.colorPicker', boardWrapper).colpick({
             layout:'full',
             color: (settings.strokeColor.substring(1) ? settings.strokeColor.substring(1) : settings.backgroundColor),
             onHide: function(){
@@ -287,8 +325,18 @@
                 settings.strokeColor = '#' + hex;
                 settings.fillColor = '#' + hex;
                 refreshSettings();
-                $('#pickerbtn').colpickHide();
+                $('.colorPicker').colpickHide();
             }
+        });
+
+        $blendingModes = $('#blendingModes');
+
+        $('body').on('click', '.chooseFiles', function(){
+            $('#oldInput').click();
+        });
+        $('body').on('change', '#oldInput', function(e){
+            HandleFiles(e);
+            $(this).empty();
         });
 
         ClearLayer('canvasTemp');
@@ -297,8 +345,69 @@
         console.log(settings);
     }
 
+    function OpenImage(img){
+        var width, height;
+        width = img.width;
+        height = img.height;
+        var newLayer = AddLayer({
+            x: settings.width / 2 - width / 2,
+            y: settings.height / 2 - height / 2,
+            width: width,
+            height: height
+        });
+
+        var _ctx = newLayer[0].getContext('2d');
+        _ctx.drawImage(img, 0, 0, width, height);
+
+        if(settings.width < img.width){
+            var prop = settings.width / img.width;
+            width = settings.width;
+            height = img.height * prop;
+        }
+        if(settings.height < img.height){
+            var prop = settings.height / img.height;
+            height = settings.height;
+            width = img.width * prop;
+        }
+        TransformLayer(newLayer, {
+            x: settings.width / 2 - width / 2,
+            y: settings.height / 2 - height / 2,
+            width: width,
+            height: height
+        });
+        AddToUndo({
+            action: 'draw',
+            layer: {
+                0: newLayer[0],
+                x: newLayer.x,
+                y: newLayer.y,
+                width: newLayer.width,
+                height: newLayer.height
+            }
+        });
+
+        Tool('select');
+        SelectLayer(newLayer);
+    }
+
+    function HandleFiles(e) {
+        var reader = new FileReader();
+        reader.readAsDataURL(e.target.files[0]);
+        reader.onload = function(event){
+            var img = new Image();
+            img.src = event.target.result;
+            img.onload = function(){
+                ClosePopovers(null);
+                OpenImage(img);
+            }
+        }
+    }
+
     $.cUndo = function(){
         console.log(undoStep, undo);
+    }
+    $.cLayers = function(){
+        console.log(layers);
     }
 
     $(document).on({
@@ -319,10 +428,7 @@
         'mousedown': function(event){
             mouse.document = true;
             if(!$('.mercuryModal').length){
-                if(!selectedLayer){
-                    // TODO: I think this could be deleted
-                    // ClearLayer('canvasTemp');
-                }
+                ClosePopovers(event);
 
                 if($(background).offset()){
                     if(isOnCanvas(event)){
@@ -416,11 +522,11 @@
                                 newX = selectedLayer.x;
                                 newY = selectedLayer.y;
 
-                                if($(canvasTemp).css('cursor') == 'default'){
+                                if($temp.css('cursor') == 'default'){
                                     CheckCursorCanvas(pos, false);
                                 }
                                 if(!action){
-                                    $(canvasTemp).css('cursor', 'move');
+                                    $temp.css('cursor', 'move');
                                     action = 'move';
                                 }
 
@@ -445,7 +551,6 @@
                                                 deltaX = Math.abs(pos.x - dist.x - original.x);
                                                 deltaY = Math.abs(pos.y - dist.y - original.y);
 
-                                                console.log(deltaX, deltaY);
                                                 if(deltaX > 20 || deltaY > 20){
                                                     if(deltaX > deltaY){
                                                         newY = original.y;
@@ -463,6 +568,8 @@
                                         case 'nw':
                                             newWidth = selectedLayer.width + (selectedLayer.x - pos.x);
                                             newHeight = selectedLayer.height + (selectedLayer.y - pos.y);
+                                            newX = pos.x;
+                                            newY = pos.y;
                                             if(keys.shift){
                                                 wProp = newWidth / original.width;
                                                 hProp = newHeight / original.height;
@@ -472,10 +579,14 @@
                                                 newX = Math.min(selectedLayer.x + selectedLayer.width - newWidth, selectedLayer.x + selectedLayer.width);
                                                 newY = Math.min(selectedLayer.y + selectedLayer.height - newHeight, selectedLayer.y + selectedLayer.height);
                                             }
-                                            else{
-                                                newX = pos.x;
-                                                newY = pos.y;
+                                            if(keys.alt){
+                                                newX = Math.min(newX, selectedLayer.x + selectedLayer.width);
+                                                newY = Math.min(newY, selectedLayer.y + selectedLayer.height);
+                                                newWidth = newWidth - Math.sign(newX - selectedLayer.x) * Math.abs(selectedLayer.width - newWidth);
+                                                newHeight = newHeight - Math.sign(newY - selectedLayer.y) * Math.abs(selectedLayer.height - newHeight);
                                             }
+                                            newX = Math.min(newX, selectedLayer.x + selectedLayer.width);
+                                            newY = Math.min(newY, selectedLayer.y + selectedLayer.height);
                                             break;
                                         case 'ne':
                                             newWidth = selectedLayer.width + (pos.x - (selectedLayer.x + selectedLayer.width));
@@ -549,11 +660,12 @@
                                             console.log(action + " for select");
                                             break;
                                     }
+
                                     actioned = true;
                                 }
 
                                 if(newWidth != selectedLayer.width || newHeight != selectedLayer.height || newX != selectedLayer.x || newY != selectedLayer.y){
-                                    TranformLayer(selectedLayer, {
+                                    TransformLayer(selectedLayer, {
                                         x: newX,
                                         y: newY,
                                         width: newWidth,
@@ -673,7 +785,7 @@
                                     }
                                     else{
                                         action = '';
-                                        $(canvasTemp).css('cursor', 'default');
+                                        $temp.css('cursor', 'default');
                                         DeselectLayer();
                                         OutLineLayer(pos);
                                     }
@@ -694,16 +806,21 @@
     });
 
     function isOnCanvas(event){
+        // new way, let the browser decide what was clicked
         if(!background) return false;
+        if(event.target && $(event.target).attr('id') == 'canvasTemp') return true;
+        else return false;
+        // old way, position detection
+        /*
         var calc = {};
         calc.start = $(background).offset();
         calc.width = $(background).width();
         calc.height = $(background).height();
-        return (event.pageY > calc.start.top && event.pageY < calc.start.top + calc.height && event.pageX > calc.start.left && event.pageX < calc.start.left + calc.width);
+        return (event.pageY > calc.start.top && event.pageY < calc.start.top + calc.height && event.pageX > calc.start.left && event.pageX < calc.start.left + calc.width);*/
     }
 
     function MoveVirtualCursor(_pos){
-        $('#cursor').css({
+        cursor.css({
             top: _pos.y,
             left: _pos.x
         });
@@ -725,6 +842,16 @@
 
     function SelectLayer(_layer){
         if(_layer){
+            opacitySlider.update({
+                from: _layer.alpha * 100,
+                disable: false
+            });
+
+            if(_layer.blendingMode != $blendingModes.val()){
+                $blendingModes.val(_layer.blendingMode).trigger("change");
+            }
+            $blendingModes.prop('disabled', false);
+
             selectedLayer = _layer;
             ClearLayer('canvasTemp');
 
@@ -783,10 +910,20 @@
         }
     }
 
+    function ClosePopovers(e){
+        $('.menu-open').each(function () {
+            if (e == null || (!$(this).is(e.target) && $(this).has(e.target).length === 0 && $('.popover').has(e.target).length === 0)) {
+                $(this).popover('hide');
+            }
+        });
+    }
+
     var shortcuts = {
         'v': 'select',
         'b': 'brush',
         'e': 'eyeDropper',
+        'ctrl s': 'save',
+        'ctrl o': 'open',
         'ctrl n': 'newDoc',
         'ctrl z': 'undo',
         'ctrl y': 'redo',
@@ -841,69 +978,78 @@
 
     function DeselectLayer(){
         ClearLayer('canvasTemp');
+
         if(settings.transition && selectedLayer) {
             $(selectedLayer[0]).css('transition', transitionContent);
         }
         selectedLayer = null;
         action = dist.x = dist.y = undefined;
+
+        if(ready){
+            opacitySlider.update({
+                from: 100,
+                disable: true
+            });
+            $blendingModes.val('normal').trigger("change").prop("disabled", true);
+        }
         // refreshSettings();
     }
 
     function CheckCursorCanvas(pos, ow){
+        $temp.css('cursor', 'default');
         if(selectedLayer && settings.tool == 'select'){
             if(typeof ow != 'boolean') ow = true;
-            $(canvasTemp).css('cursor', 'default');
             if(ow) action = '';
 
             if(pos.x > selectedLayer.x && pos.x < selectedLayer.x + selectedLayer.width && pos.y > selectedLayer.y && pos.y < selectedLayer.y + selectedLayer.height){
-                $(canvasTemp).css('cursor', 'move');
+                $temp.css('cursor', 'move');
                 if(ow) action = 'move';
             }
             if (pos.x > selectedLayer.x - settings.handlerSize / 2 && pos.x < selectedLayer.x + settings.handlerSize / 2 &&
                 pos.y > selectedLayer.y - settings.handlerSize / 2 && pos.y < selectedLayer.y + settings.handlerSize / 2){
-                $(canvasTemp).css('cursor', 'nw-resize');
+                $temp.css('cursor', 'nw-resize');
                 if(ow) action = 'nw';
             }
             if (
                 pos.x > selectedLayer.x + selectedLayer.width - settings.handlerSize / 2 && pos.x < selectedLayer.x + selectedLayer.width + settings.handlerSize / 2 &&
                 pos.y > selectedLayer.y - settings.handlerSize / 2 && pos.y < selectedLayer.y + settings.handlerSize / 2){
-                $(canvasTemp).css('cursor', 'ne-resize');
+                $temp.css('cursor', 'ne-resize');
                 if(ow) action = 'ne';
             }
             if (
                 pos.x > selectedLayer.x + selectedLayer.width - settings.handlerSize / 2 && pos.x < selectedLayer.x + selectedLayer.width + settings.handlerSize / 2 &&
                 pos.y > selectedLayer.y + selectedLayer.height - settings.handlerSize / 2 && pos.y < selectedLayer.y + selectedLayer.height + settings.handlerSize / 2){
-                $(canvasTemp).css('cursor', 'se-resize');
+                $temp.css('cursor', 'se-resize');
                 if(ow) action = 'se';
             }
             if (
                 pos.x > selectedLayer.x - settings.handlerSize / 2 && pos.x < selectedLayer.x + settings.handlerSize / 2 &&
                 pos.y > selectedLayer.y + selectedLayer.height - settings.handlerSize / 2 && pos.y < selectedLayer.y + selectedLayer.height + settings.handlerSize / 2){
-                $(canvasTemp).css('cursor', 'sw-resize');
+                $temp.css('cursor', 'sw-resize');
                 if(ow) action = 'sw';
             }
             if(
                 pos.x >= selectedLayer.x + settings.handlerSize / 2 && pos.x <= selectedLayer.x + selectedLayer.width - settings.handlerSize / 2 &&
                 pos.y > selectedLayer.y - settings.handlerSize / 3 && pos.y < selectedLayer.y + settings.handlerSize / 3){
-                $(canvasTemp).css('cursor', 'n-resize');
+                $temp.css('cursor', 'n-resize');
                 if(ow) action = 'n';
             }
             if(
                 pos.x > selectedLayer.x + selectedLayer.width - settings.handlerSize / 3 && pos.x < selectedLayer.x + selectedLayer.width + settings.handlerSize / 3 &&
                 pos.y >= selectedLayer.y + settings.handlerSize / 2 && pos.y <= selectedLayer.y + selectedLayer.height - settings.handlerSize / 2){
-                $(canvasTemp).css('cursor', 'e-resize');
+                $temp.css('cursor', 'e-resize');
                 if(ow) action = 'e';
             }
             if(
                 pos.x >= selectedLayer.x + settings.handlerSize / 2 && pos.x <= selectedLayer.x + selectedLayer.width - settings.handlerSize / 2 &&
                 pos.y > selectedLayer.y + selectedLayer.height - settings.handlerSize / 3 && pos.y < selectedLayer.y + selectedLayer.height + settings.handlerSize / 3){
-                $(canvasTemp).css('cursor', 's-resize');
+                $temp.css('cursor', 's-resize');
                 if(ow) action = 's';
             }
             if(
                 pos.x > selectedLayer.x - settings.handlerSize / 3 && pos.x < selectedLayer.x + settings.handlerSize / 3 &&
                 pos.y >= selectedLayer.y + settings.handlerSize / 2 && pos.y <= selectedLayer.y + selectedLayer.height - settings.handlerSize / 2){
-                $(canvasTemp).css('cursor', 'w-resize');
+                $temp.css('cursor', 'w-resize');
                 if(ow) action = 'w';
             }
         }
@@ -936,34 +1082,40 @@
         });
     }
 
-    function CustomSubmenu(tool){
-        $('.customSubmenu').hide();
-        $('[data-customSubmenu="'+ tool +'"]').css('display', 'inline-block');
+    function OpenTopMenu(tool){
+        $('.customSubmenu', boardWrapper).hide();
+        $('[data-customSubmenu="'+ tool +'"]', boardWrapper).css('display', 'inline-block');
+    }
+
+    function OpenRightMenu(tool){
+        $('[data-menu="'+ tool +'"]', boardWrapper).popover('show');
     }
     
     function DefaultToolChange(tool){
-        $('.outlined').removeAttr('style').removeClass('outlined');
-        $('[data-action='+ tool +']').css('border', '1px solid red').addClass('outlined');
+        $('.outlined', boardWrapper).removeAttr('style').removeClass('outlined');
+        $('[data-action='+ tool +']', boardWrapper).css('border', '1px solid red').addClass('outlined');
         settings.tool = tool;
         DeselectLayer();
     }
     
-    var actions = ['newDoc', 'fullScreen', 'undo', 'redo', 'brushSize-', 'brushSize+', 'deselect'];
+    var actions = ['newDoc', 'fullScreen', 'undo', 'redo', 'brushSize-', 'brushSize+', 'deselect', 'save', 'open', 'delete'];
+    var ignoreAction = ['colorPicker', 'draw'];
 
     function Tool(tool){
+        console.log('Tool '+ tool + ' called by: '+ (arguments.callee.caller.name ? (arguments.callee.caller.caller.name ? arguments.callee.caller.caller.name : arguments.callee.caller.name) : 'anonymous'));
         if(!$('.mercuryModal').length && !mouse.canvas.length){
+            if(ignoreAction.indexOf(tool) != -1) {
+                return;
+            }
             if(actions.indexOf(tool) == -1){
                 if(tool == settings.tool) return;
 
                 if(tool != 'brush'){
-                    $('#cursor').hide();
-                    $(canvasTemp).css('cursor', 'default');
+                    cursor.hide();
+                    $temp.css('cursor', 'default');
                 }
 
-                CustomSubmenu(tool);
-            }
-            else{
-
+                OpenTopMenu(tool);
             }
             switch (tool){
                 case 'undo':
@@ -972,11 +1124,28 @@
                 case 'redo':
                     Undo(-1);
                     break;
+                case 'delete':
+                    if(selectedLayer){
+                        AddToUndo({
+                            action: 'hide',
+                            layer: selectedLayer
+                        });
+                        $(selectedLayer[0]).hide();
+                        DeselectLayer();
+                        CheckCursorCanvas(mousePos, false);
+                    }
+                    break;
+                case 'save':
+                    OpenRightMenu('save');
+                    break;
+                case 'open':
+                    OpenRightMenu('open');
+                    break;
                 case 'brush':
                     DefaultToolChange(tool);
                     MoveVirtualCursor(mousePos);
-                    $('#cursor').show();
-                    $(canvasTemp).css('cursor', 'none');
+                    cursor.show();
+                    $temp.css('cursor', 'none');
                     break;
                 case 'select':
                     DefaultToolChange(tool);
@@ -1034,6 +1203,7 @@
                     DeselectLayer();
                     break;
                 default:
+                    console.warn('Tool doesn\'t have this action ('+ undo[undoStep - 1].action +')');
                     if(actions.indexOf(tool) == -1){
                         DefaultToolChange(tool);
                     }
@@ -1098,7 +1268,7 @@
 
     function AddToUndo(options){
         undo.splice(undoStep, undo.length, $.extend(true, {
-            action: 'draw',
+            action: 'undefined',
             layer:{
                 0: null,
                 x: 0,
@@ -1109,10 +1279,10 @@
         }, options));
         undoStep ++;
         if(undoStep > 0){
-            $('.tool[data-action="undo"]').removeClass('disabled');
+            $('.tool[data-action="undo"]', boardWrapper).removeClass('disabled');
         }
         if(undoStep == undo.length) {
-            $('.tool[data-action="redo"]').addClass('disabled');
+            $('.tool[data-action="redo"]', boardWrapper).addClass('disabled');
         }
 
         if(undoStep != undo.length) {
@@ -1122,7 +1292,7 @@
         checkForOrphanLayers();
     }
 
-    function TranformLayer(_layer, _transform){
+    function TransformLayer(_layer, _transform){
         _transform.width = Math.max(0, _transform.width);
         _transform.height = Math.max(0, _transform.height);
         $(_layer[0]).css({
@@ -1138,7 +1308,7 @@
     }
 
     function Undo(steps){
-
+        DeselectLayer();
         if (steps > 0) {
             for (var i = 0; i < steps; i++) {
                 if (undoStep > 0) {
@@ -1150,7 +1320,7 @@
                             $(undo[undoStep - 1].layer[0]).show();
                             break;
                         case 'transform':
-                            TranformLayer(undo[undoStep - 1].layer, undo[undoStep - 1].before);
+                            TransformLayer(undo[undoStep - 1].layer, undo[undoStep - 1].before);
                             break;
                         case 'opacity':
                             selectedLayer = undo[undoStep - 1].layer;
@@ -1182,7 +1352,7 @@
                             $(undo[undoStep].layer[0]).hide();
                             break;
                         case 'transform':
-                            TranformLayer(undo[undoStep].layer, undo[undoStep].after);
+                            TransformLayer(undo[undoStep].layer, undo[undoStep].after);
                             break;
                         case 'opacity':
                             selectedLayer = undo[undoStep].layer;
@@ -1209,16 +1379,16 @@
 
     function CheckUndoButtons(){
         if(undoStep > 0) {
-            $('.tool[data-action="undo"]').removeClass('disabled');
+            $('.tool[data-action="undo"]', boardWrapper).removeClass('disabled');
         }
         else{
-            $('.tool[data-action="undo"]').addClass('disabled');
+            $('.tool[data-action="undo"]', boardWrapper).addClass('disabled');
         }
         if(undoStep < undo.length){
-            $('.tool[data-action="redo"]').removeClass('disabled');
+            $('.tool[data-action="redo"]', boardWrapper).removeClass('disabled');
         }
         else{
-            $('.tool[data-action="redo"]').addClass('disabled');
+            $('.tool[data-action="redo"]', boardWrapper).addClass('disabled');
         }
     }
 
@@ -1227,8 +1397,8 @@
             var newLayer = AddLayer({
                 x: Math.max(0, startPos.x),
                 y: Math.max(0, startPos.y),
-                width: $('#canvasTemp').width(),
-                height: $('#canvasTemp').height()
+                width: $temp.width(),
+                height: $temp.height()
             });
             if (dragged) {
                 tempCtx.closePath();
@@ -1269,7 +1439,7 @@
     }
 
     function CustomMenuActive(tool){
-        return !$('[data-customsubmenu="'+ tool +'"]').hasClass('disabled');
+        return !$('[data-customsubmenu="'+ tool +'"]', boardWrapper).hasClass('disabled');
     }
 
     $.mercuryCanvas.refreshSettings = refreshSettings = function(){
@@ -1277,8 +1447,8 @@
             settings.lineWidth = $('#brushSizeSlider').val();
         }*/
         if(settings && settings.lineWidth){
-            if($('#cursor').css('display') != 'none'){
-                $('#cursor').css({
+            if(cursor.css('display') != 'none'){
+                cursor.css({
                     width: settings.lineWidth,
                     height: settings.lineWidth
                 });
@@ -1341,22 +1511,24 @@
     function AddLayer(options){
         var layerDefaults = {
             x: 0,
-            y: 0
+            y: 0,
+            width: 0,
+            height: 0
         };
         var layerSettings = $.extend({}, layerDefaults, options);
         zIndex++;
         if(zIndex > 999){
-            $(canvasTemp).css('z-index', 1000 + zIndex - 999);
-            $('#cursor').css('z-index', 1001 + zIndex - 999);
-            $('#tools, #currentTool').css('z-index', 1004 + zIndex - 999);
-            $('.select2').css('z-index', 1069 + zIndex - 999);
+            $temp.css('z-index', 1000 + zIndex - 999);
+            cursor.css('z-index', 1001 + zIndex - 999);
+            $('#tools, #currentTool', boardWrapper).css('z-index', 1004 + zIndex - 999);
+            $('.select2', boardWrapper).css('z-index', 1069 + zIndex - 999);
             $.MercuryModal.defaults.zIndex = 1080 + zIndex - 999;
         }
         var layerID = 'canvas-' + zIndex;
         var newLayer = $('<canvas />').addClass('canvasLayer').attr({
             border: '0',
-            width: 0,
-            height: 0,
+            width: layerSettings.width,
+            height: layerSettings.height,
             id: layerID
         }).css({
             'top': layerSettings.y,
@@ -1369,7 +1541,8 @@
         newLayer['y'] = layerSettings.y;
         newLayer['width'] = layerSettings.width;
         newLayer['height'] = layerSettings.height;
-        newLayer['alpha'] = 255;
+        newLayer['alpha'] = 1;
+        newLayer['blendingMode'] = 'normal';
         
         layers[layerID] = newLayer;
         return newLayer;
@@ -1428,7 +1601,7 @@
     }
     
     function ClearLayer(layer){
-        if(!$('#canvasTemp')[0]) setTimeout(function(){
+        if(!$temp[0]) setTimeout(function(){
             ClearLayer(layer);
             // console.log('Plugin not ready, clear layer postponed by 10ms');
         }, 10);
@@ -1455,9 +1628,12 @@
     function ResizeCanvasBackground(){
         var height = layersWrapper.height();
         var width = layersWrapper.width();
-        if(height != $('#canvasTemp').height() || width != $('#canvasTemp').width()){
-            $('#canvasBackground').attr('height', height).attr('width', width).attr('style', 'width: '+ width +'px; height: '+ height +'px');
-            $('#canvasTemp').attr('height', height).attr('width', width).attr('style', 'width: '+ width +'px; height: '+ height +'px');
+        if(height != $temp.height() || width != $temp.width()){
+            $background.attr('height', height).attr('width', width).attr('style', 'width: '+ width +'px; height: '+ height +'px');
+            $temp.attr('height', height).attr('width', width).attr('style', 'width: '+ width +'px; height: '+ height +'px');
+
+            settings.width = width;
+            settings.height = height;
 
             backgroundCtx.fillStyle = settings.backgroundColor;
             backgroundCtx.rect(0, 0, width, height);
