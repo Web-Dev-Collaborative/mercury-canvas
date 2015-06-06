@@ -1,6 +1,7 @@
+// TODO: select tool without mouse drag si broken
 // TODO: after resizing the layer, layerToColor can be very wrong
 // TODO: problems with opacity on undo
-// TODO: eye dropper doesn't blending modes
+// TODO: eye dropper doesn't care about blending modes
 
 (function($) {
     // Define local aliases to frequently used properties
@@ -47,11 +48,17 @@
     var points = [];
     var minMousePos = { 'x': 999999, 'y': 999999 }, maxMousePos = { 'x': -1, 'y': -1 };
     
+    if(!$.cookie('brushSize')){
+        $.cookie('brushSize', 5);
+    }
+
     $(window).resize($.debounce(settings.resizeDelay, ResizeCanvasBackground));
     
     $.MercuryModal.defaults.zIndex = 1080;
     $.MercuryModal.defaults.ready = function(){
-        ClosePopovers(null);
+        setTimeout(function(){
+            ClosePopovers(null);
+        }, 10);
         if(shortcutListener) {
             shortcutListener.stop_listening();
         }
@@ -145,7 +152,7 @@
             dragDetectSensibility: 1, // higher -> more distance before dragged becomes true
             width: 600, // overwritten at the moment
             height: 500, // overwritten at the moment
-            lineWidth: $.cookie('brushSize'),
+            lineWidth: ($.cookie('brushSize') ? $.cookie('brushSize') : 5),
             strokeColor: 'red',
             tool: '',
             transition: true,
@@ -160,7 +167,7 @@
             width: '100%',
             height: '100%'
         });
-        layersWrapper.append('<div id="cursor"></div><div id="eyeDropperDisplay"></div><canvas class="canvasLayer canvasBottom" id="canvasBackground" height="0" width="0" border="0">Update your browser</canvas><canvas class="canvasLayer canvasTop" id="canvasTemp" height="0" width="0" border="0">Update your browser</canvas>');
+        layersWrapper.append('<div id="cursor"></div><canvas class="canvasLayer canvasBottom" id="canvasBackground" height="0" width="0" border="0">Update your browser</canvas><canvas class="canvasLayer canvasTop" id="canvasTemp" height="0" width="0" border="0">Update your browser</canvas>');
         
         $background = $('#canvasBackground');
         $temp = $('#canvasTemp');
@@ -192,6 +199,8 @@
     function init(){
         cursor = $('#cursor');
         boardWrapper = $('#boardWrapper');
+        boardWrapper.attr('unselectable', 'on').css('user-select', 'none').on('selectstart', false).on('onselectstart', false);
+
         $('.menu-open', boardWrapper).popover({
             html : true,
             container: 'body',
@@ -243,6 +252,41 @@
                 selectedLayer.blendingMode = $('#blendingModes option:checked').val();
             }
         });
+        $(document).on('click', '#dbload', function(){
+            var newElem = '<table id="allcanvases" class="table table-striped table-bordered table-hover"><tr><th>Nume</th><th></th></tr></table>';
+            MercuryModal({
+                title: 'Load images from database',
+                buttons: [
+                    {
+                        text: 'Select',
+                        class: 'btn-lg btn-success',
+                        onclick: function(){
+                            console.log('tset');
+                        }
+                    },
+                    {
+                        text: 'Cancel',
+                        class: 'btn-lg btn-danger',
+                        dismiss: true
+                    }
+                ],
+                textAlign: {
+                    footer: 'center'
+                },
+                text: newElem,
+                ready: function(){
+                    $.MercuryModal.defaults.ready();
+
+                    $.ajax({
+                        url: 'functions/getimages.php',
+                        dataType: 'json',
+                        success: function(e){
+                            console.log(e);
+                        }
+                    })
+                }
+            });
+        });
 
         $('#brushSizeSlider', boardWrapper).val($.cookie('brushSize'));
         $("#brushSizeSlider", boardWrapper).ionRangeSlider({
@@ -251,14 +295,14 @@
             max: 100,
             from: parseInt($.cookie('brushSize')),
             onChange: function(e){
-                if(settings.tool == 'brush'){
+                if(settings.tool == 'brush' || settings.tool == 'eraser'){
                     $.cookie('brushSize', e.from);
                     settings.lineWidth = e.from;
                     refreshSettings();
                 }
             },
             onUpdate: function(e){
-                if(settings.tool == 'brush'){
+                if(settings.tool == 'brush' || settings.tool == 'eraser'){
                     $.cookie('brushSize', e.from);
                     settings.lineWidth = e.from;
                     refreshSettings();
@@ -338,6 +382,11 @@
             HandleFiles(e);
             $(this).empty();
         });
+        $('body').on('click', '.deleteLayer', function(){
+            if(!$(this).hasClass('disabled')){
+                Tool('delete'); 
+            }
+        });
 
         ClearLayer('canvasTemp');
         refreshSettings();
@@ -347,8 +396,8 @@
 
     function OpenImage(img){
         var width, height;
-        width = img.width;
-        height = img.height;
+        original.width = width = img.width;
+        original.height = height = img.height;
         var newLayer = AddLayer({
             x: settings.width / 2 - width / 2,
             y: settings.height / 2 - height / 2,
@@ -375,6 +424,21 @@
             width: width,
             height: height
         });
+        var transform = $(newLayer[0]).css('transform');
+        transform = transform.slice(7, -1).split(', ');
+        newLayer.x = parseFloat(transform[4]);
+        newLayer.y = parseFloat(transform[5]);
+        newLayer.width = original.width * parseFloat(transform[0]);
+        newLayer.height = original.height * parseFloat(transform[3]);
+        var matrix = new Matrix();
+        matrix.translate(newLayer.x, newLayer.y);
+        $(newLayer[0]).css({
+            'transform': matrix.toCSS(),
+            '-webkit-transform': matrix.toCSS(),
+            width: newLayer.width,
+            height: newLayer.height
+        });
+
         AddToUndo({
             action: 'draw',
             layer: {
@@ -386,6 +450,7 @@
             }
         });
 
+        original.width = original.height = 0;
         Tool('select');
         SelectLayer(newLayer);
     }
@@ -403,15 +468,18 @@
         }
     }
 
-    $.cUndo = function(){
-        console.log(undoStep, undo);
+    $.undo = function(){
+        // console.log(undoStep, undo);
+        return undo;
     }
-    $.cLayers = function(){
-        console.log(layers);
+    $.layers = function(){
+        // console.log(layers);
+        return layers;
     }
 
     $(document).on({
         'keydown': function(e){
+            if(!e.key) e.key = window.keypress._keycode_dictionary[e.keyCode];
             e.key = e.key.toLowerCase();
             keys[e.key] = true;
             keys.ctrl = e.ctrlKey;
@@ -419,11 +487,17 @@
             keys.shift = e.shiftKey;
         },
         'keyup': function(e){
+            if(!e.key) e.key = window.keypress._keycode_dictionary[e.keyCode];
             e.key = e.key.toLowerCase();
             keys[e.key] = false;
             keys.ctrl = e.ctrlKey;
             keys.atl = e.altKey;
             keys.shift = e.shiftKey;
+            // this must be here because you can't start the file dialog outside an event
+            if(keys.ctrl && e.key == 'o' && !keys.shift && !keys.alt){
+                $('#oldInput').click();
+                console.log('fuck firefox', $('#oldInput'));
+            }
         },
         'mousedown': function(event){
             mouse.document = true;
@@ -437,46 +511,32 @@
 
                         switch(settings.tool){
                             case 'brush':
-                                switch (event.which) {
-                                    case 1:
+                            case 'eraser':
+                                if(event.which == 1){
                                         startPos = pos;
-
                                         points = [];
                                         points[0] = pos;
                                         setLimitPoints(event);
                                         
-                                        DrawTemp(pos);
-                                        break;
-                                    case 2:
-                                        console.log('Middle Mouse button pressed.');
-                                        break;
-                                    case 3:
-                                        /*if(mouse.canvas.indexOf(1) == -1){
-                                            RemoveLayer(PositionToLayer(pos));
-                                        }*/
-                                        break;
-                                    default:
-                                        console.log('You have a strange Mouse!');
+                                        DrawTemp(pos, settings.tool);
                                 }
                                 break;
                             case 'select':
-                                switch (event.which) {
-                                    case 1:
-                                        if(!selectedLayer){
-                                            actioned = true;
-                                            ClearLayer('canvasTemp');
-                                            var _layer = PositionToLayer(pos);
-                                            if(_layer){
-                                                SelectLayer(_layer);
-                                                selectStart = {
-                                                    x: selectedLayer.x,
-                                                    y: selectedLayer.y,
-                                                    width: selectedLayer.width,
-                                                    height: selectedLayer.height
-                                                }
+                                if(event.which == 1){
+                                    if(!selectedLayer){
+                                        actioned = true;
+                                        ClearLayer('canvasTemp');
+                                        var _layer = PositionToLayer(pos);
+                                        if(_layer){
+                                            SelectLayer(_layer);
+                                            selectStart = {
+                                                x: selectedLayer.x,
+                                                y: selectedLayer.y,
+                                                width: selectedLayer.width,
+                                                height: selectedLayer.height
                                             }
                                         }
-                                        break;
+                                    }
                                 }
                         }
                     }
@@ -495,16 +555,14 @@
                 
                 switch(settings.tool){
                     case 'brush':
+                    case 'eraser':
                         MoveVirtualCursor(pos);
-                        if (mouse.canvas.length) {
-                            if (mouse.canvas.indexOf(1) != -1 && (Math.abs(pos.x - startPos.x) > settings.dragDetectSensibility || Math.abs(pos.y - startPos.y) > settings.dragDetectSensibility)) {
-                                // drag left click
-                                dragged = true;
-                                points[points.length] = pos;
-                                setLimitPoints(event);
+                        if (mouse.canvas.length && mouse.canvas.indexOf(1) != -1) {
+                            dragged = true;
+                            points[points.length] = pos;
+                            setLimitPoints(event);
 
-                                DrawTemp(pos);
-                            }
+                            DrawTemp(pos, settings.tool);
                         }
                         break;
                     case 'select':
@@ -718,81 +776,67 @@
 
                 switch(settings.tool){
                     case 'brush':
-                        if($(background).offset()){
-                            if(isOnCanvas(event)){
-                                switch (event.which) {
-                                    case 1:
-                                        BrushMouseUp(minMousePos);
-                                        break;
-                                    case 2:
-                                        console.log('Middle Mouse button is not pressed anymore.');
-                                        break;
-                                    case 3:
-                                        var _layer = PositionToLayer(pos);
-                                        if(_layer){
-                                            $(_layer[0]).hide();
-                                            AddToUndo({
-                                                action: 'hide',
-                                                layer: _layer
-                                            });
-                                        }
-                                        break;
-                                    default:
-                                        console.log('You have a strange Mouse!');
+                    case 'eraser':
+                        if(isOnCanvas(event)){
+                            if(event.which == 1){
+                                BrushMouseUp();
+                            }
+                        }
+                        else{
+                            BrushMouseUp();  
+                        }
+                        break;
+                    case 'select':
+                        if(mouse.canvas.indexOf(1) != -1 && event.which == 1){
+                            if(actioned){
+                                CheckCursorCanvas(pos, true);
+
+                                if(selectedLayer){
+                                    var transform = $(selectedLayer[0]).css('transform');
+                                    transform = transform.slice(7, -1).split(', ');
+                                    selectedLayer.x = parseFloat(transform[4]);
+                                    selectedLayer.y = parseFloat(transform[5]);
+                                    selectedLayer.width = original.width * parseFloat(transform[0]);
+                                    selectedLayer.height = original.height * parseFloat(transform[3]);
+                                    var matrix = new Matrix();
+                                    matrix.translate(selectedLayer.x, selectedLayer.y);
+                                    $(selectedLayer[0]).css({
+                                        'transform': matrix.toCSS(),
+                                        '-webkit-transform': matrix.toCSS(),
+                                        width: selectedLayer.width,
+                                        height: selectedLayer.height
+                                    });
+
+                                    SelectLayer(selectedLayer);
+                                    dist.x = dist.y = 0;
+                                    original.width = original.height = original.x = original.y = 0;
+
+                                    AddToUndo({
+                                        action: 'transform',
+                                        before: selectStart,
+                                        after: {
+                                            x: selectedLayer.x,
+                                            y: selectedLayer.y,
+                                            width: selectedLayer.width,
+                                            height: selectedLayer.height
+                                        },
+                                        layer: selectedLayer
+                                    });
+                                    selectStart = {
+                                        x: selectedLayer.x,
+                                        y: selectedLayer.y,
+                                        width: selectedLayer.width,
+                                        height: selectedLayer.height
+                                    }
                                 }
                             }
                             else{
-                                BrushMouseUp(minMousePos);  
+                                action = '';
+                                $temp.css('cursor', 'default');
+                                DeselectLayer();
+                                OutLineLayer(pos);
                             }
                         }
-                        dragged = false;
-                        break;
-                    case 'select':
-                        if(mouse.canvas.indexOf(1) != -1){
-                            switch (event.which) {
-                                case 1:
-                                    if(actioned){
-                                        CheckCursorCanvas(pos, true);
-
-                                        if(selectedLayer){
-                                            selectedLayer.x = parseInt($(selectedLayer[0]).css('left'));
-                                            selectedLayer.y = parseInt($(selectedLayer[0]).css('top'));
-                                            selectedLayer.width = $(selectedLayer[0]).width();
-                                            selectedLayer.height = $(selectedLayer[0]).height();
-
-                                            SelectLayer(selectedLayer);
-                                            dist.x = dist.y = 0;
-                                            original.width = original.height = original.x = original.y = 0;
-
-                                            AddToUndo({
-                                                action: 'transform',
-                                                before: selectStart,
-                                                after: {
-                                                    x: selectedLayer.x,
-                                                    y: selectedLayer.y,
-                                                    width: selectedLayer.width,
-                                                    height: selectedLayer.height
-                                                },
-                                                layer: selectedLayer
-                                            });
-                                            selectStart = {
-                                                x: selectedLayer.x,
-                                                y: selectedLayer.y,
-                                                width: selectedLayer.width,
-                                                height: selectedLayer.height
-                                            }
-                                        }
-                                    }
-                                    else{
-                                        action = '';
-                                        $temp.css('cursor', 'default');
-                                        DeselectLayer();
-                                        OutLineLayer(pos);
-                                    }
-                                    break;
-                            }
-                        }
-                        break;
                 }
                 if(event.which == 1) {
                     mouse.document = false;
@@ -820,9 +864,11 @@
     }
 
     function MoveVirtualCursor(_pos){
+        var matrix = new Matrix();
+        matrix.translate(_pos.x - settings.lineWidth / 2, _pos.y - settings.lineWidth / 2);
         cursor.css({
-            top: _pos.y,
-            left: _pos.x
+            'transform': matrix.toCSS(),
+            '-webkit-transform': matrix.toCSS()
         });
     }
 
@@ -851,6 +897,7 @@
                 $blendingModes.val(_layer.blendingMode).trigger("change");
             }
             $blendingModes.prop('disabled', false);
+            $('.deleteLayer').removeClass('disabled');
 
             selectedLayer = _layer;
             ClearLayer('canvasTemp');
@@ -921,10 +968,13 @@
     var shortcuts = {
         'v': 'select',
         'b': 'brush',
-        'e': 'eyeDropper',
+        'e': 'eraser',
+        'x': 'eyeDropper',
+        'o': 'open',
+        'ctrl a': 'selectAll',
         'ctrl s': 'save',
-        'ctrl o': 'open',
         'ctrl n': 'newDoc',
+        'ctrl o': 'none',//'keyup event on body',
         'ctrl z': 'undo',
         'ctrl y': 'redo',
         'ctrl shift z': 'redo',
@@ -937,7 +987,17 @@
         prevent_repeat  : true,
         on_keyup: function(e){
             e.preventDefault();
-            Tool(shortcuts[(e.ctrlKey ? 'ctrl ' : '') + (e.altKey ? 'alt ' : '') + (e.shiftKey ? 'shift ' : '') + e.key.toLowerCase()]);
+            if(!e.key) e.key = window.keypress._keycode_dictionary[e.keyCode];
+            var shortcutAction = shortcuts[(e.ctrlKey ? 'ctrl ' : '') + (e.altKey ? 'alt ' : '') + (e.shiftKey ? 'shift ' : '') + e.key.toLowerCase()];
+            if(typeof shortcutAction == 'function'){
+                shortcutAction();
+            }
+            else{
+                Tool(shortcutAction);
+            }
+            if(shortcutAction == 'none') {
+                return true;
+            }
         },
         on_keydown: function(e){
             e.preventDefault();
@@ -957,7 +1017,9 @@
         prevent_repeat: false,
         on_keydown: function(e){
             e.preventDefault();
-            Tool('brushSize-');
+            if(settings.tool == 'brush' || settings.tool == 'eraser'){
+                Tool('brushSize-');
+            }
         },
         on_keyup: function(e){
             e.preventDefault();
@@ -968,7 +1030,9 @@
         prevent_repeat: false,
         on_keydown: function(e){
             e.preventDefault();
-            Tool('brushSize+');
+            if(settings.tool == 'brush' || settings.tool == 'eraser'){
+                Tool('brushSize+');
+            }
         },
         on_keyup: function(e){
             e.preventDefault();
@@ -982,6 +1046,7 @@
         if(settings.transition && selectedLayer) {
             $(selectedLayer[0]).css('transition', transitionContent);
         }
+        $('.deleteLayer').addClass('disabled');
         selectedLayer = null;
         action = dist.x = dist.y = undefined;
 
@@ -1084,11 +1149,11 @@
 
     function OpenTopMenu(tool){
         $('.customSubmenu', boardWrapper).hide();
-        $('[data-customSubmenu="'+ tool +'"]', boardWrapper).css('display', 'inline-block');
+        $('[data-customSubmenu~="'+ tool +'"]', boardWrapper).css('display', 'inline-block');
     }
 
-    function OpenRightMenu(tool){
-        $('[data-menu="'+ tool +'"]', boardWrapper).popover('show');
+    function ToggleRightMenu(tool){
+        $('[data-menu="'+ tool +'"]', boardWrapper).popover('toggle');
     }
     
     function DefaultToolChange(tool){
@@ -1099,7 +1164,7 @@
     }
     
     var actions = ['newDoc', 'fullScreen', 'undo', 'redo', 'brushSize-', 'brushSize+', 'deselect', 'save', 'open', 'delete'];
-    var ignoreAction = ['colorPicker', 'draw'];
+    var ignoreAction = ['none', 'colorPicker', 'draw', 'selectAll'];
 
     function Tool(tool){
         console.log('Tool '+ tool + ' called by: '+ (arguments.callee.caller.name ? (arguments.callee.caller.caller.name ? arguments.callee.caller.caller.name : arguments.callee.caller.name) : 'anonymous'));
@@ -1110,7 +1175,7 @@
             if(actions.indexOf(tool) == -1){
                 if(tool == settings.tool) return;
 
-                if(tool != 'brush'){
+                if(tool != 'brush' && tool != 'eraser'){
                     cursor.hide();
                     $temp.css('cursor', 'default');
                 }
@@ -1136,12 +1201,13 @@
                     }
                     break;
                 case 'save':
-                    OpenRightMenu('save');
+                    ToggleRightMenu('save');
                     break;
                 case 'open':
-                    OpenRightMenu('open');
+                    ToggleRightMenu('open');
                     break;
                 case 'brush':
+                case 'eraser':
                     DefaultToolChange(tool);
                     MoveVirtualCursor(mousePos);
                     cursor.show();
@@ -1203,7 +1269,7 @@
                     DeselectLayer();
                     break;
                 default:
-                    console.warn('Tool doesn\'t have this action ('+ undo[undoStep - 1].action +')');
+                    console.warn('Tool doesn\'t have this action ('+ tool +')');
                     if(actions.indexOf(tool) == -1){
                         DefaultToolChange(tool);
                     }
@@ -1227,14 +1293,19 @@
             }
         }
     }
-
-    function DrawTemp(mouse){
-        tempCtx.lineWidth = settings.lineWidth;
-        tempCtx.strokeStyle = settings.strokeColor;
+    // TODO: Try to change this function's name. Now it's too general.
+    function DrawTemp(mouse, type){
+        if(type == 'brush'){
+            tempCtx.lineWidth = settings.lineWidth;
+            tempCtx.strokeStyle = settings.strokeColor;
+        }
+        else{
+            tempCtx.lineWidth = settings.backgroundColor;
+            tempCtx.strokeStyle = settings.backgroundColor;
+        }
         tempCtx.lineCap = tempCtx.lineJoin = 'round';
         
         if (points.length < 3) {
-            tempCtx.fillStyle = settings.strokeColor;
             var b = points[0];
             tempCtx.beginPath();
             tempCtx.arc(b.x, b.y, tempCtx.lineWidth / 2, 0, Math.PI * 2, !0);
@@ -1293,18 +1364,31 @@
     }
 
     function TransformLayer(_layer, _transform){
-        _transform.width = Math.max(0, _transform.width);
-        _transform.height = Math.max(0, _transform.height);
-        $(_layer[0]).css({
-            top: _transform.y,
-            left: _transform.x,
-            width: _transform.width,
-            height: _transform.height
-        });
-        _layer.x = _transform.x;
-        _layer.y = _transform.y;
-        _layer.width = _transform.width;
-        _layer.height = _transform.height;
+        if(_layer && _transform){
+            if(!original.width || !original.height){
+                original.width = $(_layer[0]).width();
+                original.height = $(_layer[0]).height();
+                var wipe = true;
+            }
+            _transform.width = Math.max(0, _transform.width);
+            _transform.height = Math.max(0, _transform.height);
+
+            var matrix = new Matrix();
+            matrix.translate(_transform.x, _transform.y)
+                  .scale(_transform.width / original.width, _transform.height / original.height);
+            $(_layer[0]).css({
+                'transform': matrix.toCSS(),
+                '-webkit-transform': matrix.toCSS()
+            });
+            _layer.x = _transform.x;
+            _layer.y = _transform.y;
+            _layer.width = _transform.width;
+            _layer.height = _transform.height;
+
+            if(wipe) {
+                original.width = original.height = 0;
+            }
+        }
     }
 
     function Undo(steps){
@@ -1392,35 +1476,94 @@
         }
     }
 
-    function BrushMouseUp(startPos) {
-        if (mouse.canvas.indexOf(1) != -1) {
-            var newLayer = AddLayer({
-                x: Math.max(0, startPos.x),
-                y: Math.max(0, startPos.y),
-                width: $temp.width(),
-                height: $temp.height()
-            });
-            if (dragged) {
-                tempCtx.closePath();
-            }
-            
-            DrawTempCanvas(newLayer);
-            ClearLayer('canvasTemp');
+    function BrushMouseUp() {
+        minMousePos.x = Math.max(0, minMousePos.x - tempCtx.lineWidth / 2 - 1);
+        minMousePos.y = Math.max(0, minMousePos.y - tempCtx.lineWidth / 2 - 1);
+        maxMousePos.x = maxMousePos.x + tempCtx.lineWidth / 2 + 1;
+        maxMousePos.y = maxMousePos.y + tempCtx.lineWidth / 2 + 2;
 
-            AddToUndo({
-                action: 'draw',
-                layer: {
-                    0: newLayer[0],
-                    x: newLayer.x,
-                    y: newLayer.y,
-                    width: newLayer.width,
-                    height: newLayer.height
+        if (mouse.canvas.indexOf(1) != -1) {
+            if(settings.tool == 'brush'){
+                var newLayer = AddLayer({
+                    x: minMousePos.x,
+                    y: minMousePos.y,
+                    width: $temp.width(),
+                    height: $temp.height()
+                });
+                if (dragged) {
+                    tempCtx.closePath();
                 }
-            })
+                
+                DrawTempCanvas(newLayer);
+                ClearLayer('canvasTemp');
+
+                AddToUndo({
+                    action: 'draw',
+                    layer: {
+                        0: newLayer[0],
+                        x: newLayer.x,
+                        y: newLayer.y,
+                        width: newLayer.width,
+                        height: newLayer.height
+                    }
+                });
+            }
+            else if(settings.tool == 'eraser'){
+                var p = {
+                    x0: minMousePos.x,
+                    y0: minMousePos.y,
+                    x1: maxMousePos.x,
+                    y1: maxMousePos.y
+                }
+                var tempLayers = [];
+                $.each(layers, function(index, value){
+                    if(LayerBetweenPoints(value, p)){
+                        tempLayers.push(value);
+                    }
+                });
+                console.log('On this layers we should erase something', tempLayers);
+                if (dragged) {
+                    tempCtx.closePath();
+                }
+                ClearLayer('canvasTemp');
+                /*
+                var newLayer = AddLayer({
+                    x: Math.max(0, startPos.x),
+                    y: Math.max(0, startPos.y),
+                    width: $temp.width(),
+                    height: $temp.height()
+                });
+                
+                DrawTempCanvas(newLayer);
+                ClearLayer('canvasTemp');
+
+                AddToUndo({
+                    action: 'draw',
+                    layer: {
+                        0: newLayer[0],
+                        x: newLayer.x,
+                        y: newLayer.y,
+                        width: newLayer.width,
+                        height: newLayer.height
+                    }
+                })*/
+            }
         }
 
         mouse.canvas = [];
         mouse.document = false;
+        points = [];
+        dragged = false;
+        
+        minMousePos = { 'x': 999999, 'y': 999999 };
+        maxMousePos = { 'x': -1, 'y': -1 };
+    }
+
+    function LayerBetweenPoints(layer, points){
+        if(layer.alpha > 0 && Math.max(layer.x, points.x0) < Math.min(layer.x + layer.width, points.x1) && Math.max(layer.y, points.y0) < Math.min(layer.y + layer.height, points.y1)){
+            return true;
+        }
+        return false;
     }
 
     function setLimitPoints(event){
@@ -1439,7 +1582,7 @@
     }
 
     function CustomMenuActive(tool){
-        return !$('[data-customsubmenu="'+ tool +'"]', boardWrapper).hasClass('disabled');
+        return !$('[data-customSubmenu~="'+ tool +'"]', boardWrapper).hasClass('disabled');
     }
 
     $.mercuryCanvas.refreshSettings = refreshSettings = function(){
@@ -1524,6 +1667,8 @@
             $('.select2', boardWrapper).css('z-index', 1069 + zIndex - 999);
             $.MercuryModal.defaults.zIndex = 1080 + zIndex - 999;
         }
+        var matrix = new Matrix();
+        matrix.translate(layerSettings.x, layerSettings.y);
         var layerID = 'canvas-' + zIndex;
         var newLayer = $('<canvas />').addClass('canvasLayer').attr({
             border: '0',
@@ -1531,11 +1676,18 @@
             height: layerSettings.height,
             id: layerID
         }).css({
-            'top': layerSettings.y,
-            'left': layerSettings.x,
+            'transform': matrix.toCSS(),
+            '-webkit-transform': matrix.toCSS(),
             'z-index': zIndex
         }).appendTo(layersWrapper);
         
+        if(arguments.callee.caller.name == 'OpenImage'){
+            newLayer.css({
+            'width': layerSettings.width,
+            'height': layerSettings.height
+            });
+        }
+
         newLayer['name'] = layerID;
         newLayer['x'] = layerSettings.x;
         newLayer['y'] = layerSettings.y;
@@ -1549,38 +1701,27 @@
     }
     
     function DrawTempCanvas(layer){
-        imageData = tempCtx.getImageData(0, 0, settings.width, settings.height);
-        
-        minMousePos.x = Math.max(0, minMousePos.x - tempCtx.lineWidth / 2 - 1);
-        minMousePos.y = Math.max(0, minMousePos.y - tempCtx.lineWidth / 2 - 1);
-        maxMousePos.x = maxMousePos.x + tempCtx.lineWidth / 2 + 1;
-        maxMousePos.y = maxMousePos.y + tempCtx.lineWidth / 2 + 2;
-        
-        relevantData = tempCtx.getImageData(minMousePos.x, minMousePos.y, maxMousePos.x - minMousePos.x, maxMousePos.y - minMousePos.y);
+        var relevantData = tempCtx.getImageData(minMousePos.x, minMousePos.y, maxMousePos.x - minMousePos.x, maxMousePos.y - minMousePos.y);
 
-        var canvas = {};
-        canvas.width = maxMousePos.x - minMousePos.x;
-        canvas.height = maxMousePos.y - minMousePos.y;
+        layer.width = maxMousePos.x - minMousePos.x;
+        layer.height = maxMousePos.y - minMousePos.y;
         
         var ctx = layer[0].getContext('2d');
         
+        var matrix = new Matrix();
+        matrix.translate(minMousePos.x, minMousePos.y);
         layer.css({
-            'left': minMousePos.x,
-            'top': minMousePos.y
+            'transform': matrix.toCSS(),
+            '-webkit-transform': matrix.toCSS()
         }).attr({
-            'width': canvas.width,
-            'height': canvas.height
+            'width': layer.width,
+            'height': layer.height
         });
         layer.x = minMousePos.x;
         layer.y = minMousePos.y;
-        layer.width = canvas.width;
-        layer.height = canvas.height;
         
         ctx.putImageData(relevantData, 0, 0);
         
-        minMousePos = { 'x': 999999, 'y': 999999 }; maxMousePos = { 'x': -1, 'y': -1 };
-        
-        points = [];
         if(settings.transition){
             setTimeout(function(layer){
                 $(layer[0]).css('transition', transitionContent);
