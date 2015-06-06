@@ -36,12 +36,6 @@
 
 // check if browser supports css blendings: var supportsMixBlendMode = window.getComputedStyle(document.body).mixBlendMode; (!undefined)
 
-if(!$.cookie('brushSize')){
-    $.cookie('brushSize', 10);
-}
-// console.log(parseInt($.cookie('brushSize')));
-
-
 // TODO: remove this part
 $('li > .fa').parent().addClass('disabled');
 $('[data-action], .tool, .menu-open').removeClass('disabled');
@@ -228,7 +222,3 @@ $(document).on({
         }
     }
 });
-
-
-
-debug = false;
