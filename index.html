@@ -120,7 +120,10 @@
                                 <option value="luminosity">luminosity</option>
                             </select>
                         </li>
-                        <li data-customSubmenu="brush" class="customSubmenu ionSlider" title="Mărime pensulă">
+                        <li data-customSubmenu="select" class="customSubmenu isButton deleteLayer" title="Delete selected layer(s)">
+                            <button class="btn btn-danger"><i class="fa fa-trash fa-fw"></i></button>
+                        </li>
+                        <li data-customSubmenu="brush eraser" class="customSubmenu ionSlider" title="Mărime pensulă">
                             <input type="text" id="brushSizeSlider">
                         </li>
                         <li data-customSubmenu="textTool" class="customSubmenu disabled" id="textSize" title="Mărime text">
@@ -165,7 +168,7 @@
                         <li class="menu-open" data-menu="open" title="Incarcă imaginea (O)">
                             <i class="fa fa-folder-o fa-fw hasSubmenu"><i class="fa fa-caret-right fa-rotate-45"></i></i>
                         </li>
-                        <li id="eraser" title="Radiera (E)"><i class="fa fa-eraser fa-fw"></i></li>
+                        <li class="tool" title="Radiera (E)" data-action="eraser"><i class="fa fa-eraser fa-fw"></i></li>
                         <li class="tool" title="Pensula (B)" data-action="brush"><i class="fa fa-paint-brush fa-fw"></i></li>
                         <li id="text" title="Insereaza text (T)">
                             <i class="fa fa-font fa-fw"></i>
@@ -208,27 +211,6 @@
         </div>
     </div>
     <!-- /#wrapper -->
-    <div style="display: none;" class="modal fade" id="loadfromdb" tabindex="-1" role="dialog" aria-labelledby="modal" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                    <h4 class="modal-title" id="myModalLabel">Incarca imaginea din baza de date</h4>
-                </div>
-                <div class="modal-body">
-                    <table id="allcanvases" class="table table-striped table-bordered table-hover">
-                        <tr>
-                            <th>Nume</th>
-                            <th></th>
-                        </tr>
-                    </table>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Anuleaza</button>
-                </div>
-            </div>
-        </div>
-    </div>
     
     <div class="modal fade" id="myModal" role="dialog" aria-labelledby="modal" aria-hidden="false">
         <div class="modal-dialog">
@@ -274,13 +256,14 @@
             <input id="oldInput" type="file" class="hidden" multiple>
             
             <hr class="divider">
-            <button id="dbload" class="btn btn-default" data-toggle="modal" data-target="#loadfromdb">Incarca din baza de date</button>
+            <button id="dbload" class="btn btn-default">Incarca din baza de date</button>
         </div>
     </div>
 </div>
 
 
 <script src="js/jquery.min.js"></script>
+<script src="js/matrix.js"></script>
 <script src="js/keypress.js"></script>
 <script src="js/select2.js"></script>
 <script src="js/bootstrap.min.js"></script>
