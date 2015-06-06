@@ -8,7 +8,7 @@
     width:10px;
     height:10px;
     position:absolute;
-    @include transform(translate(-50%, -50%));
+    /*@include transform(translate(-50%, -50%));*/
     pointer-events:none;
 }
 
@@ -139,6 +139,9 @@
     font-size: 20px;
     z-index: 1004;
     
+    >li {
+        vertical-align: top;
+    }
     > li,
     > li > ul > li{
         display: inline-block;
@@ -161,6 +164,20 @@
         min-width: 200px !important;
         height: 39px !important;
         border-radius: 3px !important;
+    }
+    .isButton{
+        background: rgba(0, 0, 0, 0);
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        
+        .btn{
+            height: 39px;
+
+            i{
+                font-size: 18px;
+            }
+        }
     }
 }
 
@@ -240,7 +257,8 @@
             position: absolute;
             top: 0;
             left: 0;
-            
+            transform-origin: 0px 0px 0px;
+
             &.canvasBottom{
                 z-index: 0;
             }
