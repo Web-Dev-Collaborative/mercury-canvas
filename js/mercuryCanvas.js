@@ -1,4 +1,4 @@
-// TODO: select tool without mouse drag si broken
+// TODO: select tool without mouse drag is broken (resolved, needs a test)
 // TODO: after resizing the layer, layerToColor can be very wrong
 // TODO: problems with opacity on undo
 // TODO: eye dropper doesn't care about blending modes
@@ -22,7 +22,7 @@
             // Store all previous masks
             masks: []
         };
-    settings = {};
+    var settings = {};
     var layers = {};
     var layersWrapper, background, temp, backgroundCtx, tempCtx, $temp, $background;
     var clickPressed, startPos, dragged, actioned, selectStart;
@@ -273,7 +273,7 @@
                 textAlign: {
                     footer: 'center'
                 },
-                text: newElem,
+                content: newElem,
                 ready: function(){
                     $.MercuryModal.defaults.ready();
 
@@ -476,7 +476,8 @@
         // console.log(layers);
         return layers;
     }
-
+    var mousemoved = false;
+    
     $(document).on({
         'keydown': function(e){
             if(!e.key) e.key = window.keypress._keycode_dictionary[e.keyCode];
@@ -501,6 +502,7 @@
         },
         'mousedown': function(event){
             mouse.document = true;
+            mousemoved = false;
             if(!$('.mercuryModal').length){
                 ClosePopovers(event);
 
@@ -523,8 +525,8 @@
                                 break;
                             case 'select':
                                 if(event.which == 1){
+                                    actioned = true;
                                     if(!selectedLayer){
-                                        actioned = true;
                                         ClearLayer('canvasTemp');
                                         var _layer = PositionToLayer(pos);
                                         if(_layer){
@@ -768,6 +770,7 @@
                         tempCtx.restore();
                         break;
                 }
+                mousemoved = true;
             }
         },
         'mouseup': function(event){
@@ -791,7 +794,7 @@
                             if(actioned){
                                 CheckCursorCanvas(pos, true);
 
-                                if(selectedLayer){
+                                if(selectedLayer && mousemoved){
                                     var transform = $(selectedLayer[0]).css('transform');
                                     transform = transform.slice(7, -1).split(', ');
                                     selectedLayer.x = parseFloat(transform[4]);
@@ -1219,11 +1222,9 @@
                     break;
                 case 'newDoc':
                     MercuryModal({
-                        text: '<h2>Are you sure?</h2>This action cannot be undone',
-                        show: {
-                            header: false
-                        },
+                        title: 'Are you sure?<br>This action cannot be undone',
                         textAlign: {
+                            header: 'center',
                             middle: 'center',
                             footer: 'center'
                         },
@@ -1293,6 +1294,7 @@
             }
         }
     }
+    
     // TODO: Try to change this function's name. Now it's too general.
     function DrawTemp(mouse, type){
         if(type == 'brush'){
