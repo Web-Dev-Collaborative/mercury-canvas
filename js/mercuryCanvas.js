@@ -482,10 +482,16 @@
         'keydown': function(e){
             if(!e.key) e.key = window.keypress._keycode_dictionary[e.keyCode];
             e.key = e.key.toLowerCase();
+            if(mousemoved && (e.ctrlKey != keys.ctrl || e.altKey != keys.atl || e.shiftKey != keys.shift)){
+                var mm = true;
+            }
             keys[e.key] = true;
             keys.ctrl = e.ctrlKey;
             keys.atl = e.altKey;
             keys.shift = e.shiftKey;
+            if(mm){
+                $(document).trigger('mousemove');
+            }
         },
         'keyup': function(e){
             if(!e.key) e.key = window.keypress._keycode_dictionary[e.keyCode];
@@ -498,6 +504,9 @@
             if(keys.ctrl && e.key == 'o' && !keys.shift && !keys.alt){
                 $('#oldInput').click();
                 console.log('fuck firefox', $('#oldInput'));
+            }
+            if(mousemoved){
+                $(document).trigger('mousemove');
             }
         },
         'mousedown': function(event){
@@ -551,9 +560,14 @@
                     ClearLayer('canvasTemp');
                     return;
                 }
-
-                var pos = CalculateCoords(event.pageX, event.pageY);
-                mousePos = pos;
+                var pos;
+                if(!event.originalEvent){
+                    pos = mousePos;
+                }
+                else{
+                    pos = CalculateCoords(event.pageX, event.pageY);
+                    mousePos = pos;
+                }
                 
                 switch(settings.tool){
                     case 'brush':
@@ -575,7 +589,7 @@
                             if(mouse.canvas.indexOf(1) == -1){
                                 CheckCursorCanvas(pos, true);
                             }
-                            else {
+                            else if(actioned) {
                                 var newWidth, newHeight, newX, newY;
                                 newWidth = selectedLayer.width;
                                 newHeight = selectedLayer.height;
