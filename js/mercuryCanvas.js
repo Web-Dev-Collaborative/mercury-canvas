@@ -195,8 +195,22 @@
         
         init();
     }
-
+    
+    var requestAnimationFrame;
+    
     function init(){
+        var stats = new Stats();
+        stats.setMode(1); // 0: fps, 1: ms, 2: mb
+
+        stats.domElement.style.position = 'absolute';
+        stats.domElement.style.right = '0px';
+        stats.domElement.style.top = '0px';
+
+        document.body.appendChild( stats.domElement );
+        
+        requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame || setTimeout;
+        requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});
+        
         cursor = $('#cursor');
         boardWrapper = $('#boardWrapper');
         boardWrapper.attr('unselectable', 'on').css('user-select', 'none').on('selectstart', false).on('onselectstart', false);
@@ -375,19 +389,23 @@
 
         $blendingModes = $('#blendingModes');
 
-        $('body').on('click', '.chooseFiles', function(){
+        $(document).on('click', '.chooseFiles', function(){
             $('#oldInput').click();
         });
-        $('body').on('change', '#oldInput', function(e){
+        $(document).on('change', '#oldInput', function(e){
             HandleFiles(e);
             $(this).empty();
         });
-        $('body').on('click', '.deleteLayer', function(){
+        $(document).on('click', '#saveoffline', function(){
+            var dt = temp.toDataURL('image/png');
+            this.href = dt.replace(/^data:image\/[^;]/, 'data:application/octet-stream');
+        })
+        $(document).on('click', '.deleteLayer', function(){
             if(!$(this).hasClass('disabled')){
                 Tool('delete'); 
             }
         });
-
+        tempCtx.translate(-0.5, -0.5);
         ClearLayer('canvasTemp');
         refreshSettings();
         ready = true;
@@ -477,6 +495,8 @@
         return layers;
     }
     var mousemoved = false;
+    var virtualCanvas = $('<canvas>');
+    var cleared = false;
     
     $(document).on({
         'keydown': function(e){
@@ -490,7 +510,7 @@
             keys.atl = e.altKey;
             keys.shift = e.shiftKey;
             if(mm){
-                $(document).trigger('mousemove');
+                $(document).trigger('mousemove', {custom: true});
             }
         },
         'keyup': function(e){
@@ -506,13 +526,14 @@
                 console.log('fuck firefox', $('#oldInput'));
             }
             if(mousemoved){
-                $(document).trigger('mousemove');
+                $(document).trigger('mousemove', {custom: true});
             }
         },
         'mousedown': function(event){
             mouse.document = true;
             mousemoved = false;
             if(!$('.mercuryModal').length){
+                cleared = false;
                 ClosePopovers(event);
 
                 if($(background).offset()){
@@ -524,12 +545,12 @@
                             case 'brush':
                             case 'eraser':
                                 if(event.which == 1){
-                                        startPos = pos;
-                                        points = [];
-                                        points[0] = pos;
-                                        setLimitPoints(event);
-                                        
-                                        DrawTemp(pos, settings.tool);
+                                    startPos = pos;
+                                    points = [];
+                                    points[0] = pos;
+                                    setLimitPoints(event);
+
+                                    DrawTemp(pos, settings.tool);
                                 }
                                 break;
                             case 'select':
@@ -554,241 +575,247 @@
                 }
             }
         },
-        'mousemove': function(event){
-            if(!$('.mercuryModal').length){
-                if(!isOnCanvas(event) && !selectedLayer && !mouse.document && ready){
-                    ClearLayer('canvasTemp');
-                    return;
-                }
-                var pos;
-                if(!event.originalEvent){
-                    pos = mousePos;
-                }
-                else{
-                    pos = CalculateCoords(event.pageX, event.pageY);
-                    mousePos = pos;
-                }
-                
-                switch(settings.tool){
-                    case 'brush':
-                    case 'eraser':
-                        MoveVirtualCursor(pos);
-                        if (mouse.canvas.length && mouse.canvas.indexOf(1) != -1) {
-                            dragged = true;
-                            points[points.length] = pos;
-                            setLimitPoints(event);
+        'mousemove': function(event, custom){
+            requestAnimationFrame(function(){
+                if(!$('.mercuryModal').length){
+                    if(!custom && !isOnCanvas(event) && !selectedLayer && !mouse.document && ready){
+                        if(!cleared){
+                            ClearLayer('canvasTemp');
+                        }
+                        cleared = true;
+                        return;
+                    }
+                    var pos;
+                    if(custom){
+                        pos = mousePos;
+                    }
+                    else{
+                        pos = CalculateCoords(event.pageX, event.pageY);
+                        mousePos = pos;
+                    }
 
-                            DrawTemp(pos, settings.tool);
-                        }
-                        break;
-                    case 'select':
-                        if(!selectedLayer){
-                            OutLineLayer(pos);
-                        }
-                        else{
-                            if(mouse.canvas.indexOf(1) == -1){
-                                CheckCursorCanvas(pos, true);
+                    switch(settings.tool){
+                        case 'brush':
+                        case 'eraser':
+                            MoveVirtualCursor(pos);
+                            if (mouse.canvas.length && mouse.canvas.indexOf(1) != -1) {
+                                dragged = true;
+                                points[points.length] = pos;
+                                setLimitPoints(event);
+
+                                DrawTemp(pos, settings.tool);
                             }
-                            else if(actioned) {
-                                var newWidth, newHeight, newX, newY;
-                                newWidth = selectedLayer.width;
-                                newHeight = selectedLayer.height;
-                                newX = selectedLayer.x;
-                                newY = selectedLayer.y;
-
-                                if($temp.css('cursor') == 'default'){
-                                    CheckCursorCanvas(pos, false);
+                            break;
+                        case 'select':
+                            if(!selectedLayer){
+                                OutLineLayer(pos);
+                            }
+                            else{
+                                if(mouse.canvas.indexOf(1) == -1){
+                                    CheckCursorCanvas(pos, true);
                                 }
-                                if(!action){
-                                    $temp.css('cursor', 'move');
-                                    action = 'move';
-                                }
+                                else if(actioned) {
+                                    var newWidth, newHeight, newX, newY;
+                                    newWidth = selectedLayer.width;
+                                    newHeight = selectedLayer.height;
+                                    newX = selectedLayer.x;
+                                    newY = selectedLayer.y;
 
-                                if(!dist.x || !dist.y){
-                                    dist.x = pos.x - selectedLayer.x;
-                                    dist.y = pos.y - selectedLayer.y;
-                                }
-                                if(!original.width || !original.height){
-                                    original.width = selectedLayer.width;
-                                    original.height = selectedLayer.height;
-                                    original.x = selectedLayer.x;
-                                    original.y = selectedLayer.y;
-                                }
-                                if(action && action.length){
-                                    switch (action){
-                                        case 'move':
-                                            newX = pos.x - dist.x;
-                                            newY = pos.y - dist.y;
+                                    if($temp.css('cursor') == 'default'){
+                                        CheckCursorCanvas(pos, false);
+                                    }
+                                    if(!action){
+                                        $temp.css('cursor', 'move');
+                                        action = 'move';
+                                    }
 
-                                            if(keys.shift){
-                                                var deltaX, deltaY;
-                                                deltaX = Math.abs(pos.x - dist.x - original.x);
-                                                deltaY = Math.abs(pos.y - dist.y - original.y);
+                                    if(!dist.x || !dist.y){
+                                        dist.x = pos.x - selectedLayer.x;
+                                        dist.y = pos.y - selectedLayer.y;
+                                    }
+                                    if(!original.width || !original.height){
+                                        original.width = selectedLayer.width;
+                                        original.height = selectedLayer.height;
+                                        original.x = selectedLayer.x;
+                                        original.y = selectedLayer.y;
+                                    }
+                                    if(action && action.length){
+                                        switch (action){
+                                            case 'move':
+                                                newX = pos.x - dist.x;
+                                                newY = pos.y - dist.y;
 
-                                                if(deltaX > 20 || deltaY > 20){
-                                                    if(deltaX > deltaY){
-                                                        newY = original.y;
+                                                if(keys.shift){
+                                                    var deltaX, deltaY;
+                                                    deltaX = Math.abs(pos.x - dist.x - original.x);
+                                                    deltaY = Math.abs(pos.y - dist.y - original.y);
+
+                                                    if(deltaX > 20 || deltaY > 20){
+                                                        if(deltaX > deltaY){
+                                                            newY = original.y;
+                                                        }
+                                                        else{
+                                                            newX = original.x;
+                                                        }
                                                     }
                                                     else{
                                                         newX = original.x;
+                                                        newY = original.y;
                                                     }
                                                 }
-                                                else{
-                                                    newX = original.x;
-                                                    newY = original.y;
-                                                }
-                                            }
-                                            break;
-                                        case 'nw':
-                                            newWidth = selectedLayer.width + (selectedLayer.x - pos.x);
-                                            newHeight = selectedLayer.height + (selectedLayer.y - pos.y);
-                                            newX = pos.x;
-                                            newY = pos.y;
-                                            if(keys.shift){
-                                                wProp = newWidth / original.width;
-                                                hProp = newHeight / original.height;
-                                                newHeight = original.height * (wProp + hProp) / 2;
-                                                newWidth = original.width * (wProp + hProp) / 2;
+                                                break;
+                                            case 'nw':
+                                                newWidth = selectedLayer.width + (selectedLayer.x - pos.x);
+                                                newHeight = selectedLayer.height + (selectedLayer.y - pos.y);
+                                                newX = pos.x;
+                                                newY = pos.y;
+                                                if(keys.shift){
+                                                    wProp = newWidth / original.width;
+                                                    hProp = newHeight / original.height;
+                                                    newHeight = original.height * (wProp + hProp) / 2;
+                                                    newWidth = original.width * (wProp + hProp) / 2;
 
-                                                newX = Math.min(selectedLayer.x + selectedLayer.width - newWidth, selectedLayer.x + selectedLayer.width);
-                                                newY = Math.min(selectedLayer.y + selectedLayer.height - newHeight, selectedLayer.y + selectedLayer.height);
-                                            }
-                                            if(keys.alt){
+                                                    newX = Math.min(selectedLayer.x + selectedLayer.width - newWidth, selectedLayer.x + selectedLayer.width);
+                                                    newY = Math.min(selectedLayer.y + selectedLayer.height - newHeight, selectedLayer.y + selectedLayer.height);
+                                                }
+                                                if(keys.alt){
+                                                    newX = Math.min(newX, selectedLayer.x + selectedLayer.width);
+                                                    newY = Math.min(newY, selectedLayer.y + selectedLayer.height);
+                                                    newWidth = newWidth - Math.sign(newX - selectedLayer.x) * Math.abs(selectedLayer.width - newWidth);
+                                                    newHeight = newHeight - Math.sign(newY - selectedLayer.y) * Math.abs(selectedLayer.height - newHeight);
+                                                }
                                                 newX = Math.min(newX, selectedLayer.x + selectedLayer.width);
                                                 newY = Math.min(newY, selectedLayer.y + selectedLayer.height);
-                                                newWidth = newWidth - Math.sign(newX - selectedLayer.x) * Math.abs(selectedLayer.width - newWidth);
-                                                newHeight = newHeight - Math.sign(newY - selectedLayer.y) * Math.abs(selectedLayer.height - newHeight);
-                                            }
-                                            newX = Math.min(newX, selectedLayer.x + selectedLayer.width);
-                                            newY = Math.min(newY, selectedLayer.y + selectedLayer.height);
-                                            break;
-                                        case 'ne':
-                                            newWidth = selectedLayer.width + (pos.x - (selectedLayer.x + selectedLayer.width));
-                                            newHeight = selectedLayer.height - (pos.y - selectedLayer.y);
-                                            if(keys.shift){
-                                                wProp = newWidth / original.width;
-                                                hProp = newHeight / original.height;
-                                                newHeight = original.height * (wProp + hProp) / 2;
-                                                newWidth = original.width * (wProp + hProp) / 2;
+                                                break;
+                                            case 'ne':
+                                                newWidth = selectedLayer.width + (pos.x - (selectedLayer.x + selectedLayer.width));
+                                                newHeight = selectedLayer.height - (pos.y - selectedLayer.y);
+                                                if(keys.shift){
+                                                    wProp = newWidth / original.width;
+                                                    hProp = newHeight / original.height;
+                                                    newHeight = original.height * (wProp + hProp) / 2;
+                                                    newWidth = original.width * (wProp + hProp) / 2;
 
-                                                newY = Math.min(selectedLayer.y + selectedLayer.height - newHeight, selectedLayer.y + selectedLayer.height);
-                                            }
-                                            else{
-                                                newY = Math.min(pos.y, selectedLayer.y + selectedLayer.height); 
-                                            }
-                                            newX = selectedLayer.x;
-                                            break;
-                                        case 'se':
-                                            newWidth = selectedLayer.width + (pos.x - selectedLayer.x - selectedLayer.width);
-                                            newHeight = selectedLayer.height + (pos.y - selectedLayer.y - selectedLayer.height);
-                                            if(keys.shift){
-                                                wProp = newWidth / original.width;
-                                                hProp = newHeight / original.height;
-                                                newHeight = original.height * (wProp + hProp) / 2;
-                                                newWidth = original.width * (wProp + hProp) / 2;
-                                            }
-                                            newX = selectedLayer.x;
-                                            newY = selectedLayer.y;
-                                            break;
-                                        case 'sw':
-                                            newWidth = selectedLayer.width + (selectedLayer.x - pos.x);
-                                            newHeight = selectedLayer.height + (pos.y - selectedLayer.y - selectedLayer.height);
-                                            if(keys.shift){
-                                                wProp = newWidth / original.width;
-                                                hProp = newHeight / original.height;
-                                                newHeight = original.height * (wProp + hProp) / 2;
-                                                newWidth = original.width * (wProp + hProp) / 2;
+                                                    newY = Math.min(selectedLayer.y + selectedLayer.height - newHeight, selectedLayer.y + selectedLayer.height);
+                                                }
+                                                else{
+                                                    newY = Math.min(pos.y, selectedLayer.y + selectedLayer.height); 
+                                                }
+                                                newX = selectedLayer.x;
+                                                break;
+                                            case 'se':
+                                                newWidth = selectedLayer.width + (pos.x - selectedLayer.x - selectedLayer.width);
+                                                newHeight = selectedLayer.height + (pos.y - selectedLayer.y - selectedLayer.height);
+                                                if(keys.shift){
+                                                    wProp = newWidth / original.width;
+                                                    hProp = newHeight / original.height;
+                                                    newHeight = original.height * (wProp + hProp) / 2;
+                                                    newWidth = original.width * (wProp + hProp) / 2;
+                                                }
+                                                newX = selectedLayer.x;
+                                                newY = selectedLayer.y;
+                                                break;
+                                            case 'sw':
+                                                newWidth = selectedLayer.width + (selectedLayer.x - pos.x);
+                                                newHeight = selectedLayer.height + (pos.y - selectedLayer.y - selectedLayer.height);
+                                                if(keys.shift){
+                                                    wProp = newWidth / original.width;
+                                                    hProp = newHeight / original.height;
+                                                    newHeight = original.height * (wProp + hProp) / 2;
+                                                    newWidth = original.width * (wProp + hProp) / 2;
 
-                                                newX = Math.min(selectedLayer.x + selectedLayer.width - newWidth, selectedLayer.x + selectedLayer.width);
-                                            }
-                                            else {
+                                                    newX = Math.min(selectedLayer.x + selectedLayer.width - newWidth, selectedLayer.x + selectedLayer.width);
+                                                }
+                                                else {
+                                                    newX = Math.min(pos.x, selectedLayer.x + selectedLayer.width);
+                                                }
+                                                newY = selectedLayer.y;
+                                                break;
+                                            case 'n':
+                                                newWidth = selectedLayer.width;
+                                                newHeight = selectedLayer.height + (selectedLayer.y - pos.y);
+                                                newX = selectedLayer.x;
+                                                newY = Math.min(pos.y, selectedLayer.y + selectedLayer.height);
+                                                break;
+                                            case 'w':
+                                                newWidth = selectedLayer.width + (selectedLayer.x - pos.x);
+                                                newHeight = selectedLayer.height;
                                                 newX = Math.min(pos.x, selectedLayer.x + selectedLayer.width);
-                                            }
-                                            newY = selectedLayer.y;
-                                            break;
-                                        case 'n':
-                                            newWidth = selectedLayer.width;
-                                            newHeight = selectedLayer.height + (selectedLayer.y - pos.y);
-                                            newX = selectedLayer.x;
-                                            newY = Math.min(pos.y, selectedLayer.y + selectedLayer.height);
-                                            break;
-                                        case 'w':
-                                            newWidth = selectedLayer.width + (selectedLayer.x - pos.x);
-                                            newHeight = selectedLayer.height;
-                                            newX = Math.min(pos.x, selectedLayer.x + selectedLayer.width);
-                                            newY = selectedLayer.y;
-                                            break;
-                                        case 's':
-                                            newWidth = selectedLayer.width;
-                                            newHeight = selectedLayer.height + (pos.y - selectedLayer.y - selectedLayer.height);
-                                            newX = selectedLayer.x;
-                                            newY = selectedLayer.y;
-                                            break;
-                                        case 'e':
-                                            newWidth = selectedLayer.width + (pos.x - (selectedLayer.x + selectedLayer.width));
-                                            newHeight = selectedLayer.height;
-                                            newX = selectedLayer.x;
-                                            newY = selectedLayer.y;
-                                            break;
-                                        default:
-                                            console.log(action + " for select");
-                                            break;
+                                                newY = selectedLayer.y;
+                                                break;
+                                            case 's':
+                                                newWidth = selectedLayer.width;
+                                                newHeight = selectedLayer.height + (pos.y - selectedLayer.y - selectedLayer.height);
+                                                newX = selectedLayer.x;
+                                                newY = selectedLayer.y;
+                                                break;
+                                            case 'e':
+                                                newWidth = selectedLayer.width + (pos.x - (selectedLayer.x + selectedLayer.width));
+                                                newHeight = selectedLayer.height;
+                                                newX = selectedLayer.x;
+                                                newY = selectedLayer.y;
+                                                break;
+                                            default:
+                                                console.log(action + " for select");
+                                                break;
+                                        }
+
+                                        actioned = true;
                                     }
 
-                                    actioned = true;
-                                }
-
-                                if(newWidth != selectedLayer.width || newHeight != selectedLayer.height || newX != selectedLayer.x || newY != selectedLayer.y){
-                                    TransformLayer(selectedLayer, {
-                                        x: newX,
-                                        y: newY,
-                                        width: newWidth,
-                                        height: newHeight
-                                    });
-                                    SelectLayer(selectedLayer);
+                                    if(newWidth != selectedLayer.width || newHeight != selectedLayer.height || newX != selectedLayer.x || newY != selectedLayer.y){
+                                        TransformLayer(selectedLayer, {
+                                            x: newX,
+                                            y: newY,
+                                            width: newWidth,
+                                            height: newHeight
+                                        });
+                                        SelectLayer(selectedLayer);
+                                    }
                                 }
                             }
-                        }
-                        break;
-                    case 'eyeDropper':
-                        var colors = PositionToColor(pos);
-                        var color;
-                        for (var i = 0; i < colors.length; i++) {
-                            if (colors[i].a > 0) {
-                                if(color){
-                                    if(colors[i].css('z-index') > color.css('z-index')){
+                            break;
+                        case 'eyeDropper':
+                            var colors = PositionToColor(pos);
+                            var color;
+                            for (var i = 0; i < colors.length; i++) {
+                                if (colors[i].a > 0) {
+                                    if(color){
+                                        if(colors[i].css('z-index') > color.css('z-index')){
+                                            color = colors[i];
+                                        }
+                                    }
+                                    else{
                                         color = colors[i];
                                     }
                                 }
-                                else{
-                                    color = colors[i];
+                            }
+                            if(!color){
+                                color = {
+                                    r: 0,
+                                    g: 0,
+                                    b: 0,
+                                    a: 0,
                                 }
                             }
-                        }
-                        if(!color){
-                            color = {
-                                r: 0,
-                                g: 0,
-                                b: 0,
-                                a: 0,
-                            }
-                        }
-                        ClearLayer('canvasTemp');
+                            ClearLayer('canvasTemp');
 
-                        tempCtx.save();
-                        tempCtx.fillStyle = (color.a > 0 ? 'rgba('+ color.r + ', ' + color.g + ', ' + color.b + ', ' + color.a +')' : settings.backgroundColor);
-                        tempCtx.strokeStyle = '#000';
-                        tempCtx.lineWidth = '1';
-                        tempCtx.strokeRect(pos.x + 3, pos.y - 53, 100, 50);
-                        tempCtx.fillRect(pos.x + 3, pos.y - 53, 100, 50);
-                        tempCtx.restore();
-                        break;
+                            tempCtx.save();
+                            tempCtx.fillStyle = (color.a > 0 ? 'rgba('+ color.r + ', ' + color.g + ', ' + color.b + ', ' + color.a +')' : settings.backgroundColor);
+                            tempCtx.strokeStyle = '#000';
+                            tempCtx.lineWidth = '1';
+                            tempCtx.strokeRect(pos.x + 3, pos.y - 53, 100, 50);
+                            tempCtx.fillRect(pos.x + 3, pos.y - 53, 100, 50);
+                            tempCtx.restore();
+                            break;
+                    }
+                    mousemoved = true;
                 }
-                mousemoved = true;
-            }
+            }, event);
         },
         'mouseup': function(event){
             if(!$('.mercuryModal').length){
+                cleared = false;
                 var pos = CalculateCoords(event.pageX, event.pageY);
 
                 switch(settings.tool){
@@ -817,12 +844,14 @@
                                     selectedLayer.height = original.height * parseFloat(transform[3]);
                                     var matrix = new Matrix();
                                     matrix.translate(selectedLayer.x, selectedLayer.y);
-                                    $(selectedLayer[0]).css({
+                                    selectedLayer.css({
                                         'transform': matrix.toCSS(),
                                         '-webkit-transform': matrix.toCSS(),
                                         width: selectedLayer.width,
                                         height: selectedLayer.height
                                     });
+                                    
+                                    ScaleCanvas(selectedLayer, selectedLayer, (selectStart ? selectStart : original), $('#scaling-mode').prop('checked'));
 
                                     SelectLayer(selectedLayer);
                                     dist.x = dist.y = 0;
@@ -866,6 +895,23 @@
         }
     });
 
+    function ScaleCanvas(layer, end, start, pixelPerfect){
+        var selectedContext = layer[0].getContext('2d');
+        var imageData = selectedContext.getImageData(0, 0, start.width, start.height);
+
+        virtualCanvas.attr('width', start.width).attr('height', start.height);
+        virtualCanvas[0].getContext('2d').putImageData(imageData, 0, 0);
+        layer.attr('width', end.width).attr('height', end.height);
+
+        if(pixelPerfect){
+            selectedContext.imageSmoothingEnabled = false;
+            selectedContext.webkitImageSmoothingEnabled = false;
+            selectedContext.mozImageSmoothingEnabled = false;
+        }
+        selectedContext.scale(end.width / start.width, end.height / start.height);
+        selectedContext.drawImage(virtualCanvas[0], 0, 0);
+    }
+    
     function isOnCanvas(event){
         // new way, let the browser decide what was clicked
         if(!background) return false;
@@ -897,7 +943,7 @@
                 tempCtx.save();
                 tempCtx.strokeStyle="#000000";
                 tempCtx.lineWidth = 1;
-                tempCtx.strokeRect(_layer.x - 0.5, _layer.y - 0.5, _layer.width + 1, _layer.height + 1);
+                tempCtx.strokeRect(_layer.x, _layer.y, _layer.width + 1, _layer.height + 1);
                 tempCtx.restore();
             }
         }
@@ -927,10 +973,10 @@
             tempCtx.fillStyle = 'rgba(255, 255, 255, 0.1)';
             
             var _x, _y, _width, _height;
-            _x = _layer.x - 0.5;
-            _y = _layer.y - 0.5;
-            _width = _layer.width + 1;
-            _height = _layer.height + 1;
+            _x = Math.round(_layer.x);// - 0.5;
+            _y = Math.round(_layer.y);// - 0.5;
+            _width = Math.round(_layer.width + 1);
+            _height = Math.round(_layer.height + 1);
 
             // handlers
             tempCtx.fillRect(_x + _width - settings.handlerSize / 2, _y - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
@@ -1003,21 +1049,26 @@
         is_exclusive    : true,
         prevent_repeat  : true,
         on_keyup: function(e){
-            e.preventDefault();
+//            e.preventDefault();
             if(!e.key) e.key = window.keypress._keycode_dictionary[e.keyCode];
             var shortcutAction = shortcuts[(e.ctrlKey ? 'ctrl ' : '') + (e.altKey ? 'alt ' : '') + (e.shiftKey ? 'shift ' : '') + e.key.toLowerCase()];
             if(typeof shortcutAction == 'function'){
                 shortcutAction();
             }
+            else if(shortcutAction == 'none' || !shortcutAction) {
+                e.preventDefault();
+                return true;
+            }
             else{
                 Tool(shortcutAction);
             }
-            if(shortcutAction == 'none') {
-                return true;
-            }
         },
         on_keydown: function(e){
-            e.preventDefault();
+            if(!e.key) e.key = window.keypress._keycode_dictionary[e.keyCode];
+            var shortcutAction = shortcuts[(e.ctrlKey ? 'ctrl ' : '') + (e.altKey ? 'alt ' : '') + (e.shiftKey ? 'shift ' : '') + e.key.toLowerCase()];
+            if(shortcutAction){
+                e.preventDefault();
+            }
         }
     };
     
@@ -1190,13 +1241,16 @@
                 return;
             }
             if(actions.indexOf(tool) == -1){
+                if(tool == 'select'){
+                    OutLineLayer(mousePos);
+                }
                 if(tool == settings.tool) return;
 
                 if(tool != 'brush' && tool != 'eraser'){
                     cursor.hide();
                     $temp.css('cursor', 'default');
                 }
-
+                ClosePopovers(null);
                 OpenTopMenu(tool);
             }
             switch (tool){
@@ -1270,6 +1324,7 @@
                     brushSizeSlider.update({
                         from: settings.lineWidth
                     });
+                    $(document).trigger('mousemove', {custom: true});
                     break;
                 case 'brushSize+':
                     settings.lineWidth += settings.brushSizeIncrement;
@@ -1279,6 +1334,7 @@
                     brushSizeSlider.update({
                         from: settings.lineWidth
                     });
+                    $(document).trigger('mousemove', {custom: true});
                     break;
                 case 'deselect':
                     DeselectLayer();
@@ -1314,24 +1370,26 @@
         if(type == 'brush'){
             tempCtx.lineWidth = settings.lineWidth;
             tempCtx.strokeStyle = settings.strokeColor;
+            tempCtx.fillStyle = settings.strokeColor;
         }
         else{
             tempCtx.lineWidth = settings.backgroundColor;
             tempCtx.strokeStyle = settings.backgroundColor;
+            tempCtx.fillStyle = settings.backgroundColor;
         }
         tempCtx.lineCap = tempCtx.lineJoin = 'round';
         
         if (points.length < 3) {
             var b = points[0];
             tempCtx.beginPath();
-            tempCtx.arc(b.x, b.y, tempCtx.lineWidth / 2, 0, Math.PI * 2, !0);
+            tempCtx.arc(b.x, b.y, tempCtx.lineWidth / 2, 0, Math.PI * 2, false);
             tempCtx.fill();
             tempCtx.closePath();
             
             return;
         }
         
-        tempCtx.clearRect(0, 0, tempCtx.width, tempCtx.height);
+        tempCtx.clearRect(minMousePos.x, minMousePos.y, maxMousePos.x - minMousePos.x, maxMousePos.y - minMousePos.y);
         
         tempCtx.beginPath();
         tempCtx.moveTo(points[0].x, points[0].y);
@@ -1421,6 +1479,7 @@
                             break;
                         case 'transform':
                             TransformLayer(undo[undoStep - 1].layer, undo[undoStep - 1].before);
+                            ScaleCanvas(undo[undoStep - 1].layer, undo[undoStep - 1].before, undo[undoStep - 1].after);
                             break;
                         case 'opacity':
                             selectedLayer = undo[undoStep - 1].layer;
@@ -1453,6 +1512,7 @@
                             break;
                         case 'transform':
                             TransformLayer(undo[undoStep].layer, undo[undoStep].after);
+                            ScaleCanvas(undo[undoStep].layer, undo[undoStep].after , undo[undoStep].before);
                             break;
                         case 'opacity':
                             selectedLayer = undo[undoStep].layer;
@@ -1511,7 +1571,12 @@
                 }
                 
                 DrawTempCanvas(newLayer);
-                ClearLayer('canvasTemp');
+                ClearLayer('canvasTemp', {
+                    x: minMousePos.x,
+                    y: minMousePos.y,
+                    width: maxMousePos.x - minMousePos.x,
+                    height: maxMousePos.y - minMousePos.y
+                });
 
                 AddToUndo({
                     action: 'draw',
@@ -1531,38 +1596,21 @@
                     x1: maxMousePos.x,
                     y1: maxMousePos.y
                 }
-                var tempLayers = [];
-                $.each(layers, function(index, value){
-                    if(LayerBetweenPoints(value, p)){
-                        tempLayers.push(value);
-                    }
-                });
-                console.log('On this layers we should erase something', tempLayers);
                 if (dragged) {
                     tempCtx.closePath();
                 }
-                ClearLayer('canvasTemp');
-                /*
-                var newLayer = AddLayer({
-                    x: Math.max(0, startPos.x),
-                    y: Math.max(0, startPos.y),
-                    width: $temp.width(),
-                    height: $temp.height()
-                });
+                var tempLayers = [];
+                var tWidth = p.x1 - p.x0;
+                var tHeight = p.y1 - p.y0;
                 
-                DrawTempCanvas(newLayer);
-                ClearLayer('canvasTemp');
-
-                AddToUndo({
-                    action: 'draw',
-                    layer: {
-                        0: newLayer[0],
-                        x: newLayer.x,
-                        y: newLayer.y,
-                        width: newLayer.width,
-                        height: newLayer.height
+                $.each(layers, function(index, layer){
+                    if(LayerBetweenPoints(layer, p)){
+                        var context = layer[0].getContext('2d');
+                        context.globalCompositeOperation = 'destination-out';
+                        context.drawImage(temp, -1 * layer.x, -1 * layer.y);
                     }
-                })*/
+                });
+                ClearLayer('canvasTemp');
             }
         }
 
@@ -1717,10 +1765,10 @@
     }
     
     function DrawTempCanvas(layer){
-        var relevantData = tempCtx.getImageData(minMousePos.x, minMousePos.y, maxMousePos.x - minMousePos.x, maxMousePos.y - minMousePos.y);
-
         layer.width = maxMousePos.x - minMousePos.x;
         layer.height = maxMousePos.y - minMousePos.y;
+        
+        var relevantData = tempCtx.getImageData(minMousePos.x, minMousePos.y, layer.width, layer.height);
         
         var ctx = layer[0].getContext('2d');
         
@@ -1735,7 +1783,7 @@
         });
         layer.x = minMousePos.x;
         layer.y = minMousePos.y;
-        
+        ctx.translate(-0.5, -0.5);
         ctx.putImageData(relevantData, 0, 0);
         
         if(settings.transition){
@@ -1757,16 +1805,21 @@
         delete layers[layer];
     }
     
-    function ClearLayer(layer){
+    function ClearLayer(layer, portion){
         if(!$temp[0]) setTimeout(function(){
-            ClearLayer(layer);
+            ClearLayer(layer, portion);
             // console.log('Plugin not ready, clear layer postponed by 10ms');
         }, 10);
         // console.log('Cleared layer '+ layer + ' called by: '+ (arguments.callee.caller.name ? (arguments.callee.caller.caller.name ? arguments.callee.caller.caller.name : arguments.callee.caller.name) : 'anonymous'));
         if (typeof layer == "number") {
             layer = 'canvas-' + layer;
         }
-        $('#' + layer)[0].getContext('2d').clearRect(0, 0, $('#' + layer).width(), $('#' + layer).height());
+        if(portion){
+            $('#' + layer)[0].getContext('2d').clearRect(portion.x, portion.y, portion.width, portion.height);
+        }
+        else{
+            $('#' + layer)[0].getContext('2d').clearRect(0, 0, $('#' + layer).width(), $('#' + layer).height());
+        }
     }
     
     function CalculateCoords(pageX, pageY) {
