@@ -899,9 +899,15 @@
         var selectedContext = layer[0].getContext('2d');
         var imageData = selectedContext.getImageData(0, 0, start.width, start.height);
 
-        virtualCanvas.attr('width', start.width).attr('height', start.height);
+        virtualCanvas.attr({
+            width: start.width,
+            height: start.height
+        });
         virtualCanvas[0].getContext('2d').putImageData(imageData, 0, 0);
-        layer.attr('width', end.width).attr('height', end.height);
+        layer.attr({
+            width: end.width,
+            height: end.height
+        });
 
         if(pixelPerfect){
             selectedContext.imageSmoothingEnabled = false;
@@ -1444,20 +1450,26 @@
                 original.height = $(_layer[0]).height();
                 var wipe = true;
             }
-            _transform.width = Math.max(0, _transform.width);
-            _transform.height = Math.max(0, _transform.height);
 
             var matrix = new Matrix();
-            matrix.translate(_transform.x, _transform.y)
-                  .scale(_transform.width / original.width, _transform.height / original.height);
+            matrix.translate(_transform.x, _transform.y);
+            if(!_transform.width && !_transform.height){
+                _transform.width = Math.max(0, _transform.width);
+                _transform.height = Math.max(0, _transform.height);
+                _layer.width = _transform.width;
+                _layer.height = _transform.height;
+                
+                matrix.scale(_transform.width / original.width, _transform.height / original.height);
+            }
+            else{
+                console.log('Transform received 0 or undefined width/height');
+            }
             $(_layer[0]).css({
                 'transform': matrix.toCSS(),
                 '-webkit-transform': matrix.toCSS()
             });
             _layer.x = _transform.x;
             _layer.y = _transform.y;
-            _layer.width = _transform.width;
-            _layer.height = _transform.height;
 
             if(wipe) {
                 original.width = original.height = 0;
@@ -1551,6 +1563,84 @@
             $('.tool[data-action="redo"]', boardWrapper).addClass('disabled');
         }
     }
+    
+    // modified from @remy version
+    function trim(layer) {
+        var ctx = layer[0].getContext('2d');
+        var pixels = ctx.getImageData(0, 0, layer.width, layer.height);
+        var bound = {
+            top: null,
+            left: null,
+            right: null,
+            bottom: null
+        };
+        var x, y;
+
+        for (var i = 0, l = pixels.data.length; i < l; i += 4) {
+            if (pixels.data[i+3] !== 0) {
+                x = (i / 4) % layer.width;
+                y = ~~((i / 4) / layer.width);
+
+                if (bound.top === null) {
+                    bound.top = y;
+                }
+
+                if (bound.left === null) {
+                    bound.left = x; 
+                } 
+                else if (x < bound.left) {
+                    bound.left = x;
+                }
+
+                if (bound.right === null) {
+                    bound.right = x; 
+                }
+                else if (bound.right < x) {
+                    bound.right = x;
+                }
+
+                if (bound.bottom === null) {
+                    bound.bottom = y;
+                } 
+                else if (bound.bottom < y) {
+                    bound.bottom = y;
+                }
+            }
+        }
+        bound.right ++;
+        bound.bottom ++;
+
+        var trimmed = ctx.getImageData(bound.left, bound.top, layer.width, layer.height);
+
+        layer.x += bound.left;
+        layer.y += bound.top;
+
+        TransformLayer(layer, {
+            x: layer.x,
+            y: layer.y,
+            width: layer.width,
+            height: layer.height
+        });
+        layer.height = bound.bottom - bound.top;
+        layer.width = bound.right - bound.left;
+
+        layer.css({
+            width: layer.width,
+            height: layer.height
+        }).attr({
+            width: layer.width,
+            height: layer.height
+        });
+
+        ctx.putImageData(trimmed, 0, 0);
+
+        layer.css('transition', transitionContent);
+        AddToUndo({
+            action: 'modify',
+            layer: layer
+        });
+    }
+
 
     function BrushMouseUp() {
         minMousePos.x = Math.max(0, minMousePos.x - tempCtx.lineWidth / 2 - 1);
@@ -1608,6 +1698,10 @@
                         var context = layer[0].getContext('2d');
                         context.globalCompositeOperation = 'destination-out';
                         context.drawImage(temp, -1 * layer.x, -1 * layer.y);
+                        
+                        layer.css('transition', 'none 0s');
+
+                        setTimeout(trim(layer), 1);
                     }
                 });
                 ClearLayer('canvasTemp');
@@ -1839,8 +1933,16 @@
         var height = layersWrapper.height();
         var width = layersWrapper.width();
         if(height != $temp.height() || width != $temp.width()){
-            $background.attr('height', height).attr('width', width).attr('style', 'width: '+ width +'px; height: '+ height +'px');
-            $temp.attr('height', height).attr('width', width).attr('style', 'width: '+ width +'px; height: '+ height +'px');
+            $background.attr({
+                width: width,
+                height: height,
+                style: 'width: '+ width +'px; height: '+ height +'px'
+            });
+            $temp.attr({
+                width: width,
+                height: height,
+                style: 'width: '+ width +'px; height: '+ height +'px'
+            });
 
             settings.width = width;
             settings.height = height;
