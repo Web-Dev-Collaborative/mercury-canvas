@@ -1,5 +1,5 @@
 // TODO: select tool without mouse drag is broken (resolved, needs a test)
-// TODO: after resizing the layer, layerToColor can be very wrong
+// TODO: after resizing the layer, layerToColor can be very wrong (resolved, needs a test)
 // TODO: problems with opacity on undo
 // TODO: eye dropper doesn't care about blending modes
 
@@ -1452,17 +1452,16 @@
             }
 
             var matrix = new Matrix();
-            matrix.translate(_transform.x, _transform.y);
-            if(!_transform.width && !_transform.height){
+            matrix.translate(_transform.x, _transform.y).scale(1,1);
+            if(!_transform.width || !_transform.height){
+                console.log('Transform received 0 or undefined width/height');
+            }
+            else{
                 _transform.width = Math.max(0, _transform.width);
                 _transform.height = Math.max(0, _transform.height);
                 _layer.width = _transform.width;
                 _layer.height = _transform.height;
-                
                 matrix.scale(_transform.width / original.width, _transform.height / original.height);
-            }
-            else{
-                console.log('Transform received 0 or undefined width/height');
             }
             $(_layer[0]).css({
                 'transform': matrix.toCSS(),
