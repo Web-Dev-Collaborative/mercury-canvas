@@ -1,5 +1,13 @@
 @import "bourbon/bourbon";
 
+.tool-checkbox label{
+    margin-bottom: 0;
+    
+    input{
+        height: auto !important;
+    }
+}
+
 #cursor{
     border: 1px solid #000;
     box-shadow: 0 0 0px 2px #FFF;/*, inset 0 0 1px #fff;*/

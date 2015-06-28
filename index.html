@@ -123,6 +123,9 @@
                         <li data-customSubmenu="select" class="customSubmenu isButton deleteLayer" title="Delete selected layer(s)">
                             <button class="btn btn-danger"><i class="fa fa-trash fa-fw"></i></button>
                         </li>
+                        <li data-customSubmenu="select" class="customSubmenu tool-checkbox" title="Delete selected layer(s)">
+                            <label for="scaling-mode"><input id="scaling-mode" type="checkbox">Pixel-perfect</label>
+                        </li>
                         <li data-customSubmenu="brush eraser" class="customSubmenu ionSlider" title="Mărime pensulă">
                             <input type="text" id="brushSizeSlider">
                         </li>
@@ -165,6 +168,9 @@
                     <ul id="tools">
                         <li class="tool" title="Select (V)" data-action="select"><i class="fa-cursor"></i></li>
                         <li class="tool" title="Document nou (CTRL + N)" data-action="newDoc"><i class="fa fa-file fa-fw"></i></li>
+                        <li class="menu-open" data-menu="save" title="Salvează ca (S)">
+                            <i class="fa fa-floppy-o fa-fw hasSubmenu"><i class="fa fa-caret-right fa-rotate-45"></i></i>
+                        </li>
                         <li class="menu-open" data-menu="open" title="Incarcă imaginea (O)">
                             <i class="fa fa-folder-o fa-fw hasSubmenu"><i class="fa fa-caret-right fa-rotate-45"></i></i>
                         </li>
@@ -172,17 +178,6 @@
                         <li class="tool" title="Pensula (B)" data-action="brush"><i class="fa fa-paint-brush fa-fw"></i></li>
                         <li id="text" title="Insereaza text (T)">
                             <i class="fa fa-font fa-fw"></i>
-                        </li>
-                        <li id="save" title="Salvează ca (S)">
-                            <i class="fa fa-floppy-o fa-fw hasSubmenu"><i class="fa fa-caret-right fa-rotate-45"></i></i>
-                            <div id="saveoptions" class="submenu" style="width:220px;">
-                                <a href="#" id="saveoffline" class="btn btn-default" download="tabla.png">Descarca imaginea</a>
-                                <hr class="divider">
-                                <div id="dbsave">
-                                    <input type="text" title="Nume" id="dbname" placeholder="Numele desenului">
-                                    <button class="btn btn-default" id="savetodb">Salveaza in baza de date</button>
-                                </div>
-                            </div>
                         </li>
                         <li id="geom" title="Forme geometrice (G)">
                             <i class="fa fa-cube fa-fw hasSubmenu"><i class="fa fa-caret-right fa-rotate-45"></i></i>
@@ -259,10 +254,21 @@
             <button id="dbload" class="btn btn-default">Incarca din baza de date</button>
         </div>
     </div>
+    <div id="save">
+        <div data-customSubmenu="save" class="rightSubmenu">
+            <a href="#" id="saveoffline" class="btn btn-default" download="Tabla.png">Descarca imaginea</a>
+            <hr class="divider">
+            <div id="dbsave">
+                <input type="text" title="Nume" id="dbname" placeholder="Numele desenului" class="form-control" style="margin-bottom: 5px;">
+                <button class="btn btn-default" id="savetodb">Salveaza in baza de date</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 
 <script src="js/jquery.min.js"></script>
+<script src="js/fps.js"></script>
 <script src="js/matrix.js"></script>
 <script src="js/keypress.js"></script>
 <script src="js/select2.js"></script>
