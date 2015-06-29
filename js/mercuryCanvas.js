@@ -909,6 +909,8 @@
             height: end.height
         });
 
+        selectedContext.save();
+        
         if(pixelPerfect){
             selectedContext.imageSmoothingEnabled = false;
             selectedContext.webkitImageSmoothingEnabled = false;
@@ -916,6 +918,8 @@
         }
         selectedContext.scale(end.width / start.width, end.height / start.height);
         selectedContext.drawImage(virtualCanvas[0], 0, 0);
+        
+        selectedContext.restore();
     }
     
     function isOnCanvas(event){
@@ -1373,13 +1377,12 @@
     
     // TODO: Try to change this function's name. Now it's too general.
     function DrawTemp(mouse, type){
+        tempCtx.lineWidth = settings.lineWidth;
         if(type == 'brush'){
-            tempCtx.lineWidth = settings.lineWidth;
             tempCtx.strokeStyle = settings.strokeColor;
             tempCtx.fillStyle = settings.strokeColor;
         }
         else{
-            tempCtx.lineWidth = settings.backgroundColor;
             tempCtx.strokeStyle = settings.backgroundColor;
             tempCtx.fillStyle = settings.backgroundColor;
         }
@@ -1866,7 +1869,7 @@
         var ctx = layer[0].getContext('2d');
         
         var matrix = new Matrix();
-        matrix.translate(minMousePos.x, minMousePos.y);
+        matrix.translate(Math.floor(minMousePos.x), Math.floor(minMousePos.y));
         layer.css({
             'transform': matrix.toCSS(),
             '-webkit-transform': matrix.toCSS()
@@ -1874,8 +1877,9 @@
             'width': layer.width,
             'height': layer.height
         });
-        layer.x = minMousePos.x;
-        layer.y = minMousePos.y;
+        layer.x = Math.floor(minMousePos.x);
+        layer.y = Math.floor(minMousePos.y);
+        
         ctx.translate(-0.5, -0.5);
         ctx.putImageData(relevantData, 0, 0);
         
