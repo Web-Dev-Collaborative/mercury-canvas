@@ -532,6 +532,7 @@
         'mousedown': function(event){
             mouse.document = true;
             mousemoved = false;
+            dir = '';
             if(!$('.mercuryModal').length){
                 cleared = false;
                 ClosePopovers(event);
@@ -597,13 +598,35 @@
                     switch(settings.tool){
                         case 'brush':
                         case 'eraser':
-                            MoveVirtualCursor(pos);
-                            if (mouse.canvas.length && mouse.canvas.indexOf(1) != -1) {
+                            if(!custom){
+                                MoveVirtualCursor(pos);
+                            }
+                            var _pos = pos;
+                            if(mouse.canvas.length && mouse.canvas.indexOf(1) != -1){
+                                if(keys.shift && !dir){
+                                    var deltaX, deltaY;
+                                    deltaX = Math.abs(_pos.x - startPos.x);
+                                    deltaY = Math.abs(_pos.y - startPos.y);
+                                    if(deltaX > deltaY){
+                                        dir = 'horizontal';
+                                    }
+                                    else{
+                                        dir = 'vertical';
+                                    }
+                                }
+                                if(keys.shift && dir){
+                                    if(dir == 'horizontal'){
+                                        _pos.y = startPos.y;
+                                    }
+                                    else if (dir == 'vertical'){
+                                        _pos.x = startPos.x;
+                                    }
+                                }
                                 dragged = true;
-                                points[points.length] = pos;
+                                points[points.length] = _pos;
                                 setLimitPoints(event);
 
-                                DrawTemp(pos, settings.tool);
+                                DrawTemp(_pos, settings.tool);
                             }
                             break;
                         case 'select':
@@ -816,6 +839,7 @@
         'mouseup': function(event){
             if(!$('.mercuryModal').length){
                 cleared = false;
+                dir = '';
                 var pos = CalculateCoords(event.pageX, event.pageY);
 
                 switch(settings.tool){
