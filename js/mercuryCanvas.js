@@ -1070,31 +1070,34 @@
         'o': 'open',
         'ctrl a': 'selectAll',
         'ctrl s': 'save',
-        'ctrl n': 'newDoc',
+        'ctrl n': 'newDoc', // chrome overrides this
         'ctrl o': 'none',//'keyup event on body',
         'ctrl z': 'undo',
         'ctrl y': 'redo',
         'ctrl shift z': 'redo',
         'delete': 'delete',
-        'ctrl enter': 'deselect'
+        'ctrl enter': 'deselect',
+        'esc': 'deselect',
+        'escape': 'deselect'
     }
 
     var ListenerDefaults = {
         is_exclusive    : true,
         prevent_repeat  : true,
         on_keyup: function(e){
-//            e.preventDefault();
             if(!e.key) e.key = window.keypress._keycode_dictionary[e.keyCode];
-            var shortcutAction = shortcuts[(e.ctrlKey ? 'ctrl ' : '') + (e.altKey ? 'alt ' : '') + (e.shiftKey ? 'shift ' : '') + e.key.toLowerCase()];
-            if(typeof shortcutAction == 'function'){
-                shortcutAction();
-            }
-            else if(shortcutAction == 'none' || !shortcutAction) {
+            var keyCombination = (e.ctrlKey ? 'ctrl ' : '') + (e.altKey ? 'alt ' : '') + (e.shiftKey ? 'shift ' : '') + e.key.toLowerCase();
+            var shortcutAction = shortcuts[keyCombination];
+            
+            if(shortcutAction){
                 e.preventDefault();
-                return true;
-            }
-            else{
-                Tool(shortcutAction);
+                
+                if(typeof shortcutAction == 'function'){
+                    shortcutAction();
+                }
+                else if(shortcutAction != 'none'){
+                    Tool(shortcutAction);
+                }
             }
         },
         on_keydown: function(e){
@@ -1276,6 +1279,7 @@
             }
             if(actions.indexOf(tool) == -1){
                 if(tool == 'select'){
+                    DeselectLayer(selectedLayer);
                     OutLineLayer(mousePos);
                 }
                 if(tool == settings.tool) return;
@@ -1345,7 +1349,8 @@
                             },
                             {
                                 text: 'Cancel',
-                                class: 'btn-default btn-lg'
+                                class: 'btn-default btn-lg',
+                                dismiss: true
                             }
                         ]
                     });
@@ -1371,7 +1376,9 @@
                     $(document).trigger('mousemove', {custom: true});
                     break;
                 case 'deselect':
-                    DeselectLayer();
+                    if(settings.tool == 'select') {
+                        DeselectLayer();
+                    }
                     break;
                 default:
                     console.warn('Tool doesn\'t have this action ('+ tool +')');
