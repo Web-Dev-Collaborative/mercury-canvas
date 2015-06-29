@@ -903,7 +903,7 @@
             width: start.width,
             height: start.height
         });
-        virtualCanvas[0].getContext('2d').putImageData(imageData, 0, 0);
+        virtualCanvas[0].getContext('2d').drawImage(layer[0], 0, 0);
         layer.attr({
             width: end.width,
             height: end.height
@@ -1861,15 +1861,16 @@
     }
     
     function DrawTempCanvas(layer){
+        minMousePos.x = Math.floor(minMousePos.x);
+        minMousePos.y = Math.floor(minMousePos.y);
+        
         layer.width = maxMousePos.x - minMousePos.x;
         layer.height = maxMousePos.y - minMousePos.y;
-        
-        var relevantData = tempCtx.getImageData(minMousePos.x, minMousePos.y, layer.width, layer.height);
         
         var ctx = layer[0].getContext('2d');
         
         var matrix = new Matrix();
-        matrix.translate(Math.floor(minMousePos.x), Math.floor(minMousePos.y));
+        matrix.translate(minMousePos.x, minMousePos.y);
         layer.css({
             'transform': matrix.toCSS(),
             '-webkit-transform': matrix.toCSS()
@@ -1877,11 +1878,10 @@
             'width': layer.width,
             'height': layer.height
         });
-        layer.x = Math.floor(minMousePos.x);
-        layer.y = Math.floor(minMousePos.y);
+        layer.x = minMousePos.x;
+        layer.y = minMousePos.y;
         
-        ctx.translate(-0.5, -0.5);
-        ctx.putImageData(relevantData, 0, 0);
+        ctx.drawImage(temp, minMousePos.x, minMousePos.y, layer.width, layer.height, 0, 0, layer.width, layer.height);
         
         if(settings.transition){
             setTimeout(function(layer){
