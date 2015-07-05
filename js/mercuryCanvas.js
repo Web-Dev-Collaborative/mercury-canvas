@@ -41,6 +41,7 @@
     var original = {};
     var ready = false;
     var cursor;
+    var altHiddenLayers = [];
         
     var undoStep = 0;
     var undo = [];
@@ -156,6 +157,7 @@
             strokeColor: 'red',
             tool: '',
             transition: true,
+            undoLength: 20,
             brushSizeIncrement: 3,
             handlerSize: 20
         };
@@ -164,10 +166,9 @@
         
         layersWrapper = $(this);
         layersWrapper.html('').css({
-            width: '100%',
+            width: 'calc(100% - 280px)',
             height: '100%'
-        });
-        layersWrapper.append('<div id="cursor"></div><canvas class="canvasLayer canvasBottom" id="canvasBackground" height="0" width="0" border="0">Update your browser</canvas><canvas class="canvasLayer canvasTop" id="canvasTemp" height="0" width="0" border="0">Update your browser</canvas>');
+        }).append('<div id="cursor"></div><canvas class="canvasLayer canvasBottom" id="canvasBackground" height="0" width="0" border="0">Update your browser</canvas><canvas class="canvasLayer canvasTop" id="canvasTemp" height="0" width="0" border="0">Update your browser</canvas>');
         
         $background = $('#canvasBackground');
         $temp = $('#canvasTemp');
@@ -194,9 +195,12 @@
         });
         
         init();
+        ResizeCanvasBackground();
     }
     
     var requestAnimationFrame;
+    var layersOrderInterval;
+    var max = 0;
     
     function init(){
         var stats = new Stats();
@@ -405,14 +409,164 @@
                 Tool('delete'); 
             }
         });
+        $(document).on('dragstart', ':not(#layers, #layers *)', function(){
+            if($(this).parents('#layers').length){
+                return false;
+            }
+        });
+        $(window).on('dragenter', function (e) {
+            stopDefaultEvent(e);
+            $('.dragndrop').show();
+        });
+        $('.dragndrop').on('dragover', function (e) {
+            stopDefaultEvent(e);
+            $('.dragndrop').addClass('over');
+        });
+        $('.dragndrop').on('dragexit', function (e) {
+            stopDefaultEvent(e);
+            $('.dragndrop').removeClass('over');
+        });
+        $(window).on('dragexit', function (e) {
+            stopDefaultEvent(e);
+            $('.dragndrop').removeClass('over').hide();
+        });
+
+        $('.dragndrop').on('drop', function (e) {
+            stopDefaultEvent(e);
+            $('.dragndrop').removeClass('over').hide();
+
+            var files = e.originalEvent.dataTransfer.files;
+            HandleFiles(files, true);
+        });
+        $('#layers').sortable({
+            animation: 100,
+            onMove: reorderLayers,
+            onEnd: reorderLayers
+        });
+        $(document).on('click', '.layer-visible', function(e){
+            var layerName = $(this).parents('.item').attr('data-layer');
+            
+            if(keys.alt && !keys.ctrl && !keys.shift){
+                if($('#layers .fa-eye').length <= 1){
+                    if($(this).children('.fa').hasClass('fa-eye')){
+                        $('#layers .layer-visible .fa').removeClass('fa-eye').addClass('fa-square-o');
+                        $.each(altHiddenLayers, function(index, value){
+                            $('#' + value).show();
+                            $('#layers [data-layer="'+ value +'"]').find('.fa').addClass('fa-eye').removeClass('fa-square-o');
+                        });
+                        altHiddenLayers = [];
+                    }
+                    else{
+                        $('#layers .layer-visible .fa').removeClass('fa-eye').addClass('fa-square-o');
+                        $('.canvasLayer:not(.canvasTop, .canvasBottom)').hide();
+                        $(this).children('.fa').addClass('fa-eye').removeClass('fa-square-o');
+                        $('#' + layerName).show();
+                    }
+                }
+                else{
+                    $('#layers .item').each(function(){
+                        if($(this).find('.fa').hasClass('fa-eye')){
+                            altHiddenLayers.push($(this).attr('data-layer'));
+                            $('#' + $(this).attr('data-layer')).hide();
+                        }
+                    });
+                    $('#layers .layer-visible .fa').removeClass('fa-eye').addClass('fa-square-o');
+                    $('#' + layerName).show();
+                    $(this).children('.fa').addClass('fa-eye').removeClass('fa-square-o');
+                }
+            }
+            else{
+                if($(this).children('.fa').hasClass('fa-eye')){
+                    $(this).children('.fa').removeClass('fa-eye').addClass('fa-square-o');
+                    $('#' + layerName).hide();
+                }
+                else{
+                    $(this).children('.fa').removeClass('fa-square-o').addClass('fa-eye');
+                    $('#' + layerName).show();
+                }
+            }
+            e.stopPropagation();
+        });
+        $(document).on('click', '.item', function(){
+            if(keys.ctrl){
+                $('.lastSelected').removeClass('lastSelected');
+                if($(this).hasClass('selected')){
+                    $(this).removeClass('selected');
+                }
+                else{
+                    $(this).addClass('selected').addClass('lastSelected');
+                }
+            }
+            else if(keys.shift){
+                var last = $('.lastSelected');
+                var lastID = last.index() - $(this).index();
+                $('#layers .item').removeClass('selected');
+                last.addClass('selected');
+                if(lastID < 0){
+                    lastID *= -1;
+                    for(var i = 0; i < lastID; i++){
+                        last = last.next();
+                        last.addClass('selected');
+                    }
+                }
+                else{
+                    for(var i = 0; i < lastID; i++){
+                        last = last.prev();
+                        last.addClass('selected');
+                    }
+                }
+            }
+            else{
+                $('.lastSelected').removeClass('lastSelected');
+                $('.item.selected').removeClass('selected');
+                $(this).addClass('selected').addClass('lastSelected');
+            }
+            if($('#layers .selected').length){
+                EnableLayerButtons();
+            }
+            else{
+                DisableLayerButtons();
+            }
+        });
+        $('#layer-buttons .deleteLayers').on('click', function(){
+            var layersForAction = [];
+            $('#layers').children('.selected').each(function(){
+                layersForAction.push($(this).attr('data-layer'));
+            });
+            for(var i = 0, l = layersForAction.length; i < l;i++){
+                $('#' + layersForAction[i]).hide();
+                $('#layers [data-layer="'+ layersForAction[i] +'"]').hide();
+            }
+            AddToUndo({
+                action: 'delete',
+                layer: layersForAction
+            });
+        });
+
         tempCtx.translate(-0.5, -0.5);
         ClearLayer('canvasTemp');
         refreshSettings();
         ready = true;
-        console.log(settings);
+//        AddLayer({});
+//        console.log(settings);
     }
 
+    function reorderLayers(){
+        setTimeout(function(){
+            var length = $('#layers .item').length;
+            var t = performance.now();
+            $('#layers .item').each(function(index){
+                $('#'+ $(this).attr('data-layer')).css('z-index', length - index);
+            });
+            var t1 = performance.now() - t;
+            if(t1 > max){
+                max = t1;
+                console.log('New record for reordering: ' + Math.round(t1) + ' millis');
+            }
+        }, 1);
+    }
     function OpenImage(img){
+        DeselectLayer();
         var width, height;
         original.width = width = img.width;
         original.height = height = img.height;
@@ -421,7 +575,7 @@
             y: settings.height / 2 - height / 2,
             width: width,
             height: height
-        });
+        }, true);
 
         var _ctx = newLayer[0].getContext('2d');
         _ctx.drawImage(img, 0, 0, width, height);
@@ -442,12 +596,8 @@
             width: width,
             height: height
         });
-        var transform = $(newLayer[0]).css('transform');
-        transform = transform.slice(7, -1).split(', ');
-        newLayer.x = parseFloat(transform[4]);
-        newLayer.y = parseFloat(transform[5]);
-        newLayer.width = original.width * parseFloat(transform[0]);
-        newLayer.height = original.height * parseFloat(transform[3]);
+        ScaleCanvas(newLayer, newLayer, original);
+        layers[newLayer.name].image = true;
         var matrix = new Matrix();
         matrix.translate(newLayer.x, newLayer.y);
         $(newLayer[0]).css({
@@ -459,8 +609,8 @@
 
         AddToUndo({
             action: 'draw',
-            layer: {
-                0: newLayer[0],
+            layer: newLayer[0].getAttribute('id'),
+            transform: {
                 x: newLayer.x,
                 y: newLayer.y,
                 width: newLayer.width,
@@ -473,16 +623,34 @@
         SelectLayer(newLayer);
     }
 
-    function HandleFiles(e) {
-        var reader = new FileReader();
-        reader.readAsDataURL(e.target.files[0]);
-        reader.onload = function(event){
-            var img = new Image();
-            img.src = event.target.result;
-            img.onload = function(){
-                ClosePopovers(null);
-                OpenImage(img);
-            }
+    function HandleFiles(e, files) {
+        if(files){
+            $.each(e, function(index, value){
+                var reader = new FileReader();
+                reader.readAsDataURL(value);
+                reader.onload = function(event){
+                    var img = new Image();
+                    img.src = event.target.result;
+                    img.onload = function(){
+                        ClosePopovers(null);
+                        OpenImage(img);
+                    }
+                }
+            })
+        }
+        else{
+            $.each(e.target.files, function(index, value){
+                var reader = new FileReader();
+                reader.readAsDataURL(value);
+                reader.onload = function(event){
+                    var img = new Image();
+                    img.src = event.target.result;
+                    img.onload = function(){
+                        ClosePopovers(null);
+                        OpenImage(img);
+                    }
+                }
+            })
         }
     }
 
@@ -497,17 +665,68 @@
     var mousemoved = false;
     var virtualCanvas = $('<canvas>');
     var cleared = false;
+    var firstClick = false;
+    
+    function DrawSelectedLayerOutline(_layer){
+        if(!_layer) return;
+        tempCtx.save();
+        tempCtx.lineWidth = 1;
+        tempCtx.lineJoin = 'square';
+        tempCtx.lineCap = 'square';
+        tempCtx.strokeStyle="#000";
+        tempCtx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+
+        var _x, _y, _width, _height;
+        _x = Math.round(_layer.x);// - 0.5;
+        _y = Math.round(_layer.y);// - 0.5;
+        _width = Math.round(_layer.width + 1);
+        _height = Math.round(_layer.height + 1);
+
+        // handlers
+        tempCtx.fillRect(_x + _width - settings.handlerSize / 2, _y - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
+        tempCtx.fillRect(_x - settings.handlerSize / 2, _y - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
+        tempCtx.fillRect(_x + _width - settings.handlerSize / 2, _y + _height - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
+        tempCtx.fillRect(_x - settings.handlerSize / 2, _y + _height - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
+        tempCtx.strokeRect(_x + _width - settings.handlerSize / 2, _y - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
+        tempCtx.strokeRect(_x - settings.handlerSize / 2, _y - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
+        tempCtx.strokeRect(_x + _width - settings.handlerSize / 2, _y + _height - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
+        tempCtx.strokeRect(_x - settings.handlerSize / 2, _y + _height - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
+
+        // lines
+        if(_width > settings.handlerSize + 1 || _height > settings.handlerSize + 1){
+            tempCtx.beginPath();
+            if(_width > settings.handlerSize + 1){
+                // top left -> top right
+                tempCtx.moveTo(_x + 1 + settings.handlerSize / 2, _y);
+                tempCtx.lineTo(_x - 1 - settings.handlerSize / 2 + _width, _y);
+                // bottom right -> bottom left
+                tempCtx.moveTo(_x - 1 - settings.handlerSize / 2 + _width, _y + _height);
+                tempCtx.lineTo(_x + 1 + settings.handlerSize / 2, _y + _height);
+            }
+            if(_height > settings.handlerSize + 1){
+                // top right -> bottom right
+                tempCtx.moveTo(_x + _width, _y + 1 + settings.handlerSize / 2);
+                tempCtx.lineTo(_x + _width, _y - 1 - settings.handlerSize / 2 + _height);
+                // bottom left -> top left
+                tempCtx.moveTo(_x, _y - 1 - settings.handlerSize / 2 + _height);
+                tempCtx.lineTo(_x, _y + 1 + settings.handlerSize / 2);
+            }
+            tempCtx.stroke();
+            tempCtx.closePath();
+        }
+        tempCtx.restore();
+    }
     
     $(document).on({
         'keydown': function(e){
             if(!e.key) e.key = window.keypress._keycode_dictionary[e.keyCode];
             e.key = e.key.toLowerCase();
-            if(mousemoved && (e.ctrlKey != keys.ctrl || e.altKey != keys.atl || e.shiftKey != keys.shift)){
+            if(mousemoved && (e.ctrlKey != keys.ctrl || e.altKey != keys.alt || e.shiftKey != keys.shift)){
                 var mm = true;
             }
             keys[e.key] = true;
             keys.ctrl = e.ctrlKey;
-            keys.atl = e.altKey;
+            keys.alt = e.altKey;
             keys.shift = e.shiftKey;
             if(mm){
                 $(document).trigger('mousemove', {custom: true});
@@ -518,7 +737,7 @@
             e.key = e.key.toLowerCase();
             keys[e.key] = false;
             keys.ctrl = e.ctrlKey;
-            keys.atl = e.altKey;
+            keys.alt = e.altKey;
             keys.shift = e.shiftKey;
             // this must be here because you can't start the file dialog outside an event
             if(keys.ctrl && e.key == 'o' && !keys.shift && !keys.alt){
@@ -558,6 +777,7 @@
                                 if(event.which == 1){
                                     actioned = true;
                                     if(!selectedLayer){
+                                        firstClick = true;
                                         ClearLayer('canvasTemp');
                                         var _layer = PositionToLayer(pos);
                                         if(_layer){
@@ -568,6 +788,11 @@
                                                 width: selectedLayer.width,
                                                 height: selectedLayer.height
                                             }
+                                        }
+                                    }
+                                    else{
+                                        if(PositionToLayer(pos) == selectedLayer){
+                                            firstClick = true;
                                         }
                                     }
                                 }
@@ -631,7 +856,7 @@
                             break;
                         case 'select':
                             if(!selectedLayer){
-                                OutLineLayer(pos);
+                                OutLineLayer(pos, true);
                             }
                             else{
                                 if(mouse.canvas.indexOf(1) == -1){
@@ -841,6 +1066,7 @@
                 cleared = false;
                 dir = '';
                 var pos = CalculateCoords(event.pageX, event.pageY);
+                settings.strokeColor = '#'+Math.floor(Math.random()*16777215).toString(16);
 
                 switch(settings.tool){
                     case 'brush':
@@ -862,6 +1088,7 @@
                                 if(selectedLayer && mousemoved){
                                     var transform = $(selectedLayer[0]).css('transform');
                                     transform = transform.slice(7, -1).split(', ');
+                                    
                                     selectedLayer.x = parseFloat(transform[4]);
                                     selectedLayer.y = parseFloat(transform[5]);
                                     selectedLayer.width = original.width * parseFloat(transform[0]);
@@ -874,9 +1101,9 @@
                                         width: selectedLayer.width,
                                         height: selectedLayer.height
                                     });
-                                    
-                                    ScaleCanvas(selectedLayer, selectedLayer, (selectStart ? selectStart : original), $('#scaling-mode').prop('checked'));
 
+                                    ScaleCanvas(selectedLayer, selectedLayer, (selectStart ? selectStart : original), $('#scaling-mode').prop('checked'));
+                                    
                                     SelectLayer(selectedLayer);
                                     dist.x = dist.y = 0;
                                     original.width = original.height = original.x = original.y = 0;
@@ -899,14 +1126,21 @@
                                         height: selectedLayer.height
                                     }
                                 }
+                                else if(!firstClick){
+                                    action = '';
+                                    $temp.css('cursor', 'default');
+                                    DeselectLayer();
+                                    OutLineLayer(pos, true);
+                                }
                             }
                             else{
                                 action = '';
                                 $temp.css('cursor', 'default');
                                 DeselectLayer();
-                                OutLineLayer(pos);
+                                OutLineLayer(pos, true);
                             }
                         }
+                        break;
                 }
                 if(event.which == 1) {
                     mouse.document = false;
@@ -915,6 +1149,7 @@
                     mouse.canvas.splice(mouse.canvas.indexOf(event.which), 1);
                 }
                 actioned = false;
+                firstClick = false;
             }
         }
     });
@@ -934,7 +1169,9 @@
         });
 
         selectedContext.save();
-        
+        if(pixelPerfect == undefined){
+            pixelPerfect = $('#scaling-mode').prop('checked');
+        }
         if(pixelPerfect){
             selectedContext.imageSmoothingEnabled = false;
             selectedContext.webkitImageSmoothingEnabled = false;
@@ -962,25 +1199,35 @@
 
     function MoveVirtualCursor(_pos){
         var matrix = new Matrix();
-        matrix.translate(_pos.x - settings.lineWidth / 2, _pos.y - settings.lineWidth / 2);
+        matrix.translate(Math.floor(_pos.x - settings.lineWidth / 2), Math.floor(_pos.y - settings.lineWidth / 2));
         cursor.css({
             'transform': matrix.toCSS(),
             '-webkit-transform': matrix.toCSS()
         });
     }
 
-    function OutLineLayer(_pos){
+    function OutLineLayer(_pos, clear){
         if(_pos){
-            ClearLayer('canvasTemp');
+            if(clear) ClearLayer('canvasTemp');
             var _layer = PositionToLayer(_pos);
+            if(!clear && _layer == selectedLayer) return;
             if(_layer){
                 tempCtx.save();
                 tempCtx.strokeStyle="#000000";
                 tempCtx.lineWidth = 1;
-                tempCtx.strokeRect(_layer.x, _layer.y, _layer.width + 1, _layer.height + 1);
+                tempCtx.strokeRect(Math.floor(_layer.x), Math.floor(_layer.y), Math.ceil(_layer.width + 1), Math.ceil(_layer.height + 1));
                 tempCtx.restore();
             }
         }
+    }
+    
+    function EnableLayerButtons(){
+        console.log('enabled');
+        $('#layer-buttons').children('.btn').removeClass('disabled');
+    }
+    function DisableLayerButtons(){
+        console.log('disabled');
+        $('#layer-buttons').children('.btn').addClass('disabled');
     }
 
     function SelectLayer(_layer){
@@ -995,59 +1242,18 @@
             }
             $blendingModes.prop('disabled', false);
             $('.deleteLayer').removeClass('disabled');
+            
+            $('#layers [data-layer="'+ _layer[0].getAttribute('id') +'"]').addClass('selected').addClass('lastSelected');
+            EnableLayerButtons();
 
             selectedLayer = _layer;
             ClearLayer('canvasTemp');
-
-            tempCtx.save();
-            tempCtx.lineWidth = 1;
-            tempCtx.lineJoin = 'square';
-            tempCtx.lineCap = 'square';
-            tempCtx.strokeStyle="#000";
-            tempCtx.fillStyle = 'rgba(255, 255, 255, 0.1)';
             
-            var _x, _y, _width, _height;
-            _x = Math.round(_layer.x);// - 0.5;
-            _y = Math.round(_layer.y);// - 0.5;
-            _width = Math.round(_layer.width + 1);
-            _height = Math.round(_layer.height + 1);
-
-            // handlers
-            tempCtx.fillRect(_x + _width - settings.handlerSize / 2, _y - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
-            tempCtx.fillRect(_x - settings.handlerSize / 2, _y - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
-            tempCtx.fillRect(_x + _width - settings.handlerSize / 2, _y + _height - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
-            tempCtx.fillRect(_x - settings.handlerSize / 2, _y + _height - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
-            tempCtx.strokeRect(_x + _width - settings.handlerSize / 2, _y - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
-            tempCtx.strokeRect(_x - settings.handlerSize / 2, _y - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
-            tempCtx.strokeRect(_x + _width - settings.handlerSize / 2, _y + _height - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
-            tempCtx.strokeRect(_x - settings.handlerSize / 2, _y + _height - settings.handlerSize / 2, settings.handlerSize, settings.handlerSize);
-
-            // lines
-            if(_width > settings.handlerSize + 1 || _height > settings.handlerSize + 1){
-                tempCtx.beginPath();
-                if(_width > settings.handlerSize + 1){
-                    // top left -> top right
-                    tempCtx.moveTo(_x + 1 + settings.handlerSize / 2, _y);
-                    tempCtx.lineTo(_x - 1 - settings.handlerSize / 2 + _width, _y);
-                    // bottom right -> bottom left
-                    tempCtx.moveTo(_x - 1 - settings.handlerSize / 2 + _width, _y + _height);
-                    tempCtx.lineTo(_x + 1 + settings.handlerSize / 2, _y + _height);
-                }
-                if(_height > settings.handlerSize + 1){
-                    // top right -> bottom right
-                    tempCtx.moveTo(_x + _width, _y + 1 + settings.handlerSize / 2);
-                    tempCtx.lineTo(_x + _width, _y - 1 - settings.handlerSize / 2 + _height);
-                    // bottom left -> top left
-                    tempCtx.moveTo(_x, _y - 1 - settings.handlerSize / 2 + _height);
-                    tempCtx.lineTo(_x, _y + 1 + settings.handlerSize / 2);
-                }
-                tempCtx.stroke();
-                tempCtx.closePath();
-            }
+            DrawSelectedLayerOutline(_layer);
+            
             if(settings.transition){
                 $(_layer[0]).css('transition', 'none 0s');
             }
-            tempCtx.restore();
         }
         else{
             console.warn('SelectLayer received no layer');
@@ -1152,6 +1358,11 @@
             $(selectedLayer[0]).css('transition', transitionContent);
         }
         $('.deleteLayer').addClass('disabled');
+        DisableLayerButtons();
+        if(selectedLayer){
+            $('#layers [data-layer="'+ selectedLayer[0].getAttribute('id') +'"]').removeClass('selected').removeClass('lastSelected');
+        }
+        
         selectedLayer = null;
         action = dist.x = dist.y = undefined;
 
@@ -1226,6 +1437,8 @@
     }
         
     function checkForOrphanLayers(){
+        // TODO: rethink this
+        return;
         var toBeDeleted = [];
 
         $.each(layers, function(index, value){
@@ -1248,6 +1461,7 @@
 
         $.each(toBeDeleted, function(index, value){
             $('#' + value.name).remove();
+            $('#layers [data-layer="'+ value.name +'"]').remove();
             delete layers[value.name];
         });
     }
@@ -1280,7 +1494,7 @@
             if(actions.indexOf(tool) == -1){
                 if(tool == 'select'){
                     DeselectLayer(selectedLayer);
-                    OutLineLayer(mousePos);
+                    OutLineLayer(mousePos, true);
                 }
                 if(tool == settings.tool) return;
 
@@ -1301,8 +1515,8 @@
                 case 'delete':
                     if(selectedLayer){
                         AddToUndo({
-                            action: 'hide',
-                            layer: selectedLayer
+                            action: 'delete',
+                            layer: selectedLayer[0].getAttribute('id')
                         });
                         $(selectedLayer[0]).hide();
                         DeselectLayer();
@@ -1324,7 +1538,7 @@
                     break;
                 case 'select':
                     DefaultToolChange(tool);
-                    OutLineLayer(mousePos);
+                    OutLineLayer(mousePos, true);
                     break;
                 case 'newDoc':
                     MercuryModal({
@@ -1452,24 +1666,54 @@
     }
 
     function AddToUndo(options){
-        undo.splice(undoStep, undo.length, $.extend(true, {
-            action: 'undefined',
-            layer:{
-                0: null,
-                x: 0,
-                y: 0,
-                width: 0,
-                height: 0
-            }
-        }, options));
+        if(undoStep.length > settings.undoLength){
+            undo.splice(0, 1);
+        }
+        undo.splice(undoStep, undo.length);
         undoStep ++;
+        if(options.action == 'pixelManipulation'){
+            options.forStorage = {};
+            options.forStorage.image = options.layer[0].toDataURL('image/png');
+            options.forStorage.transform = {
+                x: options.layer.x,
+                y: options.layer.y,
+                width: options.layer.width,
+                height: options.layer.height
+            }
+            try{
+                localStorage.setItem(options.layer.name, JSON.stringify(options.forStorage));
+            }
+            catch(e){
+                console.log(e);
+            }
+            undo.push({
+                action: 'pixelManipulation',
+                layer: options.layer.name
+            });
+        }
+        else{
+            undo.push(options);
+        }
         if(undoStep > 0){
             $('.tool[data-action="undo"]', boardWrapper).removeClass('disabled');
         }
         if(undoStep == undo.length) {
             $('.tool[data-action="redo"]', boardWrapper).addClass('disabled');
         }
-
+        if(options.action == 'delete'){
+            if(typeof options.layer == 'string'){
+                $('#layers [data-layer="'+ options.layer +'"]').hide();
+                DisableLayerButtons();
+            }
+            else if (typeof options.layer == 'object'){
+                if(options.layer.length){
+                    for(var i = 0, l = options.layer.length; i < l; i++){
+                        $('#layers [data-layer="'+ options.layer[i] +'"]').hide();
+                    }
+                    DisableLayerButtons();
+                }
+            }
+        }
         if(undoStep != undo.length) {
             console.warn('Undo step and undo.length not synced; undo:', undo, ', undo.length:', undo.length);
         }
@@ -1515,27 +1759,52 @@
         if (steps > 0) {
             for (var i = 0; i < steps; i++) {
                 if (undoStep > 0) {
-                    switch (undo[undoStep - 1].action) {
+                    var options = undo[undoStep - 1];
+                    switch (options.action) {
                         case 'draw':
-                            $(undo[undoStep - 1].layer[0]).hide();
+                            var layer = options.layer;
+                            $('#'+ layer).hide();
+                            $('#layers [data-layer="'+ layer +'"]').hide().removeClass('selected').removeClass('lastSelected');
                             break;
-                        case 'hide':
-                            $(undo[undoStep - 1].layer[0]).show();
+                        case 'delete':
+                            var layer = options.layer;
+                            $('#layers .selected').removeClass('selected');
+                            if(typeof layer == 'string'){
+                                $('#'+ layer).show();
+                                $('#layers [data-layer="'+ layer +'"]').show().addClass('selected').addClass('lastSelected');
+                            }
+                            else if (typeof layer == 'object'){
+                                if(layer.length){
+                                    for(var i = 0, l = layer.length; i < l; i++){
+                                        $('#'+ layer[i]).show();
+                                        $('#layers [data-layer="'+ layer[i] +'"]').show().addClass('selected').addClass('lastSelected');
+                                    }
+                                }
+                            }
+                            EnableLayerButtons();
                             break;
                         case 'transform':
-                            TransformLayer(undo[undoStep - 1].layer, undo[undoStep - 1].before);
-                            ScaleCanvas(undo[undoStep - 1].layer, undo[undoStep - 1].before, undo[undoStep - 1].after);
+                            TransformLayer(options.layer, options.before);
+                            ScaleCanvas(options.layer, options.before, options.after);
                             break;
                         case 'opacity':
-                            selectedLayer = undo[undoStep - 1].layer;
+                            selectedLayer = options.layer;
                             opacitySlider.update({
-                                from: undo[undoStep - 1].before * 100
+                                from: options.before * 100
                             });
                             selectedLayer = null;
-                            $(undo[undoStep - 1].layer[0]).css('opacity', undo[undoStep - 1].before);
+                            $(options.layer[0]).css('opacity', options.before);
+                            break;
+                        case 'pixelManipulation': 
+                            var layerName = options.layer;
+                            localStorage.setItem(layerName + '-undo', layers[layerName]);
+                            var oldLayer = $.parseJSON(localStorage.getItem(layerName));
+                            var ctx = layers[layerName][0].getContext('2d');
+                            console.log(oldLayer);
+                            ctx.drawImage(oldLayer[0], 0, 0);
                             break;
                         default:
-                            console.warn('Undo doesn\'t have this action ('+ undo[undoStep - 1].action +')');
+                            console.warn('Undo doesn\'t have this action ('+ options.action +')');
                             break;
                     }
                     undoStep --;
@@ -1550,10 +1819,27 @@
                 if (undoStep < undo.length) {
                     switch (undo[undoStep].action) {
                         case 'draw':
-                            $(undo[undoStep].layer[0]).show();
+                            var layer = undo[undoStep].layer;
+                            $('#'+ layer).show();
+                            $('#layers [data-layer="'+ layer +'"]').show();
                             break;
-                        case 'hide':
-                            $(undo[undoStep].layer[0]).hide();
+                        case 'delete':
+                            var layer = undo[undoStep].layer;
+                            $('#layers .selected').removeClass('selected');
+                            
+                            if(typeof layer == 'string'){
+                                $('#'+ layer).hide();
+                                $('#layers [data-layer="'+ layer +'"]').hide().removeClass('selected').removeClass('lastSelected');
+                            }
+                            else if (typeof layer == 'object'){
+                                if(layer.length){
+                                    for(var i = 0, l = layer.length; i < l; i++){
+                                        $('#'+ layer[i]).hide();
+                                        $('#layers [data-layer="'+ layer[i] +'"]').hide().removeClass('selected').removeClass('lastSelected');
+                                    }
+                                }
+                            }
+                            DisableLayerButtons();
                             break;
                         case 'transform':
                             TransformLayer(undo[undoStep].layer, undo[undoStep].after);
@@ -1642,7 +1928,7 @@
         }
         bound.right ++;
         bound.bottom ++;
-
+        
         var trimmed = ctx.getImageData(bound.left, bound.top, layer.width, layer.height);
 
         layer.x += bound.left;
@@ -1669,18 +1955,20 @@
 
         layer.css('transition', transitionContent);
         AddToUndo({
-            action: 'modify',
+            action: 'pixelManipulation',
             layer: layer
         });
     }
 
 
     function BrushMouseUp() {
-        minMousePos.x = Math.max(0, minMousePos.x - tempCtx.lineWidth / 2 - 1);
-        minMousePos.y = Math.max(0, minMousePos.y - tempCtx.lineWidth / 2 - 1);
+        minMousePos.x = minMousePos.x - tempCtx.lineWidth / 2 - 1;
+        minMousePos.y = minMousePos.y - tempCtx.lineWidth / 2 - 1;
         maxMousePos.x = maxMousePos.x + tempCtx.lineWidth / 2 + 1;
         maxMousePos.y = maxMousePos.y + tempCtx.lineWidth / 2 + 2;
 
+        checkMinMaxMouse();
+        
         if (mouse.canvas.indexOf(1) != -1) {
             if(settings.tool == 'brush'){
                 var newLayer = AddLayer({
@@ -1700,11 +1988,11 @@
                     width: maxMousePos.x - minMousePos.x,
                     height: maxMousePos.y - minMousePos.y
                 });
-
+                
                 AddToUndo({
                     action: 'draw',
-                    layer: {
-                        0: newLayer[0],
+                    layer: newLayer.name,
+                    transform: {
                         x: newLayer.x,
                         y: newLayer.y,
                         width: newLayer.width,
@@ -1842,19 +2130,20 @@
         }
     }
     
-    function AddLayer(options){
+    function AddLayer(options, hasDimensions){
         var layerDefaults = {
             x: 0,
             y: 0,
             width: 0,
-            height: 0
+            height: 0,
+            zIndex: zIndex
         };
         var layerSettings = $.extend({}, layerDefaults, options);
         zIndex++;
         if(zIndex > 999){
             $temp.css('z-index', 1000 + zIndex - 999);
             cursor.css('z-index', 1001 + zIndex - 999);
-            $('#tools, #currentTool', boardWrapper).css('z-index', 1004 + zIndex - 999);
+            $('#tools, #currentTool, #layers', boardWrapper).css('z-index', 1004 + zIndex - 999);
             $('.select2', boardWrapper).css('z-index', 1069 + zIndex - 999);
             $.MercuryModal.defaults.zIndex = 1080 + zIndex - 999;
         }
@@ -1869,13 +2158,19 @@
         }).css({
             'transform': matrix.toCSS(),
             '-webkit-transform': matrix.toCSS(),
+            width: layerSettings.width,
+            height: layerSettings.height,
             'z-index': zIndex
         }).appendTo(layersWrapper);
+        var layerBlock = $('#layer-template').clone();
+        layerBlock.find('.layer-name').html('Layer ' + zIndex);
+        layerBlock.attr('data-layer', 'canvas-' + zIndex).removeAttr('id');
+        layerBlock.prependTo($('#layers'));
         
-        if(arguments.callee.caller.name == 'OpenImage'){
+        if(hasDimensions){
             newLayer.css({
-            'width': layerSettings.width,
-            'height': layerSettings.height
+                'width': layerSettings.width,
+                'height': layerSettings.height
             });
         }
 
@@ -1884,16 +2179,23 @@
         newLayer['y'] = layerSettings.y;
         newLayer['width'] = layerSettings.width;
         newLayer['height'] = layerSettings.height;
+        newLayer['zIndex'] = layerSettings.zIndex;
+        newLayer['matrix'] = matrix;
         newLayer['alpha'] = 1;
         newLayer['blendingMode'] = 'normal';
         
         layers[layerID] = newLayer;
         return newLayer;
     }
+    function checkMinMaxMouse(){
+        minMousePos.x = Math.max(0, Math.floor(minMousePos.x));
+        minMousePos.y = Math.max(0, Math.floor(minMousePos.y));
+        maxMousePos.x = Math.min($temp.width(), maxMousePos.x);
+        maxMousePos.y = Math.min($temp.height(), maxMousePos.y);
+    }
     
     function DrawTempCanvas(layer){
-        minMousePos.x = Math.floor(minMousePos.x);
-        minMousePos.y = Math.floor(minMousePos.y);
+        checkMinMaxMouse();
         
         layer.width = maxMousePos.x - minMousePos.x;
         layer.height = maxMousePos.y - minMousePos.y;
@@ -1904,7 +2206,9 @@
         matrix.translate(minMousePos.x, minMousePos.y);
         layer.css({
             'transform': matrix.toCSS(),
-            '-webkit-transform': matrix.toCSS()
+            '-webkit-transform': matrix.toCSS(),
+            width: layer.width,
+            height: layer.height
         }).attr({
             'width': layer.width,
             'height': layer.height
