@@ -44,7 +44,7 @@ var menu = {
     'text': 'textTool',
     'poly': 'polyTool'
 };
-
+/*
 $(window).on('dragenter', function (e) {
     stopDefaultEvent(e);
     $('.dragndrop').show();
@@ -68,7 +68,7 @@ $('.dragndrop').on('drop', function (e) {
     
     var files = e.originalEvent.dataTransfer.files;
     handleFiles(files);
-});
+});*/
 
 $(function(){
     // load fonts list 
