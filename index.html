@@ -14,7 +14,7 @@
     <title>White board</title>
 </head>
 
-<body ondragstart="return false;">
+<body>
     <div aria-busy="true" aria-label="Loading" role="progressbar" id="loader">
         <div class="wire">
             <div class="wire-l"></div>
@@ -191,6 +191,11 @@
                         <li class="tool colorPicker" data-action="colorPicker" title="Alege culoarea (X)"><i class="fa fa-tint fa-fw"></i></li>
                         <li class="tool" data-action="eyeDropper" title="Eye dropper"><i class="fa fa-eyedropper fa-fw"></i></li>
                     </ul>
+                    <div id="layers" class="sortable"></div>
+                    <div id="layer-buttons">
+                        <button class="btn btn-sm btn-default duplicateLayers"><i class="fa fa-copy fa-fw"></i>
+                        <button class="btn btn-sm btn-danger deleteLayers"><i class="fa fa-trash fa-fw"></i>
+                    </div>
                     <div id="sketch">
                         <div class="backdrop"></div>
                         <div class="dragndrop" style="display: none;">
@@ -263,6 +268,23 @@
                 <button class="btn btn-default" id="savetodb">Salveaza in baza de date</button>
             </div>
         </div>
+    </div>
+    <div id="layer-template" class="item" data-layer="canvas-1">
+        <div class="layer-visible">
+            <i class="fa fa-eye fa-fw"></i>
+        </div>
+        <div class="layer-picture">
+            <img src="img/transparent.png" alt="Layer thumbnail">
+        </div>
+        <div class="layer-name">
+            Layer 1
+        </div>
+<!--
+        <div class="layer-buttons">
+            <button class="btn btn-sm btn-default"><i class="fa fa-copy fa-fw"></i>
+            <button class="btn btn-sm btn-danger"><i class="fa fa-trash fa-fw"></i>
+        </div>
+-->
     </div>
 </div>
 

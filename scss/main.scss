@@ -1,10 +1,102 @@
 @import "bourbon/bourbon";
 
+$menuHeight: 49px;
+$menuBorder: #757575;
+
 .tool-checkbox label{
     margin-bottom: 0;
     
     input{
         height: auto !important;
+    }
+}
+
+#layers{
+    position: absolute;
+    top: $menuHeight;
+    right: 0;
+    border-left: 1px solid $menuBorder;
+    border-right: 1px solid $menuBorder;
+    background: #FFF;
+    height: calc(100% - #{$menuHeight - 0px + 40px});
+    width: 280px;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    z-index: 1004;
+    
+    .item{
+        margin: -1px;
+        padding: 0;
+        height: 100px;
+        background: #FFF;
+        border: 1px solid $menuBorder;
+        position: relative;
+        font-size: 0;
+        
+        &.selected{
+            background-color: #dcdcdc;
+        }
+        &:first-of-type{
+            margin-top: -1px;
+        }
+        &:last-of-type{
+            height: 102px;
+        }
+        .common{
+            vertical-align: top;
+            display: inline-block;
+            font-size: 14px;
+        }
+        .layer-visible{
+            @extend .common;
+            border-left: 1px solid $menuBorder;
+            border-right: 1px solid $menuBorder;
+            margin-left: -1px;
+            height: 100%;
+            width: 50px;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+
+            i {
+                font-size: 18px;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                margin: -9px 0 0 -12px;
+            }
+        }
+        .layer-picture{
+            @extend .common;
+            width: 50px;
+            height: 100%;
+        }
+        .layer-name{
+            @extend .common;
+            padding: 0;
+            margin: 0;
+            font-size: 18px;
+            line-height: 100px;
+        }
+    }
+}
+#layer-buttons{
+    padding: 5px 0;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    font-size: 0;
+    text-align: right;
+    background: #fff;
+    z-index: 1005;
+    width: 280px;
+    overflow-x: hidden;
+    border-left: 1px solid $menuBorder;
+    border-top: 1px solid $menuBorder;
+
+    .btn{
+        margin: 0 4px;
     }
 }
 
@@ -140,7 +232,7 @@
 
 #currentTool{
     list-style: none !important;
-    border: 1px solid #eee;
+    border: 1px solid $menuBorder;
     border-radius: 10px 10px 0 0;
     padding: 4px;
     margin-bottom: 0;
@@ -191,12 +283,12 @@
 
 #tools{
     @extend #currentTool;
-    min-height: calc(100% - 48px);
+    min-height: calc(100% - #{$menuHeight - 1px});
     position: relative;
-    width: 49px;
+    width: $menuHeight;
     border-radius: 0;
     border: 0;
-    border-right: 1px solid #eee;
+    border-right: 1px solid $menuBorder;
     
     > li,
     > li > ul > li{
@@ -225,10 +317,10 @@
 }
 #sketch{
     position: absolute;
-    left: 49px;
-    top: 49px;
-    height: calc(100% - 49px);
-    width: calc(100% - 49px);
+    left: $menuHeight;
+    top: $menuHeight;
+    height: calc(100% - #{$menuHeight});
+    width: calc(100% - #{$menuHeight});
     overflow: hidden;
     
     .dragndrop{
@@ -261,6 +353,8 @@
         }
     }
     #canvasWrapper{
+        position: relative;
+        
         .canvasLayer{
             position: absolute;
             top: 0;
@@ -317,6 +411,7 @@
 }*/
 
 body {
+    height: calc(100vh - 3px);
     width: 100%;
     font-family: 'Ubuntu', sans-serif;
     font-weight: 400;
