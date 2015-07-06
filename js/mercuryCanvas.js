@@ -45,6 +45,7 @@
         
     var undoStep = 0;
     var undo = [];
+    var undoLayers = [];
     var undoData = {};
 
     var points = [];
@@ -52,6 +53,7 @@
 
     window.undo = undo;
     window.undoStep = undoStep;
+    window.undoLayers = undoLayers;
     window.undoData = undoData;
     window.layers = layers;
     
@@ -361,7 +363,8 @@
                         action: 'opacity',
                         before: startOpacity,
                         after: e.from / 100,
-                        layer: selectedLayer
+                        layer: selectedLayer,
+                        layerName: selectedLayer.name
                     });
                     opacitySliderFinished = true;
                 }
@@ -616,6 +619,7 @@
         AddToUndo({
             action: 'draw',
             layer: newLayer[0].getAttribute('id'),
+            layerName: newLayer[0].getAttribute('id'),
             transform: {
                 x: newLayer.x,
                 y: newLayer.y,
@@ -1114,7 +1118,8 @@
                                             width: selectedLayer.width,
                                             height: selectedLayer.height
                                         },
-                                        layer: selectedLayer
+                                        layer: selectedLayer,
+                                        layerName: selectedLayer.name
                                     });
                                     selectStart = {
                                         x: selectedLayer.x,
@@ -1432,32 +1437,18 @@
     }
         
     function checkForOrphanLayers(){
-        // TODO: rethink this
-        return;
         var toBeDeleted = [];
 
-        $.each(layers, function(index, value){
-            var ok = false;
-            $.each(undo, function(key, val){
-                val.after = (val.after ? val.after : {
-                    x: val.layer.x,
-                    y: val.layer.y,
-                    width: val.layer.width,
-                    height: val.layer.height
-                });
-                if(val.after.x == value.x && val.after.y == value.y && val.after.width == value.width && val.after.height == value.height){
-                    ok = true;
-                }
-            });
-            if(!ok){
-                toBeDeleted.push(value);
+        $.each(layers, function(index, layer){
+            if(undoLayers.indexOf(layer.name) == -1){
+                toBeDeleted.push(layer.name);
             }
         });
 
         $.each(toBeDeleted, function(index, value){
-            $('#' + value.name).remove();
-            $('#layers [data-layer="'+ value.name +'"]').remove();
-            delete layers[value.name];
+            $('#' + value).remove();
+            $('#layers [data-layer="'+ value +'"]').remove();
+            delete layers[value];
         });
     }
 
@@ -1511,7 +1502,8 @@
                     if(selectedLayer){
                         AddToUndo({
                             action: 'delete',
-                            layer: selectedLayer[0].getAttribute('id')
+                            layer: selectedLayer[0].getAttribute('id'),
+                            layerName: selectedLayer[0].getAttribute('id')
                         });
                         $(selectedLayer[0]).hide();
                         DeselectLayer();
@@ -1549,6 +1541,8 @@
                                     DeselectLayer();
                                     window.undoStep = undoStep = 0;
                                     undo = [];
+                                    undoLayers = [];
+                                    undoData = {};
                                     zIndex = 0;
                                     checkForOrphanLayers();
                                     CheckUndoButtons();
@@ -1670,7 +1664,15 @@
                 undoData[u.layerName].splice(0, amount);
             }
         }
-        undo.splice(undoStep, undo.length);
+        var removedLayers = undo.splice(undoStep, undo.length);
+        $.each(removedLayers, function(index, removedLayer){
+            if(removedLayer.layerName && undoLayers.indexOf(removedLayer.layerName) != -1){
+                undoLayers.splice(undoLayers.indexOf(removedLayer.layerName), 1);
+            }
+        })
+        if(options.layerName && undoLayers.indexOf(options.layerName) == -1){
+            undoLayers.push(options.layerName);
+        }
         window.undoStep = undoStep += 1;
         if(options.action == 'pixelManipulation'){
             addToUndoData(options.layer.name, options.layer);
@@ -1697,6 +1699,7 @@
             else if (typeof options.layer == 'object'){
                 if(options.layer.length){
                     for(var i = 0, l = options.layer.length; i < l; i++){
+                        undoLayers.push(options.layer[i]);
                         $('#layers [data-layer="'+ options.layer[i] +'"]').hide();
                     }
                     DisableLayerButtons();
@@ -2029,6 +2032,7 @@
                 AddToUndo({
                     action: 'draw',
                     layer: newLayer.name,
+                    layerName: newLayer.name,
                     transform: {
                         x: newLayer.x,
                         y: newLayer.y,
@@ -2055,7 +2059,8 @@
                     if(LayerBetweenPoints(layer, p)){
                         AddToUndo({
                             action: 'pixelManipulation',
-                            layer: layer
+                            layer: layer,
+                            layerName: layer.name
                         });
                         var context = layer[0].getContext('2d');
                         context.save();
