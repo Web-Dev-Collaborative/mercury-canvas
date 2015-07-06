@@ -45,9 +45,15 @@
         
     var undoStep = 0;
     var undo = [];
+    var undoData = {};
 
     var points = [];
     var minMousePos = { 'x': 999999, 'y': 999999 }, maxMousePos = { 'x': -1, 'y': -1 };
+
+    window.undo = undo;
+    window.undoStep = undoStep;
+    window.undoData = undoData;
+    window.layers = layers;
     
     if(!$.cookie('brushSize')){
         $.cookie('brushSize', 5);
@@ -203,7 +209,6 @@
     var max = 0;
     
     function init(){
-        localStorage.clear();
         var stats = new Stats();
         stats.setMode(1); // 0: fps, 1: ms, 2: mb
 
@@ -653,15 +658,6 @@
                 }
             })
         }
-    }
-
-    $.undo = function(){
-        // console.log(undoStep, undo);
-        return undo;
-    }
-    $.layers = function(){
-        // console.log(layers);
-        return layers;
     }
     var mousemoved = false;
     var virtualCanvas = $('<canvas>');
@@ -1551,7 +1547,7 @@
                             {
                                 click: function(){
                                     DeselectLayer();
-                                    undoStep = 0;
+                                    window.undoStep = undoStep = 0;
                                     undo = [];
                                     zIndex = 0;
                                     checkForOrphanLayers();
@@ -1663,15 +1659,21 @@
         );
         tempCtx.stroke();
     }
-
+    
     function AddToUndo(options){
-        if(undoStep.length > settings.undoLength){
-            undo.splice(0, 1);
+        if(undo.length >= settings.undoLength){
+            var amount = 1 + undo.length - settings.undoLength;
+            var u = undo.splice(0, amount);
+            window.undoStep = undoStep -= amount;
+            
+            if(u.action == 'pixelManipulation'){
+                undoData[u.layerName].splice(0, amount);
+            }
         }
         undo.splice(undoStep, undo.length);
-        undoStep ++;
+        window.undoStep = undoStep += 1;
         if(options.action == 'pixelManipulation'){
-            saveToLocalStorage(options.layer.name, options.layer);
+            addToUndoData(options.layer.name, options.layer);
             
             undo.push({
                 action: 'pixelManipulation',
@@ -1784,14 +1786,14 @@
                             break;
                         case 'pixelManipulation':
                             var layer = layers[options.layerName];
-                            var storage = $.parseJSON(localStorage.getItem(options.layerName));
+                            var storage = undoData[options.layerName];
                             var oldLayer = storage.pop();
                             
                             if(oldLayer == undefined){
                                 console.warn('Undo has no layer obj');
                             }
-                            saveToLocalStorage(options.layerName + '-redo', layer);
-                            localStorage.setItem(options.layerName, JSON.stringify(storage));
+                            addToUndoData(options.layerName + '-redo', layer);
+                            undoData[options.layerName] = storage;
                             
                             var img = new Image();
                             img.src = oldLayer.image;
@@ -1853,14 +1855,12 @@
                         case 'pixelManipulation':
                             var layer = layers[options.layerName];
                             
-                            var storage = $.parseJSON(localStorage.getItem(options.layerName + '-redo'));
-                            var oldLayer = storage.pop();
+                            var oldLayer = undoData[options.layerName + '-redo'].pop();
                             
                             if(oldLayer == undefined){
                                 console.warn('Redo has no layer obj');
                             }
-                            localStorage.setItem(options.layerName + '-redo', JSON.stringify(storage));
-                            saveToLocalStorage(options.layerName, layer);
+                            addToUndoData(options.layerName, layer);
                             
                             var img = new Image();
                             img.src = oldLayer.image;
@@ -1873,7 +1873,7 @@
                             console.warn('Redo doesn\'t have this action ('+ options.action +')');
                             break;
                     }
-                    undoStep ++;
+                    window.undoStep = undoStep += 1;
                 }
                 else{
                     console.log('Too many redo steps');
@@ -1884,26 +1884,15 @@
         CheckUndoButtons();
     }
     
-    function saveToLocalStorage(name, layer){
-//        console.log(name, layer);
+    function addToUndoData(name, layer){
         if(layer && name){
-            if(localStorage[name] == undefined){
-                localStorage.setItem(name, '[]');
+            if(undoData[name] == undefined){
+                undoData[name] = [];
             }
             if(layer[0] == undefined){
-                var forStorage = $.parseJSON(localStorage[name]);
-                var i = forStorage.length;
-                forStorage[i] = layer;
-
-                try{
-                    localStorage.setItem(name, JSON.stringify(forStorage));
-                }
-                catch(e){
-                    console.log(e);
-                }
+                undoData[name].push(layer);
             }
             else{
-                var forStorage = $.parseJSON(localStorage[name]);
                 var temp = {};
                 temp.image = layer[0].toDataURL('image/png');
                 temp.transform = {
@@ -1912,18 +1901,11 @@
                     width: layer.width,
                     height: layer.height
                 }
-                forStorage.push(temp);
-
-                try{
-                    localStorage.setItem(name, JSON.stringify(forStorage));
-                }
-                catch(e){
-                    console.log(e);
-                }
+                undoData[name].push(temp);
             }
         }
         else{
-            console.warn('Save to localstorage:', name, layer)
+            console.warn('SaveToUndoData received an undefined param:', name, layer)
         }
     }
 
