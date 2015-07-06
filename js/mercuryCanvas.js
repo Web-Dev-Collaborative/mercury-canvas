@@ -203,6 +203,7 @@
     var max = 0;
     
     function init(){
+        localStorage.clear();
         var stats = new Stats();
         stats.setMode(1); // 0: fps, 1: ms, 2: mb
 
@@ -1222,11 +1223,9 @@
     }
     
     function EnableLayerButtons(){
-        console.log('enabled');
         $('#layer-buttons').children('.btn').removeClass('disabled');
     }
     function DisableLayerButtons(){
-        console.log('disabled');
         $('#layer-buttons').children('.btn').addClass('disabled');
     }
 
@@ -1672,23 +1671,11 @@
         undo.splice(undoStep, undo.length);
         undoStep ++;
         if(options.action == 'pixelManipulation'){
-            options.forStorage = {};
-            options.forStorage.image = options.layer[0].toDataURL('image/png');
-            options.forStorage.transform = {
-                x: options.layer.x,
-                y: options.layer.y,
-                width: options.layer.width,
-                height: options.layer.height
-            }
-            try{
-                localStorage.setItem(options.layer.name, JSON.stringify(options.forStorage));
-            }
-            catch(e){
-                console.log(e);
-            }
+            saveToLocalStorage(options.layer.name, options.layer);
+            
             undo.push({
                 action: 'pixelManipulation',
-                layer: options.layer.name
+                layerName: options.layer.name
             });
         }
         else{
@@ -1795,13 +1782,22 @@
                             selectedLayer = null;
                             $(options.layer[0]).css('opacity', options.before);
                             break;
-                        case 'pixelManipulation': 
-                            var layerName = options.layer;
-                            localStorage.setItem(layerName + '-undo', layers[layerName]);
-                            var oldLayer = $.parseJSON(localStorage.getItem(layerName));
-                            var ctx = layers[layerName][0].getContext('2d');
-                            console.log(oldLayer);
-                            ctx.drawImage(oldLayer[0], 0, 0);
+                        case 'pixelManipulation':
+                            var layer = layers[options.layerName];
+                            var storage = $.parseJSON(localStorage.getItem(options.layerName));
+                            var oldLayer = storage.pop();
+                            
+                            if(oldLayer == undefined){
+                                console.warn('Undo has no layer obj');
+                            }
+                            saveToLocalStorage(options.layerName + '-redo', layer);
+                            localStorage.setItem(options.layerName, JSON.stringify(storage));
+                            
+                            var img = new Image();
+                            img.src = oldLayer.image;
+                            img.onload = function(){
+                                layer[0].getContext('2d').drawImage(img, 0, 0);
+                            }
                             break;
                         default:
                             console.warn('Undo doesn\'t have this action ('+ options.action +')');
@@ -1817,14 +1813,15 @@
         else{
             for (var i = 0; i < -1 * steps; i++) {
                 if (undoStep < undo.length) {
-                    switch (undo[undoStep].action) {
+                    var options = undo[undoStep];
+                    switch (options.action) {
                         case 'draw':
-                            var layer = undo[undoStep].layer;
+                            var layer = options.layer;
                             $('#'+ layer).show();
                             $('#layers [data-layer="'+ layer +'"]').show();
                             break;
                         case 'delete':
-                            var layer = undo[undoStep].layer;
+                            var layer = options.layer;
                             $('#layers .selected').removeClass('selected');
                             
                             if(typeof layer == 'string'){
@@ -1842,19 +1839,38 @@
                             DisableLayerButtons();
                             break;
                         case 'transform':
-                            TransformLayer(undo[undoStep].layer, undo[undoStep].after);
-                            ScaleCanvas(undo[undoStep].layer, undo[undoStep].after , undo[undoStep].before);
+                            TransformLayer(options.layer, options.after);
+                            ScaleCanvas(options.layer, options.after , options.before);
                             break;
                         case 'opacity':
-                            selectedLayer = undo[undoStep].layer;
+                            selectedLayer = options.layer;
                             opacitySlider.update({
-                                from: undo[undoStep].after * 100
+                                from: options.after * 100
                             });
                             selectedLayer = null;
-                            $(undo[undoStep].layer[0]).css('opacity', undo[undoStep].after);
+                            $(options.layer[0]).css('opacity', options.after);
+                            break;
+                        case 'pixelManipulation':
+                            var layer = layers[options.layerName];
+                            
+                            var storage = $.parseJSON(localStorage.getItem(options.layerName + '-redo'));
+                            var oldLayer = storage.pop();
+                            
+                            if(oldLayer == undefined){
+                                console.warn('Redo has no layer obj');
+                            }
+                            localStorage.setItem(options.layerName + '-redo', JSON.stringify(storage));
+                            saveToLocalStorage(options.layerName, layer);
+                            
+                            var img = new Image();
+                            img.src = oldLayer.image;
+                            img.onload = function(){
+                                ClearLayer(options.layerName);
+                                layer[0].getContext('2d').drawImage(img, 0, 0);
+                            }
                             break;
                         default:
-                            console.warn('Redo doesn\'t have this action ('+ undo[undoStep - 1].action +')');
+                            console.warn('Redo doesn\'t have this action ('+ options.action +')');
                             break;
                     }
                     undoStep ++;
@@ -1866,6 +1882,49 @@
         }
 
         CheckUndoButtons();
+    }
+    
+    function saveToLocalStorage(name, layer){
+//        console.log(name, layer);
+        if(layer && name){
+            if(localStorage[name] == undefined){
+                localStorage.setItem(name, '[]');
+            }
+            if(layer[0] == undefined){
+                var forStorage = $.parseJSON(localStorage[name]);
+                var i = forStorage.length;
+                forStorage[i] = layer;
+
+                try{
+                    localStorage.setItem(name, JSON.stringify(forStorage));
+                }
+                catch(e){
+                    console.log(e);
+                }
+            }
+            else{
+                var forStorage = $.parseJSON(localStorage[name]);
+                var temp = {};
+                temp.image = layer[0].toDataURL('image/png');
+                temp.transform = {
+                    x: layer.x,
+                    y: layer.y,
+                    width: layer.width,
+                    height: layer.height
+                }
+                forStorage.push(temp);
+
+                try{
+                    localStorage.setItem(name, JSON.stringify(forStorage));
+                }
+                catch(e){
+                    console.log(e);
+                }
+            }
+        }
+        else{
+            console.warn('Save to localstorage:', name, layer)
+        }
     }
 
     function CheckUndoButtons(){
@@ -1954,10 +2013,6 @@
         ctx.putImageData(trimmed, 0, 0);
 
         layer.css('transition', transitionContent);
-        AddToUndo({
-            action: 'pixelManipulation',
-            layer: layer
-        });
     }
 
 
@@ -2016,13 +2071,18 @@
                 
                 $.each(layers, function(index, layer){
                     if(LayerBetweenPoints(layer, p)){
+                        AddToUndo({
+                            action: 'pixelManipulation',
+                            layer: layer
+                        });
                         var context = layer[0].getContext('2d');
+                        context.save();
                         context.globalCompositeOperation = 'destination-out';
                         context.drawImage(temp, -1 * layer.x, -1 * layer.y);
-                        
+                        context.restore();
                         layer.css('transition', 'none 0s');
 
-                        setTimeout(trim(layer), 1);
+//                        setTimeout(trim(layer), 1);
                     }
                 });
                 ClearLayer('canvasTemp');
@@ -2188,10 +2248,10 @@
         return newLayer;
     }
     function checkMinMaxMouse(){
-        minMousePos.x = Math.max(0, Math.floor(minMousePos.x));
-        minMousePos.y = Math.max(0, Math.floor(minMousePos.y));
-        maxMousePos.x = Math.min($temp.width(), maxMousePos.x);
-        maxMousePos.y = Math.min($temp.height(), maxMousePos.y);
+        minMousePos.x = Math.floor(Math.max(0, Math.floor(minMousePos.x)));
+        minMousePos.y = Math.floor(Math.max(0, Math.floor(minMousePos.y)));
+        maxMousePos.x = Math.ceil(Math.min($temp.width(), maxMousePos.x));
+        maxMousePos.y = Math.ceil(Math.min($temp.height(), maxMousePos.y));
     }
     
     function DrawTempCanvas(layer){
