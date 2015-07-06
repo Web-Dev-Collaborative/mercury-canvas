@@ -267,9 +267,6 @@
             }
         });
 
-        CheckUndoButtons();
-        Tool('brush');
-
         $('#blendingModes', boardWrapper).select2({
             dropdownParent: $('#blendingModes', boardWrapper).parent(),
         }).on('change', function(){
@@ -554,8 +551,10 @@
 
         tempCtx.translate(-0.5, -0.5);
         ClearLayer('canvasTemp');
-        refreshSettings();
         ready = true;
+        CheckUndoButtons();
+        refreshSettings();
+        Tool('brush');
 //        AddLayer({});
 //        console.log(settings);
     }
@@ -2121,6 +2120,7 @@
                     width: settings.lineWidth,
                     height: settings.lineWidth
                 });
+                if(mousePos) MoveVirtualCursor(mousePos);
             }
             tempCtx.lineWidth = settings.lineWidth;
         }
@@ -2320,13 +2320,17 @@
         if(height != $temp.height() || width != $temp.width()){
             $background.attr({
                 width: width,
-                height: height,
-                style: 'width: '+ width +'px; height: '+ height +'px'
+                height: height
+            }).css({
+                width: width,
+                height: height
             });
             $temp.attr({
                 width: width,
-                height: height,
-                style: 'width: '+ width +'px; height: '+ height +'px'
+                height: height
+            }).css({
+                width: width,
+                height: height
             });
 
             settings.width = width;
