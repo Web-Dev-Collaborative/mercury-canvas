@@ -783,7 +783,7 @@
             }
         },
         'mousemove': function(event, custom){
-            requestAnimationFrame(function(){
+            if(requestAnimationFrame) requestAnimationFrame(function(){
                 if(!$('.mercuryModal').length){
                     if(!custom && !isOnCanvas(event) && !selectedLayer && !mouse.document && ready){
                         if(!cleared){
