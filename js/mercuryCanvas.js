@@ -166,9 +166,9 @@
         temp = $temp[0];
         
         backgroundCtx = background.getContext('2d');
+        tempCtx = temp.getContext('2d');
         var newSize = ResizeCanvasBackground();
         
-        tempCtx = temp.getContext('2d');
         tempCtx.globalAlpha = 1;
 
         tempCtx.fillStyle = '#fff';
@@ -530,8 +530,7 @@
                 layer: layersForAction
             });
         });
-
-        tempCtx.translate(-0.5, -0.5);
+        
         ClearLayer('canvasTemp');
         ready = true;
         CheckUndoButtons();
@@ -2302,6 +2301,8 @@
         var height = layersWrapper.height();
         var width = layersWrapper.width();
         if(height != $temp.height() || width != $temp.width()){
+            backgroundCtx.save();
+            tempCtx.save();
             $background.attr({
                 width: width,
                 height: height
@@ -2323,6 +2324,9 @@
             backgroundCtx.fillStyle = settings.backgroundColor;
             backgroundCtx.rect(0, 0, width, height);
             backgroundCtx.fill();
+            backgroundCtx.restore();
+            tempCtx.restore();
+            tempCtx.translate(-0.5, -0.5);
         }
         if(selectedLayer){
             SelectLayer(selectedLayer);
