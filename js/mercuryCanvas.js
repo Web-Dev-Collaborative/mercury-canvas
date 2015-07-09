@@ -1,4 +1,4 @@
-// TODO: eye dropper doesn't care about blending modes
+// TODO: eye dropper doesn't care about blending modes or opacity
 
 (function($) {
     var settings = {};
@@ -561,6 +561,12 @@
             width: width,
             height: height
         }, true);
+        selectStart = {
+            x: newLayer.x,
+            y: newLayer.y,
+            width: newLayer.width,
+            height: newLayer.height
+        };
 
         var _ctx = newLayer[0].getContext('2d');
         _ctx.drawImage(img, 0, 0, width, height);
@@ -594,8 +600,7 @@
 
         AddToUndo({
             action: 'draw',
-            layer: newLayer[0].getAttribute('id'),
-            layerName: newLayer[0].getAttribute('id'),
+            layerName: newLayer.name,
             transform: {
                 x: newLayer.x,
                 y: newLayer.y,
@@ -1084,7 +1089,7 @@
                                     SelectLayer(selectedLayer);
                                     dist.x = dist.y = 0;
                                     original.width = original.height = original.x = original.y = 0;
-
+                                    
                                     AddToUndo({
                                         action: 'transform',
                                         before: selectStart,
@@ -1094,7 +1099,6 @@
                                             width: selectedLayer.width,
                                             height: selectedLayer.height
                                         },
-                                        layer: selectedLayer,
                                         layerName: selectedLayer.name
                                     });
                                     selectStart = {
@@ -1133,6 +1137,9 @@
     });
 
     function ScaleCanvas(layer, end, start, pixelPerfect){
+        if(!end || !start){
+            console.log("ScaleCanvas didn't received enough data:", end, start);
+        }
         var selectedContext = layer[0].getContext('2d');
         var imageData = selectedContext.getImageData(0, 0, start.width, start.height);
 
@@ -1340,7 +1347,7 @@
         }
         
         selectedLayer = null;
-        action = undefined;
+        selectStart = action = undefined;
         dist.x = dist.y = 0;
         original.width = original.height = original.x = original.y = 0;
 
@@ -1481,8 +1488,7 @@
                     if(selectedLayer){
                         AddToUndo({
                             action: 'delete',
-                            layer: selectedLayer[0].getAttribute('id'),
-                            layerName: selectedLayer[0].getAttribute('id')
+                            layerName: selectedLayer.name
                         });
                         $(selectedLayer[0]).hide();
                         DeselectLayer();
@@ -1732,18 +1738,19 @@
                     var options = undo[undoStep - 1];
                     switch (options.action) {
                         case 'draw':
-                            var layer = options.layer;
+                            var layer = options.layerName;
                             $('#'+ layer).hide();
                             $('#layers [data-layer="'+ layer +'"]').hide().removeClass('selected').removeClass('lastSelected');
                             break;
                         case 'delete':
-                            var layer = options.layer;
                             $('#layers .selected').removeClass('selected');
-                            if(typeof layer == 'string'){
+                            if(options.layerName){
+                                var layer = options.layerName;
                                 $('#'+ layer).show();
                                 $('#layers [data-layer="'+ layer +'"]').show().addClass('selected').addClass('lastSelected');
                             }
-                            else if (typeof layer == 'object'){
+                            else if (options.layer){
+                                var layer = options.layer;
                                 if(layer.length){
                                     for(var i = 0, l = layer.length; i < l; i++){
                                         $('#'+ layer[i]).show();
@@ -1754,11 +1761,14 @@
                             EnableLayerButtons();
                             break;
                         case 'transform':
-                            TransformLayer(options.layer, options.before);
-                            ScaleCanvas(options.layer, options.before, options.after);
+                            var layer = layers[options.layerName];
+                            if(!options.before){
+                                options.before = undo[undoStep - 2].after || undo[undoStep - 2].transform;
+                            }
+                            TransformLayer(layer, options.before);
+                            ScaleCanvas(layer, options.before, options.after);
                             break;
                         case 'opacity':
-                            console.log(options);
                             opacitySlider.update({
                                 from: options.before * 100
                             });
@@ -1799,19 +1809,20 @@
                     var options = undo[undoStep];
                     switch (options.action) {
                         case 'draw':
-                            var layer = options.layer;
+                            var layer = options.layerName;
                             $('#'+ layer).show();
                             $('#layers [data-layer="'+ layer +'"]').show();
                             break;
                         case 'delete':
-                            var layer = options.layer;
                             $('#layers .selected').removeClass('selected');
                             
-                            if(typeof layer == 'string'){
+                            if(options.layerName){
+                                var layer = options.layerName;
                                 $('#'+ layer).hide();
                                 $('#layers [data-layer="'+ layer +'"]').hide().removeClass('selected').removeClass('lastSelected');
                             }
-                            else if (typeof layer == 'object'){
+                            else if (options.layer){
+                                var layer = options.layer;
                                 if(layer.length){
                                     for(var i = 0, l = layer.length; i < l; i++){
                                         $('#'+ layer[i]).hide();
@@ -1822,11 +1833,11 @@
                             DisableLayerButtons();
                             break;
                         case 'transform':
-                            TransformLayer(options.layer, options.after);
-                            ScaleCanvas(options.layer, options.after , options.before);
+                            var layer = layers[options.layerName];
+                            TransformLayer(layer, options.after);
+                            ScaleCanvas(layer, options.after , options.before);
                             break;
                         case 'opacity':
-                            console.log(options);
                             opacitySlider.update({
                                 from: options.after * 100
                             });
@@ -2009,7 +2020,6 @@
                 
                 AddToUndo({
                     action: 'draw',
-                    layer: newLayer.name,
                     layerName: newLayer.name,
                     transform: {
                         x: newLayer.x,
