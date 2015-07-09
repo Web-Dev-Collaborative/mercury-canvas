@@ -1,6 +1,3 @@
-// TODO: select tool without mouse drag is broken (resolved, needs a test)
-// TODO: after resizing the layer, layerToColor can be very wrong (resolved, needs a test)
-// TODO: problems with opacity on undo
 // TODO: eye dropper doesn't care about blending modes
 
 (function($) {
@@ -337,24 +334,23 @@
                 }
             },
             onFinish: function(e){
+                if(!changedOpacity){
+                    startOpacity = selectedLayer.alpha;
+                }
                 if(selectedLayer){
                     AddToUndo({
                         action: 'opacity',
                         before: startOpacity,
                         after: e.from / 100,
-                        layer: selectedLayer,
                         layerName: selectedLayer.name
                     });
+                    $(selectedLayer[0]).css('opacity', e.from / 100);
+                    selectedLayer.alpha = e.from / 100;
                     opacitySliderFinished = true;
+                    changedOpacity = false;
                 }
                 else{
                     console.log('Fuck... I\'ve lost the selected layer');
-                }
-            },
-            onUpdate: function(e){
-                if(selectedLayer) {
-                    $(selectedLayer[0]).css('opacity', e.from / 100);
-                    selectedLayer.alpha = e.from / 100;
                 }
             }
         });
@@ -1762,12 +1758,12 @@
                             ScaleCanvas(options.layer, options.before, options.after);
                             break;
                         case 'opacity':
-                            selectedLayer = options.layer;
+                            console.log(options);
                             opacitySlider.update({
                                 from: options.before * 100
                             });
-                            selectedLayer = null;
-                            $(options.layer[0]).css('opacity', options.before);
+                            layers[options.layerName].alpha = options.before;
+                            $('#' + options.layerName).css('opacity', options.before);
                             break;
                         case 'pixelManipulation':
                             var layer = layers[options.layerName];
@@ -1830,12 +1826,12 @@
                             ScaleCanvas(options.layer, options.after , options.before);
                             break;
                         case 'opacity':
-                            selectedLayer = options.layer;
+                            console.log(options);
                             opacitySlider.update({
                                 from: options.after * 100
                             });
-                            selectedLayer = null;
-                            $(options.layer[0]).css('opacity', options.after);
+                            layers[options.layerName].alpha = options.after;
+                            $('#' + options.layerName).css('opacity', options.after);
                             break;
                         case 'pixelManipulation':
                             var layer = layers[options.layerName];
