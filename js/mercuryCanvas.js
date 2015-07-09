@@ -4,24 +4,6 @@
 // TODO: eye dropper doesn't care about blending modes
 
 (function($) {
-    // Define local aliases to frequently used properties
-    var PI = Math.PI,
-        round = Math.round,
-        abs = Math.abs,
-        sin = Math.sin,
-        cos = Math.cos,
-        atan2 = Math.atan2,
-
-        // Base transformations
-        baseTransforms = {
-            rotate: 0,
-            scaleX: 1,
-            scaleY: 1,
-            translateX: 0,
-            translateY: 0,
-            // Store all previous masks
-            masks: []
-        };
     var settings = {};
     var layers = {};
     var layersWrapper, background, temp, backgroundCtx, tempCtx, $temp, $background;
@@ -770,7 +752,7 @@
                                     points[0] = pos;
                                     setLimitPoints(event);
 
-                                    DrawTemp(pos, settings.tool);
+                                    DrawBrushOnLayer(pos, settings.tool, tempCtx);
                                 }
                                 break;
                             case 'select':
@@ -851,7 +833,7 @@
                                 points[points.length] = _pos;
                                 setLimitPoints(event);
 
-                                DrawTemp(_pos, settings.tool);
+                                DrawBrushOnLayer(_pos, settings.tool, tempCtx);
                             }
                             break;
                         case 'select':
@@ -1363,7 +1345,9 @@
         }
         
         selectedLayer = null;
-        action = dist.x = dist.y = undefined;
+        action = undefined;
+        dist.x = dist.y = 0;
+        original.width = original.height = original.x = original.y = 0;
 
         if(ready){
             opacitySlider.update({
@@ -1372,6 +1356,7 @@
             });
             $blendingModes.val('normal').trigger("change").prop("disabled", true);
         }
+        
         // refreshSettings();
     }
 
@@ -1608,49 +1593,48 @@
         }
     }
     
-    // TODO: Try to change this function's name. Now it's too general.
-    function DrawTemp(mouse, type){
-        tempCtx.lineWidth = settings.lineWidth;
+    function DrawBrushOnLayer(mouse, type, ctx){
+        ctx.lineWidth = settings.lineWidth;
         if(type == 'brush'){
-            tempCtx.strokeStyle = settings.strokeColor;
-            tempCtx.fillStyle = settings.strokeColor;
+            ctx.strokeStyle = settings.strokeColor;
+            ctx.fillStyle = settings.strokeColor;
         }
         else{
-            tempCtx.strokeStyle = settings.backgroundColor;
-            tempCtx.fillStyle = settings.backgroundColor;
+            ctx.strokeStyle = settings.backgroundColor;
+            ctx.fillStyle = settings.backgroundColor;
         }
-        tempCtx.lineCap = tempCtx.lineJoin = 'round';
+        ctx.lineCap = tempCtx.lineJoin = 'round';
         
         if (points.length < 3) {
             var b = points[0];
-            tempCtx.beginPath();
-            tempCtx.arc(b.x, b.y, tempCtx.lineWidth / 2, 0, Math.PI * 2, false);
-            tempCtx.fill();
-            tempCtx.closePath();
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, ctx.lineWidth / 2, 0, Math.PI * 2, false);
+            ctx.fill();
+            ctx.closePath();
             
             return;
         }
         
-        tempCtx.clearRect(minMousePos.x, minMousePos.y, maxMousePos.x - minMousePos.x, maxMousePos.y - minMousePos.y);
+        ctx.clearRect(minMousePos.x, minMousePos.y, maxMousePos.x - minMousePos.x, maxMousePos.y - minMousePos.y);
         
-        tempCtx.beginPath();
-        tempCtx.moveTo(points[0].x, points[0].y);
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
 
         for (var i = 0; i < points.length - 2; i++) {
             var c = (points[i].x + points[i + 1].x) / 2;
             var d = (points[i].y + points[i + 1].y) / 2;
             
-            tempCtx.quadraticCurveTo(points[i].x, points[i].y, c, d);
+            ctx.quadraticCurveTo(points[i].x, points[i].y, c, d);
         }
         
         // For the last 2 points
-        tempCtx.quadraticCurveTo(
+        ctx.quadraticCurveTo(
             points[i].x,
             points[i].y,
             points[i + 1].x,
             points[i + 1].y
         );
-        tempCtx.stroke();
+        ctx.stroke();
     }
     
     function AddToUndo(options){
