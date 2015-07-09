@@ -250,8 +250,15 @@
             dropdownParent: $('#blendingModes', boardWrapper).parent(),
         }).on('change', function(){
             if(selectedLayer){
-                $(selectedLayer[0]).css('mix-blend-mode', $('#blendingModes option:checked').val());
-                selectedLayer.blendingMode = $('#blendingModes option:checked').val();
+                var newBlendingMode = $('#blendingModes option:checked').val();
+                AddToUndo({
+                    action: 'blendingModes',
+                    layerName: selectedLayer.name,
+                    before: selectedLayer.blendingMode,
+                    after: newBlendingMode
+                })
+                $(selectedLayer[0]).css('mix-blend-mode', newBlendingMode);
+                selectedLayer.blendingMode = newBlendingMode;
             }
         });
         $(document).on('click', '#dbload', function(){
@@ -1742,6 +1749,11 @@
                             $('#'+ layer).hide();
                             $('#layers [data-layer="'+ layer +'"]').hide().removeClass('selected').removeClass('lastSelected');
                             break;
+                        case 'blendingModes':
+                            var layer = layers[options.layerName];
+                            layer.blendingMode = options.before;
+                            $(layer[0]).css('mix-blend-mode', layer.blendingMode);
+                            break;
                         case 'delete':
                             $('#layers .selected').removeClass('selected');
                             if(options.layerName){
@@ -1812,6 +1824,11 @@
                             var layer = options.layerName;
                             $('#'+ layer).show();
                             $('#layers [data-layer="'+ layer +'"]').show();
+                            break;
+                        case 'blendingModes':
+                            var layer = layers[options.layerName];
+                            layer.blendingMode = options.after;
+                            $(layer[0]).css('mix-blend-mode', layer.blendingMode);
                             break;
                         case 'delete':
                             $('#layers .selected').removeClass('selected');
