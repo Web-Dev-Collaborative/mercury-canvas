@@ -1,5 +1,3 @@
-// TODO: eye dropper doesn't care about blending modes or opacity
-
 (function($) {
     var settings = {};
     var layers = {};
@@ -21,6 +19,7 @@
     var ready = false;
     var cursor;
     var altHiddenLayers = [];
+    var lastColor;
         
     var undoStep = 0;
     var undo = [];
@@ -35,6 +34,7 @@
     window.undoLayers = undoLayers;
     window.undoData = undoData;
     window.layers = layers;
+    window.settings = settings;
     
     if(!$.cookie('brushSize')){
         $.cookie('brushSize', 5);
@@ -146,6 +146,7 @@
             transition: true,
             undoLength: 20,
             brushSizeIncrement: 3,
+            layerOrder: [],
             handlerSize: 20
         };
         
@@ -186,8 +187,6 @@
     }
     
     var requestAnimationFrame;
-    var layersOrderInterval;
-    var max = 0;
     
     function init(){
         var stats = new Stats();
@@ -392,6 +391,7 @@
             $(this).empty();
         });
         $(document).on('click', '#saveoffline', function(){
+            MergeAllLayers();
             var dt = temp.toDataURL('image/png');
             this.href = dt.replace(/^data:image\/[^;]/, 'data:application/octet-stream');
         })
@@ -431,8 +431,12 @@
         });
         $('#layers').sortable({
             animation: 100,
-            onMove: reorderLayers,
-            onEnd: reorderLayers
+            onMove: function(){
+                reorderLayers(false)
+            },
+            onEnd: function(){
+                reorderLayers(true);
+            }
         });
         $(document).on('click', '.layer-visible', function(e){
             var layerName = $(this).parents('.item').attr('data-layer');
@@ -475,6 +479,9 @@
                     $(this).children('.fa').removeClass('fa-square-o').addClass('fa-eye');
                     $('#' + layerName).show();
                 }
+            }
+            if(settings.tool == 'eyeDropper'){
+                MergeAllLayers();
             }
             e.stopPropagation();
         });
@@ -543,17 +550,43 @@
 //        console.log(settings);
     }
 
-    function reorderLayers(){
+    function MergeAllLayers(){
+        ClearLayer('canvasTemp');
+        tempCtx.save();
+        tempCtx.fillStyle = settings.backgroundColor;
+        tempCtx.rect(0, 0, settings.width, settings.height);
+        tempCtx.fill();
+        $.each(settings.layerOrder, function(index, value){
+            var layer = layers[value];
+            if($(layer[0]).css('display') != 'none'){
+                tempCtx.save();
+                tempCtx.globalAlpha = layer.alpha;
+                tempCtx.globalCompositeOperation = layer.blendingMode;
+                tempCtx.drawImage(layer[0], layer.x, layer.y, layer.width, layer.height);
+                tempCtx.restore();
+            }
+        });
+    }
+    
+    function reorderLayers(writeToSettings){
         setTimeout(function(){
             var length = $('#layers .item').length;
-            var t = performance.now();
+            if(writeToSettings){
+                var oldLayerOrder = settings.layerOrder;
+                settings.layerOrder = new Array(length - 1);
+            }
             $('#layers .item').each(function(index){
                 $('#'+ $(this).attr('data-layer')).css('z-index', length - index);
+                if(writeToSettings){
+                    settings.layerOrder[length - index - 1] = $(this).attr('data-layer');
+                }
             });
-            var t1 = performance.now() - t;
-            if(t1 > max){
-                max = t1;
-                console.log('New record for reordering: ' + Math.round(t1) + ' millis');
+            if(writeToSettings){
+                AddToUndo({
+                    action: 'layerOrder',
+                    after: settings.layerOrder,
+                    before: oldLayerOrder
+                })
             }
         }, 1);
     }
@@ -791,6 +824,7 @@
             }
         },
         'mousemove': function(event, custom){
+            window.settings = settings;
             if(requestAnimationFrame) requestAnimationFrame(function(){
                 if(!$('.mercuryModal').length){
                     if(!custom && !isOnCanvas(event) && !selectedLayer && !mouse.document && ready){
@@ -1013,36 +1047,50 @@
                             }
                             break;
                         case 'eyeDropper':
-                            var colors = PositionToColor(pos);
-                            var color;
-                            for (var i = 0; i < colors.length; i++) {
-                                if (colors[i].a > 0) {
-                                    if(color){
-                                        if(colors[i].css('z-index') > color.css('z-index')){
-                                            color = colors[i];
-                                        }
-                                    }
-                                    else{
-                                        color = colors[i];
-                                    }
-                                }
+                            MergeAllLayers();
+                            lastColor = tempCtx.getImageData(pos.x, pos.y, 1, 1).data;
+                            var gridSize = 9;
+                            var gridSpace = 20;
+                            var rectDiameter = gridSize * gridSpace;
+                            var squareOrigin = {
+                                x: pos.x,
+                                y: pos.y
                             }
-                            if(!color){
-                                color = {
-                                    r: 0,
-                                    g: 0,
-                                    b: 0,
-                                    a: 0,
-                                }
-                            }
-                            ClearLayer('canvasTemp');
-
+                            
                             tempCtx.save();
-                            tempCtx.fillStyle = (color.a > 0 ? 'rgba('+ color.r + ', ' + color.g + ', ' + color.b + ', ' + color.a +')' : settings.backgroundColor);
+                            tempCtx.imageSmoothingEnabled = tempCtx.mozImageSmoothingEnabled = tempCtx.webkitImageSmoothingEnabled = false;
+                            tempCtx.beginPath();
+                            tempCtx.arc(squareOrigin.x + rectDiameter / 2, squareOrigin.y + rectDiameter / 2, rectDiameter / 2, 0, 2 * Math.PI);
+                            tempCtx.clip();
+                            
+                            tempCtx.drawImage(temp, pos.x - 4, pos.y - 4, rectDiameter / gridSpace, rectDiameter / gridSpace, squareOrigin.x, squareOrigin.y, rectDiameter, rectDiameter);
+                            
+                            tempCtx.lineWidth = 1;
+                            
+                            tempCtx.strokeStyle = 'rgba(224, 224, 224, 0.8)';
+                            tempCtx.beginPath();
+                            var x = 0;
+                            for (x = 1; x < gridSize; x ++) {
+                                tempCtx.moveTo(squareOrigin.x + x * gridSpace, squareOrigin.y);
+                                tempCtx.lineTo(squareOrigin.x + x * gridSpace, squareOrigin.y + rectDiameter);
+                            }
+                            for (x = 1; x < gridSize; x ++) {
+                                tempCtx.moveTo(squareOrigin.x, squareOrigin.y + x * gridSpace);
+                                tempCtx.lineTo(squareOrigin.x + rectDiameter, squareOrigin.y + x * gridSpace);
+                            }
+                            tempCtx.closePath();
+                            tempCtx.stroke();
+                            
                             tempCtx.strokeStyle = '#000';
-                            tempCtx.lineWidth = '1';
-                            tempCtx.strokeRect(pos.x + 3, pos.y - 53, 100, 50);
-                            tempCtx.fillRect(pos.x + 3, pos.y - 53, 100, 50);
+                            tempCtx.beginPath();
+                            tempCtx.arc(squareOrigin.x + rectDiameter / 2, squareOrigin.y + rectDiameter / 2, rectDiameter / 2, 0, 2 * Math.PI);
+                            tempCtx.closePath();
+                            tempCtx.stroke();
+                            
+                            tempCtx.strokeStyle = '#000';
+                            tempCtx.strokeRect(squareOrigin.x + rectDiameter / 2 - gridSpace / 2, squareOrigin.y + rectDiameter / 2 - gridSpace / 2, gridSpace, gridSpace);
+                            tempCtx.strokeStyle = '#FFF';
+                            tempCtx.strokeRect(squareOrigin.x + rectDiameter / 2 - gridSpace / 2 + 1, squareOrigin.y + rectDiameter / 2 - gridSpace / 2 + 1, gridSpace - 2, gridSpace - 2);
                             tempCtx.restore();
                             break;
                     }
@@ -1055,7 +1103,7 @@
                 cleared = false;
                 dir = '';
                 var pos = CalculateCoords(event.pageX, event.pageY);
-                settings.strokeColor = '#'+Math.floor(Math.random()*16777215).toString(16);
+//                settings.strokeColor = '#'+Math.floor(Math.random()*16777215).toString(16);
 
                 switch(settings.tool){
                     case 'brush':
@@ -1067,6 +1115,14 @@
                         }
                         else{
                             BrushMouseUp();  
+                        }
+                        break;
+                    case 'eyeDropper':
+                        if(isOnCanvas(event)){
+                            settings.fillColor = settings.strokeColor = 'rgb('+ lastColor[0] +', '+ lastColor[1] +', '+ lastColor[2] +')';
+                            setTimeout(function(){
+                                Tool('brush');
+                            })
                         }
                         break;
                     case 'select':
@@ -1519,6 +1575,10 @@
                     DefaultToolChange(tool);
                     OutLineLayer(mousePos, true);
                     break;
+                case 'eyeDropper':
+                    DefaultToolChange(tool);
+                    MergeAllLayers();
+                    break;
                 case 'newDoc':
                     MercuryModal({
                         title: 'Are you sure?<br>This action cannot be undone',
@@ -1754,6 +1814,18 @@
                             layer.blendingMode = options.before;
                             $(layer[0]).css('mix-blend-mode', layer.blendingMode);
                             break;
+                        case 'layerOrder':
+                            var length = $('#layers .item').length;
+                            settings.layerOrder = new Array(length - 1);
+                            var elements = [];
+                            for(var i = 0; i < length; i++){
+                                elements.push($('[data-layer="'+ options.before[length - i - 1] +'"]', '#layers'));
+                                $('#'+ options.before[length - i - 1]).css('z-index', i + 1);
+                                settings.layerOrder[i] = $(this).attr('data-layer');
+                            }
+
+                            $('#layers').append(elements);
+                            break;
                         case 'delete':
                             $('#layers .selected').removeClass('selected');
                             if(options.layerName){
@@ -1829,6 +1901,18 @@
                             var layer = layers[options.layerName];
                             layer.blendingMode = options.after;
                             $(layer[0]).css('mix-blend-mode', layer.blendingMode);
+                            break;
+                        case 'layerOrder':
+                            var length = $('#layers .item').length;
+                            settings.layerOrder = new Array(length - 1);
+                            var elements = [];
+                            for(var i = 0; i < length; i++){
+                                elements.push($('[data-layer="'+ options.after[length - i - 1] +'"]', '#layers'));
+                                $('#'+ options.after[length - i - 1]).css('z-index', i + 1);
+                                settings.layerOrder[i] = $(this).attr('data-layer');
+                            }
+
+                            $('#layers').append(elements);
                             break;
                         case 'delete':
                             $('#layers .selected').removeClass('selected');
@@ -2219,6 +2303,8 @@
         layerBlock.find('.layer-name').html('Layer ' + zIndex);
         layerBlock.attr('data-layer', 'canvas-' + zIndex).removeAttr('id');
         layerBlock.prependTo($('#layers'));
+        
+        settings.layerOrder.push(layerID);
         
         if(hasDimensions){
             newLayer.css({
