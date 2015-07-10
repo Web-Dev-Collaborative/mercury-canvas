@@ -556,6 +556,10 @@
         tempCtx.fillStyle = settings.backgroundColor;
         tempCtx.rect(0, 0, settings.width, settings.height);
         tempCtx.fill();
+        if(settings.layerOrder.indexOf(undefined) != -1){
+            console.log('layerOrder had a undefined value, reorder');
+            reorderLayers(true);
+        }
         $.each(settings.layerOrder, function(index, value){
             var layer = layers[value];
             if($(layer[0]).css('display') != 'none'){
@@ -1548,15 +1552,7 @@
                     Undo(-1);
                     break;
                 case 'delete':
-                    if(selectedLayer){
-                        AddToUndo({
-                            action: 'delete',
-                            layerName: selectedLayer.name
-                        });
-                        $(selectedLayer[0]).hide();
-                        DeselectLayer();
-                        CheckCursorCanvas(mousePos, false);
-                    }
+                    $('#layer-buttons .deleteLayers').click();
                     break;
                 case 'save':
                     ToggleRightMenu('save');
