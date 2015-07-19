@@ -189,15 +189,6 @@
     var requestAnimationFrame;
     
     function init(){
-        var stats = new Stats();
-        stats.setMode(1); // 0: fps, 1: ms, 2: mb
-
-        stats.domElement.style.position = 'absolute';
-        stats.domElement.style.right = '0px';
-        stats.domElement.style.top = '0px';
-
-        document.body.appendChild( stats.domElement );
-        
         requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame || setTimeout;
         requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});
         
