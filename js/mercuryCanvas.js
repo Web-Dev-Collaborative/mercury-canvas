@@ -823,8 +823,14 @@
         },
         'mousemove': function(event, custom){
             window.settings = settings;
-            if(requestAnimationFrame) requestAnimationFrame(function(){
+            requestAnimationFrame(function(){
                 if(!$('.mercuryModal').length){
+                    if(!isOnCanvas(event)){
+                        cursor.hide();
+                    }
+                    else if((settings.tool == 'brush' || settings.tool == 'eraser') && cursor.css('display') == 'none'){
+                        cursor.show();
+                    }
                     if(!custom && !isOnCanvas(event) && !selectedLayer && !mouse.document && ready){
                         if(!cleared){
                             ClearLayer('canvasTemp');
