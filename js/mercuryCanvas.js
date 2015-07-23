@@ -20,7 +20,8 @@
     var cursor;
     var altHiddenLayers = [];
     var lastColor;
-        
+    var layerTemplate;
+
     var undoStep = 0;
     var undo = [];
     var undoLayers = [];
@@ -35,13 +36,13 @@
     window.undoData = undoData;
     window.layers = layers;
     window.settings = settings;
-    
+
     if(!$.cookie('brushSize')){
         $.cookie('brushSize', 5);
     }
 
     $(window).resize($.debounce(settings.resizeDelay, ResizeCanvasBackground));
-    
+
     $.MercuryModal.defaults.zIndex = 1080;
     $.MercuryModal.defaults.ready = function(){
         setTimeout(function(){
@@ -121,7 +122,7 @@
                 trimmed = tmp + "...";
             }
         }
-        
+
         return trimmed;
     }
     String.prototype.visualLength = function(){
@@ -132,7 +133,7 @@
         return x;
     }
     $.mercuryCanvas = {};
-    
+
     $.fn.mercuryCanvas = function(options){
         var defaults = {
             backgroundColor: '#fff',
@@ -149,24 +150,24 @@
             layerOrder: [],
             handlerSize: 20
         };
-        
+
         settings = $.extend({}, defaults, options);
-        
+
         layersWrapper = $(this);
         layersWrapper.html('').css({
             width: 'calc(100% - 280px)',
             height: '100%'
         }).append('<div id="cursor"></div><canvas class="canvasLayer canvasBottom" id="canvasBackground" height="0" width="0" border="0">Update your browser</canvas><canvas class="canvasLayer canvasTop" id="canvasTemp" height="0" width="0" border="0">Update your browser</canvas>');
-        
+
         $background = $('#canvasBackground');
         $temp = $('#canvasTemp');
         background = $background[0];
         temp = $temp[0];
-        
+
         backgroundCtx = background.getContext('2d');
         tempCtx = temp.getContext('2d');
         var newSize = ResizeCanvasBackground();
-        
+
         tempCtx.globalAlpha = 1;
 
         tempCtx.fillStyle = '#fff';
@@ -176,25 +177,27 @@
         tempCtx.lineWidth = settings.lineWidth;
         tempCtx.lineJoin = 'round';
         tempCtx.lineCap = 'round';
-        
+
         layersWrapper.on('contextmenu', function(e){
             e.preventDefault();
             return false;
         });
-        
+
         init();
         ResizeCanvasBackground();
     }
-    
+
     var requestAnimationFrame;
-    
+
     function init(){
         requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame || setTimeout;
-        requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});
-        
+
         cursor = $('#cursor');
         boardWrapper = $('#boardWrapper');
         boardWrapper.attr('unselectable', 'on').css('user-select', 'none').on('selectstart', false).on('onselectstart', false);
+
+        layerTemplate = $('#layerTemplate').html();
+        Mustache.parse(layerTemplate);
 
         $('.menu-open', boardWrapper).popover({
             html : true,
@@ -431,7 +434,7 @@
         });
         $(document).on('click', '.layer-visible', function(e){
             var layerName = $(this).parents('.item').attr('data-layer');
-            
+
             if(keys.alt && !keys.ctrl && !keys.shift){
                 if($('#layers .fa-eye').length <= 1){
                     if($(this).children('.fa').hasClass('fa-eye')){
@@ -531,14 +534,14 @@
                 layer: layersForAction
             });
         });
-        
+
         ClearLayer('canvasTemp');
         ready = true;
         CheckUndoButtons();
         refreshSettings();
         Tool('brush');
-//        AddLayer({});
-//        console.log(settings);
+        //        AddLayer({});
+        //        console.log(settings);
     }
 
     function MergeAllLayers(){
@@ -562,7 +565,7 @@
             }
         });
     }
-    
+
     function reorderLayers(writeToSettings){
         setTimeout(function(){
             var length = $('#layers .item').length;
@@ -683,7 +686,7 @@
     var virtualCanvas = $('<canvas>');
     var cleared = false;
     var firstClick = false;
-    
+
     function DrawSelectedLayerOutline(_layer){
         if(!_layer) return;
         tempCtx.save();
@@ -733,7 +736,7 @@
         }
         tempCtx.restore();
     }
-    
+
     $(document).on({
         'keydown': function(e){
             if(!e.key) e.key = window.keypress._keycode_dictionary[e.keyCode];
@@ -1051,17 +1054,17 @@
                                 x: pos.x,
                                 y: pos.y
                             }
-                            
+
                             tempCtx.save();
                             tempCtx.imageSmoothingEnabled = tempCtx.mozImageSmoothingEnabled = tempCtx.webkitImageSmoothingEnabled = false;
                             tempCtx.beginPath();
                             tempCtx.arc(squareOrigin.x + rectDiameter / 2, squareOrigin.y + rectDiameter / 2, rectDiameter / 2, 0, 2 * Math.PI);
                             tempCtx.clip();
-                            
+
                             tempCtx.drawImage(temp, pos.x - 4, pos.y - 4, rectDiameter / gridSpace, rectDiameter / gridSpace, squareOrigin.x, squareOrigin.y, rectDiameter, rectDiameter);
-                            
+
                             tempCtx.lineWidth = 1;
-                            
+
                             tempCtx.strokeStyle = 'rgba(224, 224, 224, 0.8)';
                             tempCtx.beginPath();
                             var x = 0;
@@ -1075,13 +1078,13 @@
                             }
                             tempCtx.closePath();
                             tempCtx.stroke();
-                            
+
                             tempCtx.strokeStyle = '#000';
                             tempCtx.beginPath();
                             tempCtx.arc(squareOrigin.x + rectDiameter / 2, squareOrigin.y + rectDiameter / 2, rectDiameter / 2, 0, 2 * Math.PI);
                             tempCtx.closePath();
                             tempCtx.stroke();
-                            
+
                             tempCtx.strokeStyle = '#000';
                             tempCtx.strokeRect(squareOrigin.x + rectDiameter / 2 - gridSpace / 2, squareOrigin.y + rectDiameter / 2 - gridSpace / 2, gridSpace, gridSpace);
                             tempCtx.strokeStyle = '#FFF';
@@ -1098,7 +1101,7 @@
                 cleared = false;
                 dir = '';
                 var pos = CalculateCoords(event.pageX, event.pageY);
-//                settings.strokeColor = '#'+Math.floor(Math.random()*16777215).toString(16);
+                //                settings.strokeColor = '#'+Math.floor(Math.random()*16777215).toString(16);
 
                 switch(settings.tool){
                     case 'brush':
@@ -1128,7 +1131,7 @@
                                 if(selectedLayer && mousemoved){
                                     var transform = $(selectedLayer[0]).css('transform');
                                     transform = transform.slice(7, -1).split(', ');
-                                    
+
                                     selectedLayer.x = parseFloat(transform[4]);
                                     selectedLayer.y = parseFloat(transform[5]);
                                     selectedLayer.width = original.width * parseFloat(transform[0]);
@@ -1143,11 +1146,11 @@
                                     });
 
                                     ScaleCanvas(selectedLayer, selectedLayer, (selectStart ? selectStart : original), $('#scaling-mode').prop('checked'));
-                                    
+
                                     SelectLayer(selectedLayer);
                                     dist.x = dist.y = 0;
                                     original.width = original.height = original.x = original.y = 0;
-                                    
+
                                     AddToUndo({
                                         action: 'transform',
                                         before: selectStart,
@@ -1222,10 +1225,10 @@
         }
         selectedContext.scale(end.width / start.width, end.height / start.height);
         selectedContext.drawImage(virtualCanvas[0], 0, 0);
-        
+
         selectedContext.restore();
     }
-    
+
     function isOnCanvas(event){
         // new way, let the browser decide what was clicked
         if(!background) return false;
@@ -1263,7 +1266,7 @@
             }
         }
     }
-    
+
     function EnableLayerButtons(){
         $('#layer-buttons').children('.btn').removeClass('disabled');
     }
@@ -1283,15 +1286,15 @@
             }
             $blendingModes.prop('disabled', false);
             $('.deleteLayer').removeClass('disabled');
-            
+
             $('#layers [data-layer="'+ _layer[0].getAttribute('id') +'"]').addClass('selected').addClass('lastSelected');
             EnableLayerButtons();
 
             selectedLayer = _layer;
             ClearLayer('canvasTemp');
-            
+
             DrawSelectedLayerOutline(_layer);
-            
+
             if(settings.transition){
                 $(_layer[0]).css('transition', 'none 0s');
             }
@@ -1335,10 +1338,10 @@
             if(!e.key) e.key = window.keypress._keycode_dictionary[e.keyCode];
             var keyCombination = (e.ctrlKey ? 'ctrl ' : '') + (e.altKey ? 'alt ' : '') + (e.shiftKey ? 'shift ' : '') + e.key.toLowerCase();
             var shortcutAction = shortcuts[keyCombination];
-            
+
             if(shortcutAction){
                 e.preventDefault();
-                
+
                 if(typeof shortcutAction == 'function'){
                     shortcutAction();
                 }
@@ -1355,7 +1358,7 @@
             }
         }
     };
-    
+
     var shortcutListener = new window.keypress.Listener(document, ListenerDefaults);
 
     var listenerKeys = [];
@@ -1403,7 +1406,7 @@
         if(selectedLayer){
             $('#layers [data-layer="'+ selectedLayer[0].getAttribute('id') +'"]').removeClass('selected').removeClass('lastSelected');
         }
-        
+
         selectedLayer = null;
         selectStart = action = undefined;
         dist.x = dist.y = 0;
@@ -1416,7 +1419,7 @@
             });
             $blendingModes.val('normal').trigger("change").prop("disabled", true);
         }
-        
+
         // refreshSettings();
     }
 
@@ -1479,7 +1482,7 @@
             }
         }
     }
-        
+
     function checkForOrphanLayers(){
         var toBeDeleted = [];
 
@@ -1504,14 +1507,14 @@
     function ToggleRightMenu(tool){
         $('[data-menu="'+ tool +'"]', boardWrapper).popover('toggle');
     }
-    
+
     function DefaultToolChange(tool){
         $('.outlined', boardWrapper).removeAttr('style').removeClass('outlined');
         $('[data-action='+ tool +']', boardWrapper).css('border', '1px solid red').addClass('outlined');
         settings.tool = tool;
         DeselectLayer();
     }
-    
+
     var actions = ['newDoc', 'fullScreen', 'undo', 'redo', 'brushSize-', 'brushSize+', 'deselect', 'save', 'open', 'delete'];
     var ignoreAction = ['none', 'colorPicker', 'draw', 'selectAll'];
 
@@ -1647,7 +1650,7 @@
             }
         }
     }
-    
+
     function DrawBrushOnLayer(mouse, type, ctx){
         ctx.lineWidth = settings.lineWidth;
         if(type == 'brush'){
@@ -1659,29 +1662,29 @@
             ctx.fillStyle = settings.backgroundColor;
         }
         ctx.lineCap = tempCtx.lineJoin = 'round';
-        
+
         if (points.length < 3) {
             var b = points[0];
             ctx.beginPath();
             ctx.arc(b.x, b.y, ctx.lineWidth / 2, 0, Math.PI * 2, false);
             ctx.fill();
             ctx.closePath();
-            
+
             return;
         }
-        
+
         ctx.clearRect(minMousePos.x, minMousePos.y, maxMousePos.x - minMousePos.x, maxMousePos.y - minMousePos.y);
-        
+
         ctx.beginPath();
         ctx.moveTo(points[0].x, points[0].y);
 
         for (var i = 0; i < points.length - 2; i++) {
             var c = (points[i].x + points[i + 1].x) / 2;
             var d = (points[i].y + points[i + 1].y) / 2;
-            
+
             ctx.quadraticCurveTo(points[i].x, points[i].y, c, d);
         }
-        
+
         // For the last 2 points
         ctx.quadraticCurveTo(
             points[i].x,
@@ -1691,13 +1694,13 @@
         );
         ctx.stroke();
     }
-    
+
     function AddToUndo(options){
         if(undo.length >= settings.undoLength){
             var amount = 1 + undo.length - settings.undoLength;
             var u = undo.splice(0, amount);
             window.undoStep = undoStep -= amount;
-            
+
             if(u.action == 'pixelManipulation'){
                 undoData[u.layerName].splice(0, amount);
             }
@@ -1714,7 +1717,7 @@
         window.undoStep = undoStep += 1;
         if(options.action == 'pixelManipulation'){
             addToUndoData(options.layer.name, options.layer);
-            
+
             undo.push({
                 action: 'pixelManipulation',
                 layerName: options.layer.name
@@ -1850,13 +1853,13 @@
                             var layer = layers[options.layerName];
                             var storage = undoData[options.layerName];
                             var oldLayer = storage.pop();
-                            
+
                             if(oldLayer == undefined){
                                 console.warn('Undo has no layer obj');
                             }
                             addToUndoData(options.layerName + '-redo', layer);
                             undoData[options.layerName] = storage;
-                            
+
                             var img = new Image();
                             img.src = oldLayer.image;
                             img.onload = function(){
@@ -1903,7 +1906,7 @@
                             break;
                         case 'delete':
                             $('#layers .selected').removeClass('selected');
-                            
+
                             if(options.layerName){
                                 var layer = options.layerName;
                                 $('#'+ layer).hide();
@@ -1934,14 +1937,14 @@
                             break;
                         case 'pixelManipulation':
                             var layer = layers[options.layerName];
-                            
+
                             var oldLayer = undoData[options.layerName + '-redo'].pop();
-                            
+
                             if(oldLayer == undefined){
                                 console.warn('Redo has no layer obj');
                             }
                             addToUndoData(options.layerName, layer);
-                            
+
                             var img = new Image();
                             img.src = oldLayer.image;
                             img.onload = function(){
@@ -1963,7 +1966,7 @@
 
         CheckUndoButtons();
     }
-    
+
     function addToUndoData(name, layer){
         if(layer && name){
             if(undoData[name] == undefined){
@@ -2003,7 +2006,7 @@
             $('.tool[data-action="redo"]', boardWrapper).addClass('disabled');
         }
     }
-    
+
     // modified from @remy version
     function trim(layer) {
         var ctx = layer[0].getContext('2d');
@@ -2049,7 +2052,7 @@
         }
         bound.right ++;
         bound.bottom ++;
-        
+
         var trimmed = ctx.getImageData(bound.left, bound.top, layer.width, layer.height);
 
         layer.x += bound.left;
@@ -2085,7 +2088,7 @@
         maxMousePos.y = maxMousePos.y + tempCtx.lineWidth / 2 + 2;
 
         checkMinMaxMouse();
-        
+
         if (mouse.canvas.indexOf(1) != -1) {
             if(settings.tool == 'brush'){
                 var newLayer = AddLayer({
@@ -2097,7 +2100,7 @@
                 if (dragged) {
                     tempCtx.closePath();
                 }
-                
+
                 DrawTempCanvas(newLayer);
                 ClearLayer('canvasTemp', {
                     x: minMousePos.x,
@@ -2105,7 +2108,7 @@
                     width: maxMousePos.x - minMousePos.x,
                     height: maxMousePos.y - minMousePos.y
                 });
-                
+
                 AddToUndo({
                     action: 'draw',
                     layerName: newLayer.name,
@@ -2130,7 +2133,7 @@
                 var tempLayers = [];
                 var tWidth = p.x1 - p.x0;
                 var tHeight = p.y1 - p.y0;
-                
+
                 $.each(layers, function(index, layer){
                     if(LayerBetweenPoints(layer, p)){
                         AddToUndo({
@@ -2145,7 +2148,7 @@
                         context.restore();
                         layer.css('transition', 'none 0s');
 
-//                        setTimeout(trim(layer), 1);
+                        //                        setTimeout(trim(layer), 1);
                     }
                 });
                 ClearLayer('canvasTemp');
@@ -2156,7 +2159,7 @@
         mouse.document = false;
         points = [];
         dragged = false;
-        
+
         minMousePos = { 'x': 999999, 'y': 999999 };
         maxMousePos = { 'x': -1, 'y': -1 };
     }
@@ -2206,30 +2209,30 @@
             setTimeout(refreshSettings, 10);
         }
     }
-    
+
     function PositionToColor(pos){
         var returned = [];
         $.each(layers, function(index, value){
             if (value.x <= pos.x && value.x + value.width >= pos.x &&
                 value.y <= pos.y && value.y + value.height >= pos.y) {
-                    var imageData = value[0].getContext('2d').getImageData(pos.x - value.x, pos.y - value.y, 1, 1);
-                    value.r = imageData.data[0];
-                    value.g = imageData.data[1];
-                    value.b = imageData.data[2];
-                    value.a = imageData.data[3];
-                    returned.push(value);
+                var imageData = value[0].getContext('2d').getImageData(pos.x - value.x, pos.y - value.y, 1, 1);
+                value.r = imageData.data[0];
+                value.g = imageData.data[1];
+                value.b = imageData.data[2];
+                value.a = imageData.data[3];
+                returned.push(value);
             }
         });
         return returned;
     }
-    
+
     function PositionToLayer(pos){
         var returned = [];
         $.each(layers, function(index, value){
             if (value.x <= pos.x && value.x + value.width >= pos.x &&
                 value.y <= pos.y && value.y + value.height >= pos.y &&
                 $(value[0]).css('display') != 'none') {
-                    returned.push(value);
+                returned.push(value);
             }
         });
         if(returned.length > 1) {
@@ -2253,7 +2256,7 @@
             return returned[0];
         }
     }
-    
+
     function AddLayer(options, hasDimensions){
         var layerDefaults = {
             x: 0,
@@ -2286,13 +2289,15 @@
             height: layerSettings.height,
             'z-index': zIndex
         }).appendTo(layersWrapper);
-        var layerBlock = $('#layer-template').clone();
-        layerBlock.find('.layer-name').html('Layer ' + zIndex);
-        layerBlock.attr('data-layer', 'canvas-' + zIndex).removeAttr('id');
-        layerBlock.prependTo($('#layers'));
-        
+
+        var rendered = Mustache.render(layerTemplate, {
+            canvasID: "canvas-" + zIndex,
+            layerName: "Layer " + zIndex
+        });
+        $(rendered).prependTo($('#layers'));
+
         settings.layerOrder.push(layerID);
-        
+
         if(hasDimensions){
             newLayer.css({
                 'width': layerSettings.width,
@@ -2309,7 +2314,7 @@
         newLayer['matrix'] = matrix;
         newLayer['alpha'] = 1;
         newLayer['blendingMode'] = 'normal';
-        
+
         layers[layerID] = newLayer;
         return newLayer;
     }
@@ -2319,15 +2324,15 @@
         maxMousePos.x = Math.ceil(Math.min($temp.width(), maxMousePos.x));
         maxMousePos.y = Math.ceil(Math.min($temp.height(), maxMousePos.y));
     }
-    
+
     function DrawTempCanvas(layer){
         checkMinMaxMouse();
-        
+
         layer.width = maxMousePos.x - minMousePos.x;
         layer.height = maxMousePos.y - minMousePos.y;
-        
+
         var ctx = layer[0].getContext('2d');
-        
+
         var matrix = new Matrix();
         matrix.translate(minMousePos.x, minMousePos.y);
         layer.css({
@@ -2341,16 +2346,16 @@
         });
         layer.x = minMousePos.x;
         layer.y = minMousePos.y;
-        
+
         ctx.drawImage(temp, minMousePos.x, minMousePos.y, layer.width, layer.height, 0, 0, layer.width, layer.height);
-        
+
         if(settings.transition){
             setTimeout(function(layer){
                 $(layer[0]).css('transition', transitionContent);
             }, 10, layer);
         }
     }
-    
+
     function RemoveLayer(layer){
         if (typeof layer == "number") {
             layer = 'canvas-' + layer;
@@ -2358,11 +2363,11 @@
         else if (typeof layer == 'object') {
             layer = $(layer).attr('id');
         }
-        
+
         $('#' + layer).remove();
         delete layers[layer];
     }
-    
+
     function ClearLayer(layer, portion){
         if(!$temp[0]) setTimeout(function(){
             ClearLayer(layer, portion);
@@ -2379,12 +2384,12 @@
             $('#' + layer)[0].getContext('2d').clearRect(0, 0, $('#' + layer).width(), $('#' + layer).height());
         }
     }
-    
+
     function CalculateCoords(pageX, pageY) {
         if(layersWrapper){
             var x0 = parseFloat(layersWrapper.offset()['left']);
             var y0 = parseFloat(layersWrapper.offset()['top']);
-            
+
             return {
                 x: pageX - x0,
                 y: pageY - y0
@@ -2392,7 +2397,7 @@
         }
         return{x: 0, y: 0}
     }
-    
+
     function ResizeCanvasBackground(){
         var height = layersWrapper.height();
         var width = layersWrapper.width();
@@ -2516,5 +2521,5 @@
         x: 0,
         y: 0
     };*/
-    
+
 }(jQuery));
