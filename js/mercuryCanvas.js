@@ -20,7 +20,8 @@
     var cursor;
     var altHiddenLayers = [];
     var lastColor;
-    var layerTemplate;
+    var layerTemplate, textTemplate;
+    var textStart, textarea;
 
     var undoStep = 0;
     var undo = [];
@@ -157,11 +158,12 @@
         layersWrapper.html('').css({
             width: 'calc(100% - 280px)',
             height: '100%'
-        }).append('<div id="cursor"></div><canvas id="buffer" width="0" height="0" border="0"></canvas><canvas class="canvasLayer canvasBottom" id="canvasBackground" height="0" width="0" border="0">Update your browser</canvas><canvas class="canvasLayer canvasTop" id="canvasTemp" height="0" width="0" border="0">Update your browser</canvas>');
+        }).append('<div id="cursor"></div><textarea id="textarea"></textarea><canvas id="buffer" width="0" height="0" border="0"></canvas><canvas class="canvasLayer canvasBottom" id="canvasBackground" height="0" width="0" border="0">Update your browser</canvas><canvas class="canvasLayer canvasTop" id="canvasTemp" height="0" width="0" border="0">Update your browser</canvas>');
 
         $background = $('#canvasBackground');
         $temp = $('#canvasTemp');
         $buffer = $('#buffer');
+        textarea = $('#textarea');
         background = $background[0];
         temp = $temp[0];
         buffer = $buffer[0];
@@ -201,6 +203,8 @@
 
         layerTemplate = $('#layerTemplate').html();
         Mustache.parse(layerTemplate);
+        textTemplate = $('#textTemplate').html();
+        Mustache.parse(textTemplate);
 
         $('.menu-open', boardWrapper).popover({
             html : true,
@@ -542,7 +546,7 @@
         ready = true;
         CheckUndoButtons();
         refreshSettings();
-        Tool('brush');
+        Tool('text');
         //        AddLayer({});
         //        console.log(settings);
     }
@@ -818,6 +822,22 @@
                                         }
                                     }
                                 }
+                                break;
+                            case 'text':
+                                if(event.which == 1){
+                                    textStart = {
+                                        x: pos.x,
+                                        y: pos.y
+                                    };
+                                    textarea.css({
+                                        top: pos.y,
+                                        left: pos.x,
+                                        width: 1,
+                                        height: 1,
+                                        display: 'block'
+                                    });
+                                }
+                                break;
                         }
                     }
                 }
@@ -1101,6 +1121,14 @@
                             tempCtx.strokeRect(squareOrigin.x + rectDiameter / 2 - gridSpace / 2 + 1, squareOrigin.y + rectDiameter / 2 - gridSpace / 2 + 1, gridSpace - 2, gridSpace - 2);
                             tempCtx.restore();
                             break;
+                        case 'text':
+                            if(mouse.canvas.indexOf(1) != -1){
+                                textarea.css({
+                                    width: pos.x - textStart.x,
+                                    height: pos.y - textStart.y
+                                });
+                            }
+                            break;
                     }
                     mousemoved = true;
                 }
@@ -1194,6 +1222,32 @@
                             }
                         }
                         break;
+                    case 'text':
+                        if(mouse.canvas.indexOf(1) != -1 && event.which == 1){
+                            var newLayer = AddLayer({
+                                x: textStart.x,
+                                y: textStart.y,
+                                width: pos.x - textStart.x,
+                                height: pos.y - textStart.y,
+                                text: textarea.val(),
+                                type: 'text'
+                            });
+                            
+                            textarea.hide();
+                            
+                            AddToUndo({
+                                action: 'draw',
+                                layerName: newLayer.name,
+                                text: textarea.val(),
+                                transform: {
+                                    x: newLayer.x,
+                                    y: newLayer.y,
+                                    width: newLayer.width,
+                                    height: newLayer.height
+                                }
+                            });
+                        }
+                        break;
                 }
                 if(event.which == 1) {
                     mouse.document = false;
@@ -1211,6 +1265,8 @@
         if(typeof layer == 'string'){
             layer = layers[layer];
         }
+        if(layer.text) return;
+        console.log(layer);
         var imgElem = $('#layers').find('[data-layer="'+ layer.name +'"]').children('.layer-picture');
         
         imgElem.css('background-image', 'url(' + layer[0].toDataURL() + ')');
@@ -1337,6 +1393,7 @@
         'e': 'eraser',
         'x': 'eyeDropper',
         'o': 'open',
+        't': 'text',
         'ctrl a': 'selectAll',
         'ctrl s': 'save',
         'ctrl n': 'newDoc', // chrome overrides this
@@ -2291,7 +2348,7 @@
         zIndex++;
         if(zIndex > 999){
             $temp.css('z-index', 1000 + zIndex - 999);
-            cursor.css('z-index', 1001 + zIndex - 999);
+            $('#cursor, #textarea').css('z-index', 1001 + zIndex - 999);
             $('#tools, #currentTool, #layers', boardWrapper).css('z-index', 1004 + zIndex - 999);
             $('.select2', boardWrapper).css('z-index', 1069 + zIndex - 999);
             $.MercuryModal.defaults.zIndex = 1080 + zIndex - 999;
@@ -2299,18 +2356,34 @@
         var matrix = new Matrix();
         matrix.translate(layerSettings.x, layerSettings.y);
         var layerID = 'canvas-' + zIndex;
-        var newLayer = $('<canvas />').addClass('canvasLayer').attr({
-            border: '0',
-            width: layerSettings.width,
-            height: layerSettings.height,
-            id: layerID
-        }).css({
-            'transform': matrix.toCSS(),
-            '-webkit-transform': matrix.toCSS(),
-            width: layerSettings.width,
-            height: layerSettings.height,
-            'z-index': zIndex
-        }).appendTo(layersWrapper);
+        var newLayer;
+        if(options.type == 'text'){
+            var rendered = Mustache.render(textTemplate, {
+                canvasID: layerID,
+                width: options.width,
+                height: options.height
+            });
+            $(rendered).appendTo(layersWrapper);
+            newLayer = $('#' + layerID).css({
+                'transform': matrix.toCSS(),
+                '-webkit-transform': matrix.toCSS(),
+                'z-index': zIndex
+            });
+        }
+        else{
+            newLayer = $('<canvas />').addClass('canvasLayer').attr({
+                border: '0',
+                width: layerSettings.width,
+                height: layerSettings.height,
+                id: layerID
+            }).css({
+                'transform': matrix.toCSS(),
+                '-webkit-transform': matrix.toCSS(),
+                width: layerSettings.width,
+                height: layerSettings.height,
+                'z-index': zIndex
+            }).appendTo(layersWrapper);
+        }
 
         var rendered = Mustache.render(layerTemplate, {
             canvasID: "canvas-" + zIndex,
@@ -2336,6 +2409,9 @@
         newLayer['matrix'] = matrix;
         newLayer['alpha'] = 1;
         newLayer['blendingMode'] = 'normal';
+        if(options.type == 'text'){
+            newLayer.text = (options.text ? options.text : ' ');
+        }
 
         layers[layerID] = newLayer;
         return newLayer;

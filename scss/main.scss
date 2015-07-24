@@ -11,6 +11,17 @@ $menuBorder: #757575;
     }
 }
 
+#textarea{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    border: 1px dashed #000;
+    z-index: 1001;
+    resize: none;
+}
+
 #layers{
     position: absolute;
     top: $menuHeight;
@@ -368,6 +379,7 @@ $menuBorder: #757575;
             top: 0;
             left: 0;
             transform-origin: 0px 0px 0px;
+            resize: none;
 
             &.canvasBottom{
                 z-index: 0;

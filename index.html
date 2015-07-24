@@ -138,9 +138,7 @@
                             </li>
                             <li class="tool" title="Radiera (E)" data-action="eraser"><i class="fa fa-eraser fa-fw"></i></li>
                             <li class="tool" title="Pensula (B)" data-action="brush"><i class="fa fa-paint-brush fa-fw"></i></li>
-                            <li id="text" title="Insereaza text (T)">
-                                <i class="fa fa-font fa-fw"></i>
-                            </li>
+                            <li class="tool" title="Insereaza text (T)" data-action="insertText"><i class="fa fa-font fa-fw"></i></li>
                             <li id="geom" title="Forme geometrice (G)">
                                 <i class="fa fa-cube fa-fw hasSubmenu"><i class="fa fa-caret-right fa-rotate-45"></i></i>
                                 <ul class="submenu">
@@ -205,6 +203,9 @@
                 {{ layerName }}
             </div>
             </div>
+        </script>
+        <script id="textTemplate" type="x-tmpl-mustache">
+        <textarea id="{{ canvasID }}" class="canvasLayer" style="width: {{ width }}px; height: {{ height }}px;"></textarea>
         </script>
 
         <script src="js/jquery.min.js"></script>
