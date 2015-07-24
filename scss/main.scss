@@ -34,7 +34,7 @@ $menuBorder: #757575;
         font-size: 0;
         
         &.selected{
-            background-color: #dcdcdc;
+            background-color: #eee;
         }
         &:first-of-type{
             margin-top: -1px;
@@ -68,8 +68,14 @@ $menuBorder: #757575;
         }
         .layer-picture{
             @extend .common;
-            width: 50px;
-            height: 100%;
+            position: relative;
+            width: 80px;
+            height: calc(100% - 20px);
+            margin: 10px 0 0 10px;
+            border: 1px solid #000;
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
         }
         .layer-name{
             @extend .common;
@@ -77,6 +83,8 @@ $menuBorder: #757575;
             margin: 0;
             font-size: 18px;
             line-height: 100px;
+            width: calc(100% - 160px);
+            margin-left: 20px;
         }
     }
 }
@@ -377,7 +385,14 @@ $menuBorder: #757575;
     height: 100%;
     width: 100%;
 }
-
+#buffer{
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: block;
+    border: 1px dashed red;
+    z-index: 9999;
+}
 
 
 

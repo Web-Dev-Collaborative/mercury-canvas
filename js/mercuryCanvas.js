@@ -1,7 +1,7 @@
 (function($) {
     var settings = {};
     var layers = {};
-    var layersWrapper, background, temp, backgroundCtx, tempCtx, $temp, $background;
+    var layersWrapper, background, temp, backgroundCtx, tempCtx, $temp, $background, $buffer, buffer, bufferCtx;
     var clickPressed, startPos, dragged, actioned, selectStart;
     var zIndex = 0;
     var selectedLayer;
@@ -157,15 +157,18 @@
         layersWrapper.html('').css({
             width: 'calc(100% - 280px)',
             height: '100%'
-        }).append('<div id="cursor"></div><canvas class="canvasLayer canvasBottom" id="canvasBackground" height="0" width="0" border="0">Update your browser</canvas><canvas class="canvasLayer canvasTop" id="canvasTemp" height="0" width="0" border="0">Update your browser</canvas>');
+        }).append('<div id="cursor"></div><canvas id="buffer" width="0" height="0" border="0"></canvas><canvas class="canvasLayer canvasBottom" id="canvasBackground" height="0" width="0" border="0">Update your browser</canvas><canvas class="canvasLayer canvasTop" id="canvasTemp" height="0" width="0" border="0">Update your browser</canvas>');
 
         $background = $('#canvasBackground');
         $temp = $('#canvasTemp');
+        $buffer = $('#buffer');
         background = $background[0];
         temp = $temp[0];
+        buffer = $buffer[0];
 
         backgroundCtx = background.getContext('2d');
         tempCtx = temp.getContext('2d');
+        bufferCtx = buffer.getContext('2d');
         var newSize = ResizeCanvasBackground();
 
         tempCtx.globalAlpha = 1;
@@ -646,7 +649,7 @@
                 height: newLayer.height
             }
         });
-
+        
         original.width = original.height = 0;
         Tool('select');
         SelectLayer(newLayer);
@@ -683,7 +686,6 @@
         }
     }
     var mousemoved = false;
-    var virtualCanvas = $('<canvas>');
     var cleared = false;
     var firstClick = false;
 
@@ -1066,7 +1068,9 @@
                             tempCtx.beginPath();
                             tempCtx.arc(squareOrigin.x + rectDiameter / 2, squareOrigin.y + rectDiameter / 2, rectDiameter / 2, 0, 2 * Math.PI);
                             tempCtx.clip();
-
+                            
+                            pos.x = Math.max(4, pos.x);
+                            pos.y = Math.max(4, pos.y);
                             tempCtx.drawImage(temp, pos.x - 4, pos.y - 4, rectDiameter / gridSpace, rectDiameter / gridSpace, squareOrigin.x, squareOrigin.y, rectDiameter, rectDiameter);
 
                             tempCtx.lineWidth = 1;
@@ -1202,6 +1206,15 @@
             }
         }
     });
+    
+    function refreshLayerPreview(layer){
+        if(typeof layer == 'string'){
+            layer = layers[layer];
+        }
+        var imgElem = $('#layers').find('[data-layer="'+ layer.name +'"]').children('.layer-picture');
+        
+        imgElem.css('background-image', 'url(' + layer[0].toDataURL() + ')');
+    }
 
     function ScaleCanvas(layer, end, start, pixelPerfect){
         if(!end || !start){
@@ -1210,11 +1223,11 @@
         var selectedContext = layer[0].getContext('2d');
         var imageData = selectedContext.getImageData(0, 0, start.width, start.height);
 
-        virtualCanvas.attr({
+        $buffer.attr({
             width: start.width,
             height: start.height
         });
-        virtualCanvas[0].getContext('2d').drawImage(layer[0], 0, 0);
+        bufferCtx.drawImage(layer[0], 0, 0);
         layer.attr({
             width: end.width,
             height: end.height
@@ -1230,7 +1243,7 @@
             selectedContext.mozImageSmoothingEnabled = false;
         }
         selectedContext.scale(end.width / start.width, end.height / start.height);
-        selectedContext.drawImage(virtualCanvas[0], 0, 0);
+        selectedContext.drawImage(buffer, 0, 0);
 
         selectedContext.restore();
     }
@@ -1756,7 +1769,10 @@
         if(undoStep != undo.length) {
             console.warn('Undo step and undo.length not synced; undo:', undo, ', undo.length:', undo.length);
         }
-
+        
+        if(options.action == 'draw' || options.action == 'pixelManipulation' || (options.action == 'transform' && options.before && (options.after.width != options.before.width || options.after.height != options.before.height))){
+            refreshLayerPreview(options.layerName);
+        }
         checkForOrphanLayers();
     }
 
@@ -2153,7 +2169,7 @@
                         context.drawImage(temp, -1 * layer.x, -1 * layer.y);
                         context.restore();
                         layer.css('transition', 'none 0s');
-
+                        
                         //                        setTimeout(trim(layer), 1);
                     }
                 });
