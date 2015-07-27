@@ -22,6 +22,12 @@ $menuBorder: #757575;
     resize: none;
 }
 
+.tool{
+    &.selected{
+        border: 1px solid red !important;
+    }
+}
+
 #layers{
     position: absolute;
     top: $menuHeight;
@@ -60,6 +66,7 @@ $menuBorder: #757575;
         }
         .layer-visible{
             @extend .common;
+            background: #fff;
             border-left: 1px solid $menuBorder;
             border-right: 1px solid $menuBorder;
             margin-left: -1px;
@@ -87,6 +94,7 @@ $menuBorder: #757575;
             background-size: contain;
             background-position: center;
             background-repeat: no-repeat;
+            background-color: #fff;
         }
         .layer-name{
             @extend .common;
@@ -157,7 +165,7 @@ $menuBorder: #757575;
 }
 
 .colpick{
-    top: 265px !important;
+    top: 335px !important;
     left: 55px !important;
     width: 376px;
     height: 180px;
@@ -251,8 +259,7 @@ $menuBorder: #757575;
 
 #currentTool{
     list-style: none !important;
-    border: 1px solid $menuBorder;
-    border-radius: 10px 10px 0 0;
+    border-bottom: 1px solid $menuBorder;
     padding: 4px;
     margin-bottom: 0;
     font-size: 20px;
@@ -273,7 +280,7 @@ $menuBorder: #757575;
     .disabled{
         cursor: not-allowed;
         box-shadow: none;
-        opacity: .65;
+        opacity: 0.3;
     }
     input{
         height: 28px;
@@ -344,7 +351,7 @@ $menuBorder: #757575;
     
     .dragndrop{
         height: 100%;
-        width: 100%;
+        width: calc(100% - 280px);
         position: absolute;
         @include transition(background-color 0.5s);
         border: 4px dashed #000;
@@ -401,7 +408,7 @@ $menuBorder: #757575;
     position: absolute;
     top: 0;
     right: 0;
-    display: block;
+    display: none;
     border: 1px dashed red;
     z-index: 9999;
 }

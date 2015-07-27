@@ -77,12 +77,9 @@ $(function(){
         $('#fontList').append('<li class="font'+ (fontsAvailable[i] == fontsAvailable['selected'] ? ' selectedFont' : '') +'">'+ fontsAvailable[i] +'</li>');
     }
     
-    $('#canvasWrapper').mercuryCanvas({
-        backgroundColor: '#FFF',
-        strokeColor: '#00ed7e'
-    });
+    $('#boardWrapper').mercuryCanvas({});
 
-    $.mercuryCanvas.refreshSettings();
+//    $.mercuryCanvas.refreshSettings();
 });
 
 

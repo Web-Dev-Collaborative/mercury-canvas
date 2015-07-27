@@ -82,9 +82,6 @@
                                     <option value="luminosity">luminosity</option>
                                 </select>
                             </li>
-                            <li data-customSubmenu="select" class="customSubmenu isButton deleteLayer" title="Delete selected layer(s)">
-                                <button class="btn btn-danger"><i class="fa fa-trash fa-fw"></i></button>
-                            </li>
                             <li data-customSubmenu="select" class="customSubmenu tool-checkbox" title="Delete selected layer(s)">
                                 <label for="scaling-mode"><input id="scaling-mode" type="checkbox">Pixel-perfect</label>
                             </li>
@@ -138,7 +135,7 @@
                             </li>
                             <li class="tool" title="Radiera (E)" data-action="eraser"><i class="fa fa-eraser fa-fw"></i></li>
                             <li class="tool" title="Pensula (B)" data-action="brush"><i class="fa fa-paint-brush fa-fw"></i></li>
-                            <li class="tool" title="Insereaza text (T)" data-action="insertText"><i class="fa fa-font fa-fw"></i></li>
+                            <li id="text" title="Insereaza text (T)"><i class="fa fa-font fa-fw"></i></li>
                             <li id="geom" title="Forme geometrice (G)">
                                 <i class="fa fa-cube fa-fw hasSubmenu"><i class="fa fa-caret-right fa-rotate-45"></i></i>
                                 <ul class="submenu">
@@ -193,7 +190,7 @@
                 </div>
             </div>
         </div>
-        <script id="layerTemplate" type="x-tmpl-mustache">
+        <script class="mustache" id="layerPanel" type="x-tmpl-mustache">
         <div class="item" data-layer="{{ canvasID }}">
             <div class="layer-visible">
                 <i class="fa fa-eye fa-fw"></i>
@@ -204,7 +201,7 @@
             </div>
             </div>
         </script>
-        <script id="textTemplate" type="x-tmpl-mustache">
+        <script class="mustache" id="textTemplate" type="x-tmpl-mustache">
         <textarea id="{{ canvasID }}" class="canvasLayer" style="width: {{ width }}px; height: {{ height }}px;"></textarea>
         </script>
 
@@ -232,7 +229,7 @@
         <script src="js/mercuryModal.js"></script>
         <script src="js/fontsDetect.js"></script>
         <script src="js/colorPicker.js"></script>
-        <script src="js/mercuryCanvas.js"></script>
+        <script src="js/mercuryCanvas-modular.js"></script>
         <script src="main.js"></script>
     </body>
 </html>
