@@ -94,6 +94,7 @@
             canvasID: options.id,
             layerName: options.name
         });
+        rendered = rendered.trim().replace(/\n/g, '');
         this.$ = $(rendered).prependTo($('#layers'));
     }
     panel.prototype.hide = function(){
@@ -106,8 +107,9 @@
         $('#layers .item[data-layer="'+ this.id +'"]').remove();
         return null;
     }
-    panel.prototype.refreshPreview = function(){
-        
+    panel.prototype.refreshPreview = function(layer){
+        if(!layer.$) return;
+        this.$.children('.layer-picture').css('background-image', 'url(' + layer.$[0].toDataURL() + ')');
     }
     panel.prototype.select = function(){
         this.$.addClass('selected lastSelected');
@@ -1064,7 +1066,11 @@
             }
 
             if(options.action == 'add' || options.action == 'pixelManipulation' || (options.action == 'transform' && (options.after.width != layer.width || options.after.height != layer.height))){
-                options.layer.panel.refreshPreview();
+                $.each(settings.layers.order, function(index, value){
+                    if(value.id == layer.id){
+                        value.panel.refreshPreview(value);
+                    }
+                });
             }
             this.CheckForOrphans();
         }
@@ -1241,7 +1247,7 @@
         dragDetectSensibility: 1, // higher -> more distance before dragged becomes true
         width: 600, // overwritten at the moment
         height: 500, // overwritten at the moment
-        lineWidth: 3,//($.cookie('brushSize') ? $.cookie('brushSize') : 5),
+        lineWidth: ($.cookie('brushSize') ? $.cookie('brushSize') : 5),
         strokeColor: '#000',
         tool: '',
         transition: 'all 0.5s ease',
