@@ -770,7 +770,7 @@
                                     break;
                                 case 'layerOrder':
                                     var length = $('#layers .item').length;
-                                    settings.layers.order = new Array(length);
+                                    settings.layers.order = [];
                                     var elements = [];
                                     for(var i = 0; i < length; i++){
                                         elements.push($('[data-layer="'+ options.before[length - i - 1] +'"]', '#layers'));
@@ -868,7 +868,7 @@
                                         break;
                                     case 'layerOrder':
                                         var length = $('#layers .item').length;
-                                        settings.layers.order = new Array(length - 1);
+                                        settings.layers.order = [];
                                         var elements = [];
                                         for(var i = 0; i < length; i++){
                                             elements.push($('[data-layer="'+ options.after[length - i - 1] +'"]', '#layers'));
@@ -1120,7 +1120,7 @@
             var self = this;
             $.each(settings.layers.order, function(index, layer){
                 if(!layer){
-                    settings.layer.order.splice(index, 1);
+                    settings.layers.order.splice(index, 1);
                 }
                 if(self.layers.indexOf(layer.id) == -1){
                     layer.remove();
@@ -1155,7 +1155,7 @@
                 var length = $('#layers .item').length;
                 if(writeToSettings){
                     var oldLayerOrder = settings.layers.order;
-                    settings.layers.order = new Array(length);
+                    settings.layers.order = [];
                 }
                 $('#layers .item').each(function(index){
                     $('#'+ $(this).attr('data-layer')).css('z-index', length - index);
