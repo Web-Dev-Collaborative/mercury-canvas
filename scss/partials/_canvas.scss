@@ -1,0 +1,73 @@
+#boardWrapper{
+    outline: 1px solid #000;
+    height: 100%;
+    position: relative;
+}
+#sketch{
+    position: absolute;
+    left: $menuHeight;
+    top: $menuHeight;
+    height: calc(100% - #{$menuHeight});
+    width: calc(100% - #{$menuHeight});
+    overflow: hidden;
+
+    .dragndrop{
+        height: 100%;
+        width: calc(100% - 280px);
+        position: absolute;
+        @include transition(background-color 0.5s);
+        border: 4px dashed #000;
+        margin-bottom: 15px;
+        z-index: 1002;
+
+        &.over{
+            background-color: rgba(0, 100, 200, 0.9);
+
+            > div{
+                color: #fff;
+                text-shadow: 0 0 5px #000;
+            }
+        }
+        .upload{
+            position:relative;
+            text-align: center;
+            top: 50%;
+            left:50%;
+            @include transform(translate(-50%, -50%));
+            font-size: 35px;
+            color: #000;
+            text-shadow: 0 0 5px #fff;
+            @include transition(text-shadow 0.5s, color 0.5s);
+        }
+    }
+    #canvasWrapper{
+        position: relative;
+
+        .canvasLayer{
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: 0px 0px 0px;
+            resize: none;
+
+            &.canvasBottom{
+                z-index: 0;
+            }
+            &.canvasTop{
+                z-index: 1000;
+            }
+        }
+    }
+}
+#blackboard{
+    height: 100%;
+    width: 100%;
+}
+#buffer{
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: none;
+    border: 1px dashed red;
+    z-index: 9999;
+}

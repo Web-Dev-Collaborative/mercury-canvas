@@ -1,0 +1,86 @@
+.mercuryModal{
+    h2{
+        margin-top: 0;
+    }
+}
+
+.irs.disabled *{
+    cursor: not-allowed;
+}
+
+.select2-container:not(.select2){
+    z-index: 1069;
+}
+.select2parent{
+    background: rgba(0, 0, 0, 0) !important;
+    border: 0 solid rgba(0, 0, 0, 0) !important;
+    padding: 0 !important;
+    vertical-align: top !important;
+
+    .select2{
+        min-width: 200px;
+
+        .select2-selection{
+            height: 39px !important;
+
+            *{
+                margin-top: 5px !important;
+            }
+        }
+    }
+}
+.select2-results__option,
+.select2-selection__rendered{
+    text-transform: capitalize;
+}
+.select2-container--default .select2-results > .select2-results__options {
+    max-height: 370px;
+}
+#blendingModes option{
+    text-transform: capitalize;
+}
+
+.colpick{
+    top: 335px !important;
+    left: 55px !important;
+    width: 376px;
+    height: 180px;
+    z-index: 2090 !important; /*TODO: remake this zIndex to be like the others*/
+
+    .colpick_submit{
+        top: 149px !important;
+        left: 217px;
+        width: 150px;
+    }
+    .colpick_new_color,
+    .colpick_current_color{
+        width: 70px;
+        left: 217px;
+    }
+    .colpick_current_color{
+        left: 298px !important;
+    }
+    .colpick_field,
+    .colpick_hex_field{
+        width: 70px;
+    }
+    [class*="colpick_rgb_"],
+    .colpick_hex_field{
+        left: 217px;
+    }
+    [class*="colpick_hsb_"]{
+        left: 297px !important;
+    }
+    .colpick_field_letter{
+        width: 22px;
+    }
+    [class*="colpick_color"]{
+        height: 166px;
+        width: 166px;
+    }
+    .colpick_hue {
+        height: 166px;
+        left: 185px;
+    }
+
+}
