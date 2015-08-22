@@ -109,7 +109,34 @@
     }
     panel.prototype.refreshPreview = function(layer){
         if(!layer.$) return;
-        this.$.children('.layer-picture').css('background-image', 'url(' + layer.$[0].toDataURL() + ')');
+        
+        var preview = {
+            width: 80,
+            height: 80
+        };
+        var scaledTemp = {
+            width: (temp.width * preview.height) / temp.height,
+            height: (temp.height * preview.width) / temp.width
+        };
+        if (scaledTemp.width > preview.width) {
+            scaledTemp.width = preview.width;
+            this.$.children('.layer-picture').css({
+                'line-height': Math.round(scaledTemp.height) + 'px',
+                'margin-top': (this.$.height() - Math.round(scaledTemp.height)) / 2
+            });
+        }
+        else {
+            scaledTemp.height = preview.height;
+            this.$.children('.layer-picture').removeAttr('style');
+        }
+        buffer.$.attr({
+            width: scaledTemp.width,
+            height: scaledTemp.height
+        });
+        buffer.ctx.scale(scaledTemp.width / temp.width, scaledTemp.height / temp.height);
+        buffer.ctx.drawImage(layer.$[0], layer.x, layer.y, layer.width, layer.height);
+        
+        this.$.find('img').attr('src', buffer.$[0].toDataURL());
     }
     panel.prototype.select = function(){
         this.$.addClass('selected lastSelected');
@@ -1065,7 +1092,7 @@
                 console.warn('Undo step and undo.length not synced; undo:', this.history, ', undo.length:', this.history.length);
             }
 
-            if(options.action == 'add' || options.action == 'pixelManipulation' || (options.action == 'transform' && (options.after.width != layer.width || options.after.height != layer.height))){
+            if(options.action == 'add' || options.action == 'pixelManipulation' || options.action == 'transform'){
                 $.each(settings.layers.order, function(index, value){
                     if(value.id == layer.id){
                         value.panel.refreshPreview(value);
@@ -1364,9 +1391,12 @@
             }
         });
         
-        $(window).on('resize', function(){
+        $(window).on('resize', $.throttle(10, function(){
             temp.resize();
-        });
+            $.each(settings.layers.order, function(index, layer){
+                layer.panel.refreshPreview(layer);
+            });
+        }));
 
         $('#blendingModes', root).select2({
             dropdownParent: $('#blendingModes', root).parent(),
