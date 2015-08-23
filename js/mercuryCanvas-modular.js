@@ -740,9 +740,8 @@
                         $(document.body).trigger('mousemove', {custom: true});
                         break;
                     case 'delete':
-                        if(settings.layers.selected){
-                            settings.layers.selected.delete();
-                            settings.layers.Deselect();
+                        if(!$('.deleteLayers ').hasClass('disabled')){
+                            $('.deleteLayers ').click();
                         }
                         break;
                     case 'deselect':
