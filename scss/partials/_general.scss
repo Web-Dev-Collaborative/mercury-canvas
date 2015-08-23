@@ -23,10 +23,10 @@ body {
     }
 }
 .fa-rotate-315{
-    @include transform(rotate(315deg));
+    transform: rotate(315deg);
 }
 .fa-rotate-45{
-    @include transform(rotate(45deg));
+    transform: rotate(45deg);
 }
 .fa-cursor{
     padding: 15px;
@@ -44,7 +44,7 @@ body {
     margin: 0;
     padding: 0;
     background-color: #fff;
-    @include transition(all 1s);
+    transition: all 1s;
 }
 .submenu,
 .hidden{
