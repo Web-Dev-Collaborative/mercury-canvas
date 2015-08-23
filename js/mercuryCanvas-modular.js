@@ -1,8 +1,10 @@
+"use strict";
 //(function($){
     var settings = {}, keys = {}, buffer = {}, altHiddenLayers = [];
     var root;
     var startOpacity = 1;
     var opacitySliderFinished = false, userOpacityChange = false;
+    var $blendingModes;
     requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame || setTimeout;
 
     var shortcuts = {
@@ -1160,7 +1162,7 @@
                 $('#layers .item').each(function(index){
                     $('#'+ $(this).attr('data-layer')).css('z-index', length - index);
                     if(writeToSettings){
-                        currentID = $(this).attr('data-layer');
+                        var currentID = $(this).attr('data-layer');
                         $.each(oldLayerOrder, function(i, layer){
                             if(layer.id == currentID){
                                 settings.layers.order[length - index - 1] = layer;
@@ -1322,12 +1324,8 @@
         
         settings.layers.parent = $('#canvasWrapper');
         
-        $background = $('#canvasBackground');
         buffer.$ = $('#buffer');
         buffer.ctx = buffer.$[0].getContext('2d');
-        background = $background[0];
-
-        backgroundCtx = background.getContext('2d');
 
         root.on('contextmenu', function(e){
             e.preventDefault();
@@ -1621,7 +1619,7 @@
                 layersPanel.DisableLayerButtons();
                 return;
             }
-            elem = $(e.target).hasClass('item') ? $(e.target) : $(e.target).parents('.item');
+            var elem = $(e.target).hasClass('item') ? $(e.target) : $(e.target).parents('.item');
             if(keys.ctrl){
                 $('.lastSelected').removeClass('lastSelected');
                 if(elem.hasClass('selected')){
@@ -1729,7 +1727,8 @@
         lastPos: {},
         moved: false,
         dragged: false,
-        firstClick: false
+        firstClick: false,
+        dir: ''
     };
     
     $.Event.prototype.IsOnCanvas = function(){
@@ -1761,7 +1760,7 @@
         }
     }
     
-    canvasPosition = function(x, y){
+    var canvasPosition = function(x, y){
         if(typeof x == 'object'){
             this.x = x.x;
             this.y = x.y;
@@ -1868,7 +1867,7 @@
         'mousedown': function(event){
             mouse.document[event.which] = true;
             mouse.dragged = false;
-            dir = '';
+            mouse.dir = '';
             if($('.mercuryModal').length) return;
             
             temp.cleared = false;
@@ -1919,10 +1918,10 @@
             requestAnimationFrame(function(){
                 var pos;
                 if(custom){
-                    pos = mousePos;
+                    pos = mouse.lastPos;
                 }
                 else{
-                    mousePos = pos = event.ToCanvasSpace();
+                    pos = event.ToCanvasSpace();
                 }
                 mouse.lastPos = pos;
 
@@ -1935,11 +1934,11 @@
                         
                         if(mouse.canvas['1']){
                             if(keys.shift){
-                                if(dir){
-                                    if(dir == 'horizontal'){
+                                if(mouse.dir){
+                                    if(mouse.dir == 'horizontal'){
                                         pos.y = mouse.start.y;
                                     }
-                                    else if (dir == 'vertical'){
+                                    else if (mouse.dir == 'vertical'){
                                         pos.x = mouse.start.x;
                                     }
                                 }
@@ -1948,10 +1947,10 @@
                                     deltaX = Math.abs(pos.x - mouse.start.x);
                                     deltaY = Math.abs(pos.y - mouse.start.y);
                                     if(deltaX > deltaY){
-                                        dir = 'horizontal';
+                                        mouse.dir = 'horizontal';
                                     }
                                     else{
-                                        dir = 'vertical';
+                                        mouse.dir = 'vertical';
                                     }
                                 }
                             }
@@ -1970,7 +1969,7 @@
                                 temp.CheckCursor(pos, true);
                             }
                             else {
-                                var newWidth, newHeight, newX, newY, layer;
+                                var newWidth, newHeight, newX, newY, layer, wProp, hProp;
                                 layer = settings.layers.selected;
                                 newWidth = layer.width;
                                 newHeight = layer.height;
@@ -2186,7 +2185,7 @@
         'mouseup': function(event){
             if($('.mercuryModal').length) return;
             temp.cleared = false;
-            dir = '';
+            mouse.dir = '';
             var pos = event.ToCanvasSpace();
 
             if(mouse.canvas['1'] && event.which == 1){
