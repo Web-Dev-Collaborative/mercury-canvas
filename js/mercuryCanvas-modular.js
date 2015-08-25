@@ -233,6 +233,11 @@
         this.panel.hide();
         return this;
     }
+    Layer.prototype.show = function(){
+        $('#' + this.id).show();
+        this.panel.show();
+        return this;
+    }
     Layer.prototype.scale = function(options){
         if(!options.end || !options.start){
             console.log("layer.scale didn't received enough data:", options);
