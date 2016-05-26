@@ -1,5 +1,6 @@
-"use strict";
+//"use strict";
 //(function($){
+	var brushSizeSlider;
     var settings = {}, keys = {}, buffer = {}, altHiddenLayers = [];
     var root;
     var startOpacity = 1;
