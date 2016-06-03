@@ -3,48 +3,11 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="scss/vendor/bootstrap.min.css">
-        <link rel="stylesheet" href="scss/vendor/font-awesome.min.css">
-        <link rel="stylesheet" href="scss/vendor/ion.rangeSlider.css">
-        <link rel="stylesheet" href="scss/vendor/ion.rangeSlider.skinNice.css">
-        <link rel="stylesheet" href="scss/vendor/select2.css">
-        <link rel="stylesheet" href="scss/vendor/colpick.css">
-        <link rel="stylesheet" href="css/main.css">
 
-        <title>White board</title>
+        <title>Mercury canvas</title>
     </head>
 
     <body>
-        <div aria-busy="true" aria-label="Loading" role="progressbar" id="loader">
-            <div class="wire">
-                <div class="wire-l"></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div class="wire-r"></div>
-            </div>
-            <div class="swing">
-                <div class="swing-l"></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div class="swing-r"></div>
-            </div>
-            <div class="shadow">
-                <div class="shadow-l"></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div class="shadow-r"></div>
-            </div>
-        </div>
-
         <div id="wrapper">
             <div id="page-wrapper">
                 <div class="row">
@@ -53,8 +16,6 @@
                 </div>
                 <div class="row" id="blackboard">
                     <div id="boardWrapper">
-                        <!-- TODO: add tools with mercuryCanvas (jQuery) -->
-                        <!-- TODO: keep font awesome updated (v5 should have a cursor icon) -->
                         <ul id="currentTool">
                             <li class="tool" data-action="fullScreen" title="Enter fullscreen (F11)"><i class="fa fa-expand fa-fw"></i></li>
                             <li class="disabled tool" data-action="undo" title="Undo (CTRL + Z)"><i class="fa fa-undo fa-fw"></i></li>
@@ -166,7 +127,6 @@
                 </div>
             </div>
         </div>
-        <!-- /#wrapper -->
 
         <div class="hidden">
             <div id="open">
@@ -189,48 +149,15 @@
                 </div>
             </div>
         </div>
-        <script class="mustache" id="layerPanel" type="x-tmpl-mustache">
-        <div class="item" data-layer="{{ canvasID }}">
-            <div class="layer-visible">
-                <i class="fa fa-eye fa-fw"></i>
-            </div>
-            <div class="layer-picture">
-                <img src="img/transparent.png" class="picture">
-            </div>
-            <div class="layer-name">
-                {{ layerName }}
-            </div>
-            </div>
-        </script>
-        <script class="mustache" id="textTemplate" type="x-tmpl-mustache">
-        <textarea id="{{ canvasID }}" class="canvasLayer" style="width: {{ width }}px; height: {{ height }}px;"></textarea>
-        </script>
 
-        <script src="js/jquery.min.js"></script>
-        <script src="js/mustache.js"></script>
         <script src="js/sortable.js"></script>
         <script src="js/matrix.js"></script>
         <script src="js/keypress.js"></script>
         <script src="js/select2.js"></script>
-        <script src="js/bootstrap.min.js"></script>
-        <script src="js/ion.rangeSlider.js"></script>
 
-        <script class="removeMe">
-            $('#canvas').attr('height', parseInt($('#canvas').parent().css('height')));
-            $('#canvas').attr('width', parseInt($('#canvas').parent().css('width')));
-            $('#brushSize').val('15');
-            $('#brushSizeText').val('15');
-            $('#polySides').val('10');
-            $('.removeMe').remove();
-        </script>
-
-        <script src="js/jquery.cookie.js"></script>
         <script src="js/throttle.js"></script>
-        <script src="js/noty.js"></script>
-        <script src="js/mercuryModal.js"></script>
         <script src="js/fontsDetect.js"></script>
         <script src="js/colorPicker.js"></script>
-        <script src="js/mercuryCanvas-modular.js"></script>
-        <script src="main.js"></script>
+        <script src="http://localhost:8090/assets/bundle.js"></script>
     </body>
 </html>
