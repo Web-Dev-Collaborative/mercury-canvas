@@ -8,7 +8,8 @@ var topbarTools = [
     },
     {
         name: 'fullscreen',
-        icon: 'fa-arrows-alt'
+        icon: 'fa-arrows-alt',
+        end: true
     }
 ];
 

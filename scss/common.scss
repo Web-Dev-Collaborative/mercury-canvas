@@ -7,17 +7,11 @@ html, body, #wrapper {
     padding: 0;
     overflow: hidden;
 }
-* {
-    box-sizing: border-box;
-}
 
 .toolbar {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
     padding: 5px;
-    box-shadow: 2px 0 2px rgba($black, 0.5);
+    border: 1px solid $grey-800;
     background: #535353;
     line-height: 0;
     display: flex;
@@ -26,9 +20,67 @@ html, body, #wrapper {
     z-index: 1000;
     box-sizing: border-box;
 
+    &.top {
+        top: 0;
+    }
+    &.bottom {
+        bottom: 0;
+
+    }
+    &.left {
+        left: 0;
+    }
+    &.right {
+        right: 0;
+    }
+    &.horizontal {
+        width: 100%;
+        left: 0;
+        flex-direction: row;
+        box-shadow: 0 -#{$menuBlurLength} #{$menuBlurLength} -#{$menuBlurLength} $menuBlurColor, 0 #{$menuBlurLength} #{$menuBlurLength} -#{$menuBlurLength} $menuBlurColor;
+        z-index: 1;
+
+        .tool {
+            margin: 0 3px;
+
+            &:first-of-type{
+                margin-left: 0;
+            }
+            &:last-of-type {
+                margin-right: 0;
+            }
+            &.end {
+                margin-left: auto;
+            }
+        }
+    }
+    &.vertical {
+        height: 100%;
+        top: 0;
+        flex-direction: column;
+        box-shadow: -#{$menuBlurLength} 0 #{$menuBlurLength} -#{$menuBlurLength} $menuBlurColor, #{$menuBlurLength} 0 #{$menuBlurLength} -#{$menuBlurLength} $menuBlurColor;
+        z-index: 2;
+
+        .tool {
+            margin: 3px 0;
+
+            &:first-of-type{
+                margin-top: 0;
+            }
+            &:last-of-type {
+                margin-bottom: 0;
+            }
+            &.end {
+                margin-top: auto;
+            }
+        }
+    }
+    // .horizontal + .vertical {
+    //     box-shadow:
+    // }
+
     .tool {
         display: inline-block;
-        margin: 0 3px;
         padding: 6px 4px;
         border: 1px solid rgba($black, 0);
         cursor: pointer;
@@ -39,19 +91,10 @@ html, body, #wrapper {
         &:hover {
             border-color: $grey-500;
         }
-        &:first-of-type{
-            margin-left: 0;
-        }
-        &:last-of-type {
-            margin-right: 0;
-        }
         &.disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
-    }
-    .fullscreen {
-        margin-left: auto;
     }
 }
 
@@ -64,6 +107,7 @@ html, body, #wrapper {
     height: 100%;
     padding: 0;
     margin: 0;
+    overflow: hidden;
 
     .layer {
         position: absolute;

@@ -5,6 +5,7 @@ import './scss/common.scss';
 import 'font-awesome/css/font-awesome.min.css';
 // import async from 'async';
 import _ from 'lodash';
+import classnames from 'classnames';
 
 import {topbarTools} from './js/tools.js';
 import './js/worker';
@@ -23,9 +24,11 @@ class coords {
 class Tool {
     constructor(options) {
         var tool = $('<div>', {
-            class: 'tool ' + options.name,
+            class: classnames('tool', options.name, {
+                end: options.end
+            }),
             html: $('<div>', {
-                class: 'fa fa-fw ' + options.iconClass
+                class: classnames('fa', 'fa-fw', options.iconClass)
             })
         }).appendTo(options.toolbar);
 
@@ -37,15 +40,50 @@ class Tool {
 
 class Toolbar {
     constructor(options) {
+        _.merge(this, {
+            classes: '',
+            fixed: false,
+            orientation: {
+                horizontal: false,
+                vertical: false
+            },
+            tools: []
+        }, options);
+
+        if (this.fixed.length > 0 && !this.orientation.horizontal && !this.orientation.vertical) {
+            this.orientation.horizontal = this.fixed == 'top' || this.fixed == 'bottom';
+            this.orientation.vertical = this.fixed == 'left' || this.fixed == 'right';
+        }
+
         var toolbar = $('<div>', {
-            class: 'toolbar ' + options.classes
-        }).appendTo(options.parent);
-        this.parent = options.parent;
+            class: classnames('toolbar', {
+                'horizontal': this.orientation.horizontal,
+                'vertical': this.orientation.vertical
+            }, this.classes, this.fixed)
+        }).appendTo(this.parent);
+
         this.element = toolbar;
-        this.tools = [];
-        this.fixed = options.fixed;
-        if (options.classes.indexOf('default') != -1) {
-            this.appendTools(topbarTools);
+
+        if (this.tools && this.tools.length > 0) {
+            this.appendTools(this.tools);
+        }
+    }
+    resize(options) {
+        if (this.fixed.length > 0) {
+            if (this.orientation.horizontal) {
+                this.element.css({
+                    width: options.width
+                });
+            }
+            else {
+                this.element.css({
+                    top: options.topHeight,
+                    height: options.height - options.menuHeight
+                });
+            }
+        }
+        else {
+            // dragable menu, make sure it stays on screen
         }
     }
     appendTools(tools) {
@@ -56,7 +94,8 @@ class Toolbar {
             let tool = new Tool({
                 name: options.name,
                 toolbar: this.element,
-                iconClass: (options.icon ? options.icon : 'fa-' + options.name)
+                iconClass: (options.icon ? options.icon : 'fa-' + options.name),
+                end: options.end
             });
             this.tools.push(tool);
         });
@@ -76,7 +115,9 @@ class MercuryWorker {
         this.worker.postMessage(message);
     }
     receive(e) {
-        console.log('worker message', e);
+        if (!e.data) return;
+        if (e.data.ready == true) return console.log('worker ready');
+        console.log('worker message', e.data);
     }
 }
 
@@ -89,7 +130,7 @@ class Layer {
             name: ''
         }, options);
         this.element = $('<canvas>', {
-            class: 'layer ' + (this.name.length > 0 ? this.name : '')
+            class: classnames('layer', this.name)
         }).appendTo(options.parent);
         this.canvas = this.element[0];
         this.context = this.canvas.getContext('2d');
@@ -137,9 +178,11 @@ class MercuryCanvas {
         }
         this.toolbars.push(new Toolbar({
             parent: this.parent,
-            classes: 'default',
-            fixed: 'top'
+            classes: '',
+            fixed: 'top',
+            tools: topbarTools
         }));
+
         this.layersContainer = $('<div>', {
             class: 'layersContainer'
         }).appendTo(this.parent);
@@ -194,9 +237,15 @@ class MercuryCanvas {
         });
 
         _.forIn(this.layers.fitToWindow, (layer) => layer.resize({
+            width: layersOrigin.width,
+            height: layersOrigin.height
+        }));
+        _.forIn(this.toolbars, (toolbar) => toolbar.resize({
             width: width,
-            height: height
-        }))
+            height: height,
+            topHeight: layersOrigin.y,
+            menuHeight: height - layersOrigin.height
+        }));
 
         this.state.width = width;
         this.state.height = height;
