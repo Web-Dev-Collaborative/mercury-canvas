@@ -1,4 +1,5 @@
-import 'expose?$!expose?jQuery!jquery';
+import $ from './js/jQuery.js';
+window.$ = window.jQuery = window.jquery = $;
 import 'normalize.css';
 import './scss/common.scss';
 import 'font-awesome/css/font-awesome.min.css';
@@ -20,13 +21,14 @@ class coords {
 
 class Tool {
     constructor(options) {
-        var tool = document.createElement('div');
-        tool.className = 'tool ' + options.name;
-        var icon = document.createElement('i');
-        icon.className = 'fa fa-fw ' + options.iconClass;
-        tool.appendChild(icon);
+        var tool = $('<div>', {
+            class: 'tool ' + options.name,
+            html: $('<div>', {
+                class: 'fa fa-fw ' + options.iconClass
+            })
+        });
 
-        options.toolbar.appendChild(tool);
+        tool.appendTo(options.toolbar);
         return {
             name: options.name
         };
@@ -35,9 +37,9 @@ class Tool {
 
 class Toolbar {
     constructor(options) {
-        var toolbar = document.createElement('div');
-        toolbar.className = 'toolbar ' + options.classes;
-        options.parent.appendChild(toolbar);
+        var toolbar = $('<div>', {
+            class: 'toolbar ' + options.classes
+        }).appendTo(options.parent);
         this.parent = options.parent;
         this.element = toolbar;
         this.tools = [];
@@ -64,9 +66,10 @@ class Toolbar {
 class Layer {
     constructor(options) {
         this.name = options.name;
-        this.canvas = document.createElement('canvas');
-        this.canvas.className = 'layer';
-        options.parent.appendChild(this.canvas);
+        this.canvas = $('canvas', {
+            class: 'layer'
+        });
+        this.canvas.appendTo(options.parent);
     }
     clear() {
 
@@ -83,18 +86,18 @@ class Canvas {
             classes: 'default',
             fixed: 'top'
         }));
-        this.layersContainer = document.createElement('div');
-        this.layersContainer.className = 'layersContainer';
-        this.parent.appendChild(this.layersContainer);
+        this.layersContainer = $('<div>', {
+            class: 'layersContainer'
+        }).appendTo(this.parent);
 
         this.base = new Layer({
             parent: this.layersContainer
         });
         this.resize = this.resize.bind(this);
-        window.addEventListener('resize', _.throttle(this.resize, 33));
+        $(window).on('resize', _.throttle(this.resize, 33));
         this.resize();
     }
-    resize () {
+    resize() {
         var layersOrigin = new coords({
             x: 0,
             y: 0,
@@ -104,7 +107,7 @@ class Canvas {
         _.forIn(this.toolbars, (toolbar) => {
             if (!toolbar.fixed) return;
 
-            if (toolbar.fixed == 'top')  layersOrigin.y += toolbar.element.offsetHeight;
+            if (toolbar.fixed == 'top') layersOrigin.y += toolbar.element.offsetHeight;
             if (toolbar.fixed == 'bottom') layersOrigin.height -= toolbar.element.offsetHeight;
             if (toolbar.fixed == 'left') layersOrigin.x += toolbar.element.offsetwidth;
             if (toolbar.fixed == 'right') layersOrigin.width -= toolbar.element.offsetwidth;
@@ -112,11 +115,13 @@ class Canvas {
         layersOrigin.width -= layersOrigin.x;
         layersOrigin.height -= layersOrigin.y;
 
-        this.layersContainer.style.left = layersOrigin.x + 'px';
-        this.layersContainer.style.top = layersOrigin.y + 'px';
-        this.layersContainer.style.width = layersOrigin.width + 'px';
-        this.layersContainer.style.height = layersOrigin.height + 'px';
+        this.layersContainer.css({
+            left: layersOrigin.x,
+            top: layersOrigin.y,
+            width: layersOrigin.width,
+            height: layersOrigin.height
+        });
     }
 }
 
-window.mercuryCanvas = new Canvas(document.getElementById('wrapper'));
+window.mercuryCanvas = new Canvas($('#wrapper'));
