@@ -1,6 +1,7 @@
 var webpack = require('webpack');
 var autoprefixer = require('autoprefixer');
 var precss = require('precss');
+var path = require('path');
 
 var exp = {
     devServer: {
@@ -10,12 +11,12 @@ var exp = {
             index: '/'
         }
     },
-    entry: [
-        './index.js'
-    ],
+    entry: {
+        bundle: './index.js'
+    },
     output: {
-        path: './assets/',
-        filename: 'bundle.js',
+        path: path.join(__dirname, 'assets'),
+        filename: '[name].js',
         publicPath: '/assets/'
     },
     amd: {
