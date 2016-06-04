@@ -22,19 +22,36 @@ class coords {
 }
 
 class Tool {
-    constructor(options) {
-        var tool = $('<div>', {
-            class: classnames('tool', options.name, {
-                end: options.end
+    constructor(options, toolbar) {
+        _.merge(this, {
+            end: false,
+            disabled: false,
+            name: '',
+            icon: ''
+        }, options);
+        this.toolbar = toolbar;
+        this.icon = this.icon.length > 0 ? this.icon : (options.icon ? options.icon : 'fa-' + options.name);
+
+        this.element = $('<div>', {
+            class: classnames('tool', this.name, {
+                end: this.end,
+                disabled: this.disabled
             }),
             html: $('<div>', {
-                class: classnames('fa', 'fa-fw', options.iconClass)
+                class: classnames('fa', 'fa-fw', this.icon)
             })
-        }).appendTo(options.toolbar);
+        }).appendTo(this.toolbar);
 
-        return _.merge(options, {
-            element: tool
-        });
+        this.onClick = this.onClick.bind(this);
+        this.element.on('click', this.onClick);
+    }
+    onClick(e) {
+        if (this.disabled) return;
+
+        console.log(e, this);
+    }
+    remove() {
+        this.element.remove();
     }
 }
 
@@ -63,9 +80,10 @@ class Toolbar {
         }).appendTo(this.parent);
 
         this.element = toolbar;
+        this.tools = [];
 
-        if (this.tools && this.tools.length > 0) {
-            this.appendTools(this.tools);
+        if (options.tools && options.tools.length > 0) {
+            this.addTools(options.tools);
         }
     }
     resize(options) {
@@ -86,18 +104,29 @@ class Toolbar {
             // dragable menu, make sure it stays on screen
         }
     }
-    appendTools(tools) {
-        if (tools.length === undefined) {
+    addTools(tools) {
+        if (typeof tools != 'object' || tools.length === undefined) {
             tools = [tools];
         }
-        _.forIn(tools, (options) => {
-            let tool = new Tool({
-                name: options.name,
-                toolbar: this.element,
-                iconClass: (options.icon ? options.icon : 'fa-' + options.name),
-                end: options.end
+        _.forIn(tools, (tool) => {
+            this.tools.push(new Tool(tool, this.element));
+        });
+    }
+    removeTools(tools) {
+        if (typeof tools == 'boolean') {
+            tools = this.tools;
+        }
+        else if (typeof tools != 'object' || tools.length === undefined) {
+            tools = [tools];
+        }
+
+        _.forIn(tools, (tool) => {
+            var removedTools = _.remove(this.tools, {
+                name: typeof tool == 'object' ? tool.name : tool
             });
-            this.tools.push(tool);
+            _.forIn(removedTools, (removedTool) => {
+                removedTool.remove();
+            });
         });
     }
 }

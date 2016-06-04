@@ -75,9 +75,6 @@ html, body, #wrapper {
             }
         }
     }
-    // .horizontal + .vertical {
-    //     box-shadow:
-    // }
 
     .tool {
         display: inline-block;
@@ -94,6 +91,9 @@ html, body, #wrapper {
         &.disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+        &.end {
+            order: 999;
         }
     }
 }

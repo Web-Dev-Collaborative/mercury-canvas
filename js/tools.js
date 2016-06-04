@@ -3,8 +3,9 @@ var topbarTools = [
         name: 'undo'
     },
     {
-        name: 'redo disabled',
-        icon: 'fa-repeat'
+        name: 'redo',
+        icon: 'fa-repeat',
+        disabled: true
     },
     {
         name: 'fullscreen',
