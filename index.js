@@ -3,52 +3,55 @@ window.$ = window.jQuery = window.jquery = $;
 import 'normalize.css';
 import './scss/common.scss';
 import 'font-awesome/css/font-awesome.min.css';
-// import async from 'async';
 import _ from 'lodash';
 import classnames from 'classnames';
 
 import {topbarTools} from './js/tools.js';
 import './js/worker';
-
-class coords {
-    constructor(options) {
-        _.merge(this, {
-            x: 0,
-            y: 0,
-            width: 0,
-            height: 0
-        }, options);
-    }
-}
+import {coords} from './js/helpers.js';
+import Layer from './js/layer.js';
 
 class Tool {
-    constructor(options, toolbar) {
+    constructor(options, parent) {
         _.merge(this, {
             end: false,
             disabled: false,
+            action: false,
+            select: () => { },
+            mouseDown: () => { },
+            mouseMove: () => { },
+            mouseUp: () => { },
+            mouseLeave: () => { },
+            load: () => { },
             name: '',
             icon: ''
         }, options);
-        this.toolbar = toolbar;
+        this.parent = parent;
         this.icon = this.icon.length > 0 ? this.icon : (options.icon ? options.icon : 'fa-' + options.name);
 
+        this.mercuryCanvas = this.parent.mercuryCanvas;
         this.element = $('<div>', {
             class: classnames('tool', this.name, {
                 end: this.end,
                 disabled: this.disabled
             }),
-            html: $('<div>', {
+            html: $('<i>', {
                 class: classnames('fa', 'fa-fw', this.icon)
             })
-        }).appendTo(this.toolbar);
+        }).appendTo(this.parent.element);
 
-        this.onClick = this.onClick.bind(this);
-        this.element.on('click', this.onClick);
+        this.element.on('click', this.onClick.bind(this));
+
+        this.load();
     }
-    onClick(e) {
+    onClick() {
         if (this.disabled) return;
 
-        console.log(e, this);
+        this.select.bind(this)();
+
+        if (this.action) return;
+
+        this.parent.selectTool(this);
     }
     remove() {
         this.element.remove();
@@ -77,8 +80,9 @@ class Toolbar {
                 'horizontal': this.orientation.horizontal,
                 'vertical': this.orientation.vertical
             }, this.classes, this.fixed)
-        }).appendTo(this.parent);
+        }).appendTo(this.parent.element);
 
+        this.mercuryCanvas = this.parent;
         this.element = toolbar;
         this.tools = [];
 
@@ -109,7 +113,7 @@ class Toolbar {
             tools = [tools];
         }
         _.forIn(tools, (tool) => {
-            this.tools.push(new Tool(tool, this.element));
+            this.tools.push(new Tool(tool, this));
         });
     }
     removeTools(tools) {
@@ -128,6 +132,13 @@ class Toolbar {
                 removedTool.remove();
             });
         });
+    }
+    selectTool(e) {
+        if (this.lastToolIndex >= 0) {
+            console.log(this.lastToolIndex);
+            this.parent.state.activeTools.splice(this.lastToolIndex, 1);
+        }
+        this.lastToolIndex = this.parent.state.activeTools.push(e) - 1;
     }
 }
 
@@ -150,42 +161,9 @@ class MercuryWorker {
     }
 }
 
-class Layer {
-    constructor(options) {
-        _.merge(this, {
-            options: {
-                background: 'rgba(0, 0, 0, 0)'
-            },
-            name: ''
-        }, options);
-        this.element = $('<canvas>', {
-            class: classnames('layer', this.name)
-        }).appendTo(options.parent);
-        this.canvas = this.element[0];
-        this.context = this.canvas.getContext('2d');
-        this.MercuryCanvas.layers.list.push(this);
-    }
-    resize(options) {
-        if (!options || typeof options.width != 'number' || typeof options.height != 'number') return;
-        var ctx = this.context;
-        this.element.attr({
-            width: options.width,
-            height: options.height
-        });
-
-        if (this.options.background) ctx.fillStyle = this.options.background;
-        ctx.rect(0, 0, options.width, options.height);
-        ctx.fill();
-        ctx.restore();
-    }
-    clear() {
-
-    }
-}
-
 class MercuryCanvas {
     constructor(element) {
-        this.parent = element;
+        this.element = element;
         this.toolbars = [];
         this.layers = {
             fitToWindow: [],
@@ -194,7 +172,13 @@ class MercuryCanvas {
         this.state = {
             width: 0,
             height: 0,
-            background: '#fff'
+            background: '#fff',
+            strokeColor: '#000',
+            lineWidth: 2,
+            mouse: {
+                points: []
+            },
+            activeTools: []
         };
 
         this.workers = [];
@@ -206,34 +190,73 @@ class MercuryCanvas {
             }
         }
         this.toolbars.push(new Toolbar({
-            parent: this.parent,
+            parent: this,
             classes: '',
             fixed: 'top',
+            tools: topbarTools
+        }));
+        this.toolbars.push(new Toolbar({
+            parent: this,
+            classes: '',
+            fixed: 'left',
             tools: topbarTools
         }));
 
         this.layersContainer = $('<div>', {
             class: 'layersContainer'
-        }).appendTo(this.parent);
+        }).appendTo(this.element);
+        $(document.body).on('mousedown', this.mouseDown.bind(this));
+        $(document.body).on('mousemove', this.mouseMove.bind(this));
+        $(document.body).on('mouseup', this.mouseUp.bind(this));
+        $(document.body).on('mouseout', this.mouseLeave.bind(this));
 
         this.base = new Layer({
             name: 'base',
-            parent: this.layersContainer,
-            MercuryCanvas: this,
+            removable: false,
+            parent: this,
             options: {
                 background: this.state.background
             }
         });
         this.overlay = new Layer({
             name: 'overlay',
-            parent: this.layersContainer,
-            MercuryCanvas: this
+            parent: this,
+            removable: false
         });
         this.layers.fitToWindow.push(this.base, this.overlay);
 
         this.resize = this.resize.bind(this);
         $(window).on('resize', _.throttle(this.resize, 33));
         this.resize();
+
+        this.toolbars[0].tools[3].element.click(); //debug
+    }
+    mouseDown(e) {
+        var mouseCoords = new coords({
+            x: e.clientX,
+            y: e.clientY
+        });
+        if (!mouseCoords.inside(this.layersContainer.coords)) return;
+        this.state.mouse.down = true;
+        _.forIn(this.state.activeTools, (tool) => {
+            tool.mouseDown(e);
+        });
+    }
+    mouseMove(e) {
+        _.forIn(this.state.activeTools, (tool) => {
+            tool.mouseMove(e);
+        });
+    }
+    mouseUp(e) {
+        this.state.mouse.down = false;
+        _.forIn(this.state.activeTools, (tool) => {
+            tool.mouseUp(e);
+        });
+    }
+    mouseLeave(e) {
+        _.forIn(this.state.activeTools, (tool) => {
+            tool.mouseLeave(e);
+        });
     }
     resize() {
         let width = document.body.clientWidth;
@@ -258,6 +281,7 @@ class MercuryCanvas {
         layersOrigin.width -= layersOrigin.x;
         layersOrigin.height -= layersOrigin.y;
 
+        this.layersContainer.coords = layersOrigin;
         this.layersContainer.css({
             left: layersOrigin.x,
             top: layersOrigin.y,
