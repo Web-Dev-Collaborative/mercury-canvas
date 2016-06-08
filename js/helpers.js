@@ -11,20 +11,19 @@ class coords {
         _.merge(this, {
             x: 0,
             y: 0,
+            z: coords.z,
             width: 0,
             height: 0
         }, options);
-        this.x2 = this.x + this.width;
-        this.y2 = this.y + this.height;
     }
     update(options) {
         _.merge(this, options);
     }
     inside(coord) {
-        return this.x >= coord.x && this.x <= coord.x2 && this.y >= coord.y && this.y <= coord.y2;
+        return this.x >= coord.x && this.x <= coord.x + coord.width && this.y >= coord.y && this.y <= coord.y + coord.height;
     }
-    toCanvasSpace(mercuryCanvas) {
-        var base = mercuryCanvas.layersContainer.coords;
+    toCanvasSpace(mc) {
+        var base = mc.layersContainer.coords;
         return new coords({
             x: this.x - base.x,
             y: this.y - base.y,
@@ -32,6 +31,16 @@ class coords {
             height: this.height - base.y
         });
     }
+    toLayer(mc) {
+        var chosenLayer;
+        _.forIn(mc.layers.list, (layer) => {
+            if (this.inside(layer.coords) && (chosenLayer === undefined || layer.coords.z > chosenLayer.coords.z)) {
+                chosenLayer = layer;
+            }
+        });
+        return chosenLayer;
+    }
 }
+coords.z = 1;
 
 export {coords};

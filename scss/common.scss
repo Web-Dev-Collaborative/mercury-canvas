@@ -95,6 +95,9 @@ html, body, #wrapper {
         &.end {
             order: 999;
         }
+        &.selected {
+            border-color: $grey-300;
+        }
     }
 }
 

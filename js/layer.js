@@ -12,16 +12,24 @@ class Layer {
             name: ''
         }, options);
 
+        this.coords = new coords(options);
+
         this.element = $('<canvas>', {
-            class: classnames('layer', this.name)
+            class: classnames('layer', this.name),
+            css: {
+                zIndex: this.name == 'base' ? 0 : this.coords.z
+            }
         }).appendTo(this.parent.layersContainer);
 
-        this.coords = new coords(options);
         this.mercuryCanvas = this.parent;
         this.parent = this.parent.layersContainer;
         this.canvas = this.element[0];
         this.context = this.canvas.getContext('2d');
 
+        if (this.name == 'base' || this.name == 'overlay') return;
+
+        coords.z++;
+        this.updateOverlayZ();
         this.mercuryCanvas.layers.list.push(this);
     }
     resize(options) {
@@ -41,6 +49,47 @@ class Layer {
         ctx.fill();
         ctx.restore();
     }
+    trim() {
+        var pixels = this.context.getImageData(0, 0, this.coords.width, this.coords.height);
+        var bound = {};
+        var x, y;
+
+        for (var i = 0, l = pixels.data.length; i < l; i += 4) {
+            if (pixels.data[i + 3] === 0) continue;
+
+            x = (i / 4) % this.coords.width;
+            y = ~~((i / 4) / this.coords.width);
+
+            bound.top = bound.top === undefined ? y : (y < bound.top ? y : bound.top);
+            bound.bottom = bound.bottom === undefined ? y : (y > bound.bottom ? y : bound.bottom);
+            bound.left = bound.left === undefined ? x : (x < bound.left ? x : bound.left);
+            bound.right = bound.right === undefined ? x : (x > bound.right ? x : bound.right);
+        }
+        bound.left--;
+        bound.top--;
+        bound.right += 2;
+        bound.bottom += 2;
+
+        this.coords.update({
+            x: this.coords.x + bound.left,
+            y: this.coords.y + bound.top,
+            width: bound.right - bound.left,
+            height: bound.bottom - bound.top
+        });
+
+        var trimmed = this.context.getImageData(bound.left, bound.top, this.coords.width, this.coords.height);
+
+        this.element.css({
+            width: this.coords.width,
+            height: this.coords.height,
+            top: this.coords.y,
+            left: this.coords.x
+        }).attr({
+            width: this.coords.width,
+            height: this.coords.height
+        });
+        this.context.putImageData(trimmed, 0, 0);
+    }
     clear() {
         if (!this.dirty) return;
 
@@ -50,12 +99,17 @@ class Layer {
         targetLayer.resize(this.coords);
         targetLayer.context.drawImage(this.element[0], 0, 0);
         targetLayer.dirty = true;
+        if (this.name == 'overlay') targetLayer.trim();
     }
-    remove () {
+    remove() {
         if (this.removable === false) return;
 
         _.remove(this.mercuryCanvas.layers.list, this);
         this.element.remove();
+    }
+    updateOverlayZ() {
+        this.mercuryCanvas.overlay.coords.z = coords.z;
+        this.mercuryCanvas.overlay.element.css('zIndex', coords.z);
     }
 }
 

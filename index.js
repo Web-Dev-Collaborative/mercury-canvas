@@ -17,6 +17,7 @@ class Tool {
             end: false,
             disabled: false,
             action: false,
+            selected: false,
             select: () => { },
             mouseDown: () => { },
             mouseMove: () => { },
@@ -43,14 +44,16 @@ class Tool {
         this.element.on('click', this.onClick.bind(this));
 
         this.load();
+        if (this.selected) this.onClick();
     }
-    onClick() {
+    onClick(e) {
         if (this.disabled) return;
 
-        this.select.bind(this)();
+        if (_.isObject(e)) this.select.bind(this)();
 
         if (this.action) return;
-
+        this.parent.element.children('div').removeClass('selected');
+        this.element.addClass('selected');
         this.parent.selectTool(this);
     }
     remove() {
@@ -135,7 +138,6 @@ class Toolbar {
     }
     selectTool(e) {
         if (this.lastToolIndex >= 0) {
-            console.log(this.lastToolIndex);
             this.parent.state.activeTools.splice(this.lastToolIndex, 1);
         }
         this.lastToolIndex = this.parent.state.activeTools.push(e) - 1;
@@ -174,7 +176,7 @@ class MercuryCanvas {
             height: 0,
             background: '#fff',
             strokeColor: '#000',
-            lineWidth: 2,
+            lineWidth: 20,
             mouse: {
                 points: []
             },
@@ -189,12 +191,6 @@ class MercuryCanvas {
                 this.workers.push(worker);
             }
         }
-        this.toolbars.push(new Toolbar({
-            parent: this,
-            classes: '',
-            fixed: 'top',
-            tools: topbarTools
-        }));
         this.toolbars.push(new Toolbar({
             parent: this,
             classes: '',
@@ -228,8 +224,6 @@ class MercuryCanvas {
         this.resize = this.resize.bind(this);
         $(window).on('resize', _.throttle(this.resize, 33));
         this.resize();
-
-        this.toolbars[0].tools[3].element.click(); //debug
     }
     mouseDown(e) {
         var mouseCoords = new coords({
