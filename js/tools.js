@@ -17,7 +17,6 @@ var topbarTools = [
     {
         name: 'brush',
         icon: 'fa-paint-brush',
-        selected: true,
         select: function () {
             console.log('clear the temp layer or something');
 
@@ -101,6 +100,7 @@ var topbarTools = [
     {
         name: 'select',
         icon: 'fa-mouse-pointer',
+        selected: true,
         select: function () {
             var mc = this.mercuryCanvas;
 
@@ -114,19 +114,93 @@ var topbarTools = [
             mc.overlay.clear();
             if (!layer) return;
 
-            mc.overlay.context.lineWidth = 1;
-            mc.overlay.context.strokeStyle = '#000';
-            mc.overlay.context.lineCap = mc.overlay.context.lineJoin = 'square';
+            var context = mc.overlay.context;
+            context.lineWidth = 1;
+            context.strokeStyle = '#000';
+            context.lineCap = mc.overlay.context.lineJoin = 'square';
+            context.fillStyle = 'rgba(255, 255, 255, 0.1)';
 
-            mc.overlay.context.beginPath();
-            mc.overlay.context.moveTo(layer.coords.x - 0.5, layer.coords.y - 0.5);
-            mc.overlay.context.lineTo(layer.coords.x + layer.coords.width + 0.5, layer.coords.y - 0.5);
-            mc.overlay.context.lineTo(layer.coords.x + layer.coords.width + 0.5, layer.coords.y + layer.coords.height + 0.5);
-            mc.overlay.context.lineTo(layer.coords.x - 0.5, layer.coords.y + layer.coords.height + 0.5);
-            mc.overlay.context.lineTo(layer.coords.x - 0.5, layer.coords.y - 0.5);
-            mc.overlay.context.stroke();
+            var rect = _.clone(layer.coords);
+            var handlerSize = mc.state.handlerSize;
+            rect.x = Math.floor(rect.x) - 0.5;
+            rect.y = Math.floor(rect.y) - 0.5;
+            rect.width = Math.ceil(rect.width) + 1;
+            rect.height = Math.ceil(rect.height) + 1;
 
+            if (!mc.state.session.selectedLayers.length) {
+                context.beginPath();
+                context.moveTo(rect.x, rect.y);
+                context.lineTo(rect.x + rect.width, rect.y);
+                context.lineTo(rect.x + rect.width, rect.y + rect.height);
+                context.lineTo(rect.x, rect.y + rect.height);
+                context.lineTo(rect.x, rect.y);
+                context.stroke();
+            }
+            else {
+                // handlers
+                rect.topLeft = new coords({
+                    x: rect.x,
+                    y: rect.y
+                });
+                rect.topRight = new coords({
+                    x: rect.x + rect.width,
+                    y: rect.y
+                });
+                rect.bottomRight = new coords({
+                    x: rect.x + rect.width,
+                    y: rect.y + rect.height
+                });
+                rect.bottomLeft = new coords({
+                    x: rect.x,
+                    y: rect.y + rect.height
+                });
+                rect.sh = handlerSize / 2;
+
+                // handlers
+                context.fillRect(rect.topLeft.x - rect.sh, rect.topLeft.y - rect.sh, handlerSize, handlerSize);
+                context.fillRect(rect.topRight.x - rect.sh, rect.topRight.y - rect.sh, handlerSize, handlerSize);
+                context.fillRect(rect.bottomRight.x - rect.sh, rect.bottomRight.y - rect.sh, handlerSize, handlerSize);
+                context.fillRect(rect.bottomLeft.x - rect.sh, rect.bottomLeft.y - rect.sh, handlerSize, handlerSize);
+
+                context.strokeRect(rect.topLeft.x - rect.sh, rect.topLeft.y - rect.sh, handlerSize, handlerSize);
+                context.strokeRect(rect.topRight.x - rect.sh, rect.topRight.y - rect.sh, handlerSize, handlerSize);
+                context.strokeRect(rect.bottomRight.x - rect.sh, rect.bottomRight.y - rect.sh, handlerSize, handlerSize);
+                context.strokeRect(rect.bottomLeft.x - rect.sh, rect.bottomLeft.y - rect.sh, handlerSize, handlerSize);
+
+                // lines
+                if (rect.width > handlerSize + 1 || rect.height > handlerSize + 1) {
+                    context.beginPath();
+
+                    // compensate for handlers lines
+                    rect.width++;
+                    rect.height++;
+                    rect.x--;
+                    rect.y--;
+
+                    if (rect.width > handlerSize + 1) {
+                        context.moveTo(rect.topLeft.x + rect.sh, rect.topLeft.y);
+                        context.lineTo(rect.topRight.x - rect.sh, rect.topRight.y);
+
+                        context.moveTo(rect.bottomLeft.x + rect.sh, rect.bottomLeft.y);
+                        context.lineTo(rect.bottomRight.x - rect.sh, rect.bottomRight.y);
+                    }
+                    if (rect.height > handlerSize + 1) {
+                        context.moveTo(rect.topRight.x, rect.topRight.y + rect.sh);
+                        context.lineTo(rect.bottomRight.x, rect.bottomRight.y - rect.sh);
+
+                        context.moveTo(rect.topLeft.x, rect.topLeft.y + rect.sh);
+                        context.lineTo(rect.bottomLeft.x, rect.bottomLeft.y - rect.sh);
+                    }
+                    context.stroke();
+                    context.closePath();
+                }
+            }
             mc.overlay.dirty = true;
+        },
+        mouseDown: function (e) {
+            var sel = this.mercuryCanvas.state.session.selectedLayers;
+            sel.length = sel.length ? 0 : 1;
+            requestAnimationFrame(this.draw.bind(this, e));
         }
     },
     {
