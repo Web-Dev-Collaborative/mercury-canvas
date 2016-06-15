@@ -34,7 +34,8 @@ class Tool {
         this.element = $('<div>', {
             class: classnames('tool', this.name, {
                 end: this.end,
-                disabled: this.disabled
+                disabled: this.disabled,
+                first: this.first
             }),
             html: $('<i>', {
                 class: classnames('fa', 'fa-fw', this.icon)
@@ -115,7 +116,12 @@ class Toolbar {
         if (typeof tools != 'object' || tools.length === undefined) {
             tools = [tools];
         }
+        var firstEnd = false;
         _.forIn(tools, (tool) => {
+            if (tool.end && !firstEnd) {
+                tool.first = true;
+                firstEnd = true;
+            }
             this.tools.push(new Tool(tool, this));
         });
     }
@@ -137,10 +143,11 @@ class Toolbar {
         });
     }
     selectTool(e) {
+        var activeTools = this.parent.state.activeTools;
         if (this.lastToolIndex >= 0) {
-            this.parent.state.activeTools.splice(this.lastToolIndex, 1);
+            activeTools.splice(this.lastToolIndex, 1);
         }
-        this.lastToolIndex = this.parent.state.activeTools.push(e) - 1;
+        this.lastToolIndex = activeTools.push(e) - 1;
     }
 }
 
@@ -166,21 +173,23 @@ class MercuryWorker {
 class MercuryCanvas {
     constructor(element) {
         this.element = element;
-        this.toolbars = [];
         this.layers = {
             fitToWindow: [],
             list: []
         };
         this.state = {
-            width: 0,
-            height: 0,
             background: '#fff',
             strokeColor: '#000',
             lineWidth: 20,
-            mouse: {
-                points: []
-            },
-            activeTools: []
+            toolbars: [],
+            activeTools: [],
+            session: {
+                width: 0,
+                height: 0,
+                mouse: {
+                    points: []
+                }
+            }
         };
 
         this.workers = [];
@@ -191,7 +200,8 @@ class MercuryCanvas {
                 this.workers.push(worker);
             }
         }
-        this.toolbars.push(new Toolbar({
+
+        this.state.toolbars.push(new Toolbar({
             parent: this,
             classes: '',
             fixed: 'left',
@@ -231,18 +241,19 @@ class MercuryCanvas {
             y: e.clientY
         });
         if (!mouseCoords.inside(this.layersContainer.coords)) return;
-        this.state.mouse.down = true;
+        this.state.session.mouse.down = true;
         _.forIn(this.state.activeTools, (tool) => {
             tool.mouseDown(e);
         });
     }
     mouseMove(e) {
         _.forIn(this.state.activeTools, (tool) => {
-            tool.mouseMove(e);
+            if (typeof tool.mouseMove == 'function') tool.mouseMove(e);
+            if (typeof tool.draw == 'function') requestAnimationFrame(tool.draw.bind(tool, e));
         });
     }
     mouseUp(e) {
-        this.state.mouse.down = false;
+        this.state.session.mouse.down = false;
         _.forIn(this.state.activeTools, (tool) => {
             tool.mouseUp(e);
         });
@@ -256,7 +267,7 @@ class MercuryCanvas {
         let width = document.body.clientWidth;
         let height = document.body.clientHeight;
 
-        if (width == this.state.width && height == this.state.height) return;
+        if (width == this.state.session.width && height == this.state.session.height) return;
 
         var layersOrigin = new coords({
             x: 0,
@@ -264,7 +275,7 @@ class MercuryCanvas {
             width: width,
             height: height
         });
-        _.forIn(this.toolbars, (toolbar) => {
+        _.forIn(this.state.toolbars, (toolbar) => {
             if (!toolbar.fixed) return;
 
             if (toolbar.fixed == 'top') layersOrigin.y += toolbar.element.outerHeight();
@@ -287,15 +298,15 @@ class MercuryCanvas {
             width: layersOrigin.width,
             height: layersOrigin.height
         }));
-        _.forIn(this.toolbars, (toolbar) => toolbar.resize({
+        _.forIn(this.state.toolbars, (toolbar) => toolbar.resize({
             width: width,
             height: height,
             topHeight: layersOrigin.y,
             menuHeight: height - layersOrigin.height
         }));
 
-        this.state.width = width;
-        this.state.height = height;
+        this.state.session.width = width;
+        this.state.session.height = height;
     }
 }
 
