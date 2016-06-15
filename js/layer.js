@@ -93,6 +93,7 @@ class Layer {
     clear() {
         if (!this.dirty) return;
 
+        this.dirty = false;
         this.context.clearRect(0, 0, this.element.attr('width'), this.element.attr('height'));
     }
     copyTo(targetLayer) {

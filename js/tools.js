@@ -41,6 +41,7 @@ var topbarTools = [
                 mc.overlay.context.arc(b.x, b.y, mc.overlay.context.lineWidth / 2, 0, Math.PI * 2, false);
                 mc.overlay.context.fill();
                 mc.overlay.context.closePath();
+                mc.overlay.dirty = true;
                 return;
             }
 
@@ -74,6 +75,7 @@ var topbarTools = [
             mc.overlay.context.lineCap = mc.overlay.context.lineJoin = 'round';
 
             this.mouseMove(e);
+            requestAnimationFrame(this.draw.bind(this, e));
         },
         mouseMove: function (e) {
             var mc = this.mercuryCanvas;
@@ -84,15 +86,16 @@ var topbarTools = [
         },
         mouseUp: function () {
             var mc = this.mercuryCanvas;
-            var points = mc.state.session.mouse.points;
-            if (!points.length) return;
+            var mouse = mc.state.session.mouse;
+            if (!mouse.points.length) return;
 
+            mouse.down = false;
             var newLayer = new Layer({
                 parent: mc
             });
             mc.overlay.copyTo(newLayer);
-            points = [];
             mc.overlay.clear();
+            mouse.points = [];
         }
     },
     {
