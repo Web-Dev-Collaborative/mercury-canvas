@@ -17,12 +17,22 @@ var topbarTools = [
     {
         name: 'brush',
         icon: 'fa-paint-brush',
+        load: function () {
+            var mc = this.mercuryCanvas;
+            var brushCursor = $('<div>', {
+                class: 'brushCursor'
+            }).hide();
+            brushCursor.appendTo(mc.layersContainer);
+            mc.state.session.mouse.brushCursor = brushCursor;
+        },
         select: function () {
-            console.log('clear the temp layer or something');
-
             var mc = this.mercuryCanvas;
 
             mc.overlay.clear();
+            mc.layersContainer.css({
+                cursor: 'none'
+            });
+            mc.state.session.mouse.brushCursor.show();
         },
         draw: function () {
             var mc = this.mercuryCanvas;
@@ -79,16 +89,20 @@ var topbarTools = [
         mouseMove: function (e) {
             var mc = this.mercuryCanvas;
             var mouse = mc.state.session.mouse;
+            var pos = new coords(e).toCanvasSpace(mc);
+            mouse.brushCursor.css({
+                top: pos.y,
+                left: pos.x
+            });
             if (!mouse.down) return;
 
-            mouse.points.push(new coords(e).toCanvasSpace(mc));
+            mouse.points.push(pos);
         },
         mouseUp: function () {
             var mc = this.mercuryCanvas;
             var mouse = mc.state.session.mouse;
             if (!mouse.points.length) return;
 
-            mouse.down = false;
             var newLayer = new Layer({
                 parent: mc
             });
@@ -106,10 +120,59 @@ var topbarTools = [
 
             mc.overlay.clear();
         },
+        cursor: function (e) {
+            var mc = this.mercuryCanvas;
+            var pos = new coords(e).toCanvasSpace(mc);
+            var layerCoords = mc.state.session.selectedLayers.rect;
+
+            if (!layerCoords) return;
+
+            var selectedRect = _.clone(layerCoords);
+            var handlerSize = mc.state.handlerSize;
+            var sh = handlerSize / 2;
+
+            if (pos.x > selectedRect.x - sh && pos.x < selectedRect.x + sh &&
+                pos.y > selectedRect.y - sh && pos.y < selectedRect.y + sh) {
+                return 'nw-resize';
+            }
+            if (pos.x > selectedRect.x + selectedRect.width - sh && pos.x < selectedRect.x + selectedRect.width + sh &&
+                pos.y > selectedRect.y - sh && pos.y < selectedRect.y + sh) {
+                return 'ne-resize';
+            }
+            if (pos.x > selectedRect.x + selectedRect.width - sh && pos.x < selectedRect.x + selectedRect.width + sh &&
+                pos.y > selectedRect.y + selectedRect.height - sh && pos.y < selectedRect.y + selectedRect.height + sh) {
+                return 'se-resize';
+            }
+            if (pos.x > selectedRect.x - sh && pos.x < selectedRect.x + sh &&
+                pos.y > selectedRect.y + selectedRect.height - sh && pos.y < selectedRect.y + selectedRect.height + sh) {
+                return 'sw-resize';
+            }
+            if (pos.x >= selectedRect.x + sh && pos.x <= selectedRect.x + selectedRect.width - sh &&
+                pos.y > selectedRect.y - handlerSize / 3 && pos.y < selectedRect.y + handlerSize / 3) {
+                return 'n-resize';
+            }
+            if (pos.x > selectedRect.x + selectedRect.width - handlerSize / 3 && pos.x < selectedRect.x + selectedRect.width + handlerSize / 3 &&
+                pos.y >= selectedRect.y + sh && pos.y <= selectedRect.y + selectedRect.height - sh) {
+                return 'e-resize';
+            }
+            if (pos.x >= selectedRect.x + sh && pos.x <= selectedRect.x + selectedRect.width - sh &&
+                pos.y > selectedRect.y + selectedRect.height - handlerSize / 3 && pos.y < selectedRect.y + selectedRect.height + handlerSize / 3) {
+                return 's-resize';
+            }
+            if (pos.x > selectedRect.x - handlerSize / 3 && pos.x < selectedRect.x + handlerSize / 3 &&
+                pos.y >= selectedRect.y + sh && pos.y <= selectedRect.y + selectedRect.height - sh) {
+                return 'w-resize';
+            }
+            if (pos.x > selectedRect.x && pos.x < selectedRect.x + selectedRect.width && pos.y > selectedRect.y && pos.y < selectedRect.y + selectedRect.height) {
+                return 'move';
+            }
+            // return 'rotate';
+        },
         draw: function (e) {
             var mc = this.mercuryCanvas;
             var point = new coords(e).toCanvasSpace(mc);
-            var layer = point.toLayer(mc);
+
+            var layer = mc.state.session.selectedLayers.list.length ? mc.state.session.selectedLayers.rect : point.toLayer(mc);
 
             mc.overlay.clear();
             if (!layer) return;
@@ -120,14 +183,14 @@ var topbarTools = [
             context.lineCap = mc.overlay.context.lineJoin = 'square';
             context.fillStyle = 'rgba(255, 255, 255, 0.1)';
 
-            var rect = _.clone(layer.coords);
+            var rect = _.clone(layer.coords ? layer.coords : layer);
             var handlerSize = mc.state.handlerSize;
             rect.x = Math.floor(rect.x) - 0.5;
             rect.y = Math.floor(rect.y) - 0.5;
             rect.width = Math.ceil(rect.width) + 1;
             rect.height = Math.ceil(rect.height) + 1;
 
-            if (!mc.state.session.selectedLayers.length) {
+            if (!mc.state.session.selectedLayers.list.length) {
                 context.beginPath();
                 context.moveTo(rect.x, rect.y);
                 context.lineTo(rect.x + rect.width, rect.y);
@@ -197,9 +260,40 @@ var topbarTools = [
             }
             mc.overlay.dirty = true;
         },
+        makeBox: function (e) {
+            var rect = new coords();
+            _.forIn(e, (layer) => {
+                rect.update(coords.max(rect, layer.coords));
+            });
+            return rect;
+        },
         mouseDown: function (e) {
-            var sel = this.mercuryCanvas.state.session.selectedLayers;
-            sel.length = sel.length ? 0 : 1;
+            var mc = this.mercuryCanvas;
+            var pos = new coords(e).toCanvasSpace(mc);
+            var layer = pos.toLayer(mc);
+
+            if (!layer) return;
+
+            var selectedLayers = mc.state.session.selectedLayers;
+            selectedLayers.list.push(layer);
+            selectedLayers.rect = this.makeBox(selectedLayers.list);
+
+            requestAnimationFrame(this.draw.bind(this, e));
+        },
+        mouseMove: function (e) {
+            var mc = this.mercuryCanvas;
+            if (mc.state.session.mouse.down) return;
+
+            var mouse = mc.state.session.mouse;
+            mouse.action = this.cursor(e);
+            mouse.action = mouse.action ? mouse.action : 'move';
+            $(mc.layersContainer).css({
+                cursor: mouse.action
+            });
+        },
+        mouseUp: function (e) {
+            this.mercuryCanvas.state.session.mouse.action = undefined;
+            this.mouseMove(e);
             requestAnimationFrame(this.draw.bind(this, e));
         }
     },
