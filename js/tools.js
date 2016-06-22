@@ -24,15 +24,27 @@ var topbarTools = [
             }).hide();
             brushCursor.appendTo(mc.layersContainer);
             mc.state.session.mouse.brushCursor = brushCursor;
+            this.canShow = false;
+            this.shown = false;
         },
         select: function () {
             var mc = this.mercuryCanvas;
 
             mc.overlay.clear();
+            this.canShow = true;
             mc.layersContainer.css({
                 cursor: 'none'
             });
-            mc.state.session.mouse.brushCursor.show();
+        },
+        deselect: function () {
+            var mc = this.mercuryCanvas;
+
+            mc.state.session.mouse.brushCursor.hide();
+            mc.layersContainer.css({
+                cursor: 'default'
+            });
+            this.shown = false;
+            this.canShow = false;
         },
         draw: function () {
             var mc = this.mercuryCanvas;
@@ -88,6 +100,12 @@ var topbarTools = [
         },
         mouseMove: function (e) {
             var mc = this.mercuryCanvas;
+
+            if (this.canShow && !this.shown) {
+                this.shown = true;
+                mc.state.session.mouse.brushCursor.show();
+            }
+
             var mouse = mc.state.session.mouse;
             var pos = new coords(e).toCanvasSpace(mc);
             mouse.brushCursor.css({

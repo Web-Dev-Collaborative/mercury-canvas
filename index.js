@@ -19,6 +19,7 @@ class Tool {
             action: false,
             selected: false,
             select: () => { },
+            deselect: () => { },
             mouseDown: () => { },
             mouseMove: () => { },
             mouseUp: () => { },
@@ -44,12 +45,15 @@ class Tool {
 
         this.element.on('click', this.onClick.bind(this));
 
-        this.load();
+        setTimeout(this.load);
         if (this.selected) this.onClick();
     }
     onClick(e) {
         if (this.disabled) return;
 
+        if (this.parent.lastTool) {
+            this.parent.lastTool.deselect();
+        }
         if (_.isObject(e)) this.select.bind(this)();
 
         if (this.action) return;
@@ -144,10 +148,11 @@ class Toolbar {
     }
     selectTool(e) {
         var activeTools = this.parent.state.activeTools;
-        if (this.lastToolIndex >= 0) {
-            activeTools.splice(this.lastToolIndex, 1);
+        if (this.lastTool) {
+            activeTools.splice(activeTools.indexOf(this.lastTool), 1);
         }
-        this.lastToolIndex = activeTools.push(e) - 1;
+        this.lastTool = e;
+        activeTools.push(e);
     }
 }
 
@@ -181,6 +186,7 @@ class MercuryCanvas {
             background: '#fff',
             strokeColor: '#000',
             lineWidth: 20,
+            handlerSize: 18,
             toolbars: [],
             activeTools: [],
             session: {
@@ -188,6 +194,9 @@ class MercuryCanvas {
                 height: 0,
                 mouse: {
                     points: []
+                },
+                selectedLayers: {
+                    list: []
                 }
             }
         };
@@ -230,6 +239,15 @@ class MercuryCanvas {
             removable: false
         });
         this.layers.fitToWindow.push(this.base, this.overlay);
+
+        new Layer({
+            parent: this,
+            imageData: {
+                'data': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJIAAAApCAYAAADednA4AAADV0lEQVR4nO2cL0wbURzHP6KiAoFAICaa0CUkQ0wgEAjERMUEYgJRgWDJlkwsC4IsE00mJhCICcRExZKxBIFAIBDNFAKBQCAmTrCkyRAVFYiKTXzvwtFQ2l7vz7ve75t8DLR37959+37v/e73DkwmkylGlYB14DvgAV0fz//buv8Zk2mgFoEz4N8QzvzPmkz3VAK2gVuGmyjg1v+OyQRAGdhldAP1Y2YquMrAe6BNdBMFI5OFuQIqLgOFucAm4IVREgYKU0/vUkxZaB5oADckY6CAg5Sux5SyVtDNHWclNgneKI1aBb6iWOj5XABNLEHlkp6gVdQl6ZgnTPexhlWBwxEO0kbxtzxRN5iiaA7YAlqkb54wvUEN3PH/Oc7BzFDpqAxsAEekF7oihbZXEx7UDBW/ZtHK6ACFkayN089xf4MXY2xoG/jkd4JpfC2iOc8p40eHtLmX4S4BVwmcpAvsocmgabBmgJfAPgoVWZtjVHpAJXwhtRROeIBWehb21Pkb3K2IszZEVJr9F/YtxZN30YpwG6UXZob3e65VApbR3PGQ5DLMadOmbzQCOM+wQT00nLeQwxvAJholn6MMbR40j34YdeAzKgY7w53VVdwmevCBredA44bh+TfmCM0lGshwmyhMrPksoV9KhegJ0+D71dBxa6HzvUNzvyOUBJxGs4xtIsiHkYzsafJAOAsri9S6kR+u0Yg8VPsONNZwjw5aFI280n7hQKMNd+igOWikhPKJAxdg5NhAgZZwPx1vJMMNMRgorEl2FRj5wyPBh+xbFCsvUkROUe4t8cLEZSy3NG1co4x7hZQ1i+JmZ8wGG+5wg56jruGAzFD54pa7lz44WWnxFPhIvsseppW/wE/gNbAw6Aa6pgXgA/CL7DuwyPwBfgBvgWeP3jHHFbxPZ5TXoRjx0EEFgnWmtI5rBZVUWEIzfs7RamuVAu0jDPZa5aFo3UV6yDh7KM+Tl6K+RBWY6gRb8Q2ig0byHbREn8pwFbeqaN/cLjLXb7K/kWmPNpcor7OJvVsoVpVQh9ZQ+eouyoG0kNFc3BA4bIS5QEX+X4A3qESnElN/mSbQDHe103VUaNVA84imzzEyXwvtz/N8os7TvBCtEM0QDbQJdAMtNuYSuXqTqUj6D3etR2USRDYRAAAAAElFTkSuQmCC',
+                'width': 146,
+                'height': 41
+            }
+        });
 
         this.resize = this.resize.bind(this);
         $(window).on('resize', _.throttle(this.resize, 33));
@@ -307,6 +325,10 @@ class MercuryCanvas {
 
         this.state.session.width = width;
         this.state.session.height = height;
+    }
+    saveState() {
+        var layer = this.layers.list[0];
+        localStorage.setItem('layer', layer.context.getImageData(0, 0, layer.width, layer.height));
     }
 }
 

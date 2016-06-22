@@ -28,9 +28,48 @@ class Layer {
 
         if (this.name == 'base' || this.name == 'overlay') return;
 
+        if (this.imageData) {
+            this.resize(this.imageData);
+            var image = document.createElement('img');
+            image.src = this.imageData.data;
+            image.onload = () => {
+                this.context.drawImage(image, 0, 0);
+                this.dirty = true;
+                // this.trim();
+
+                var self = this;
+                setTimeout(() => {
+                    var x = (self.mercuryCanvas.state.session.width - self.imageData.width) / 2;
+                    var y = (self.mercuryCanvas.state.session.height - self.imageData.height) / 2;
+
+                    self.element.css({
+                        top: y,
+                        left: x
+                    });
+                    self.coords.update({
+                        x: x,
+                        y: y
+                    });
+                    delete this.imageData;
+                }, 10);
+            };
+        }
+
         coords.z++;
         this.updateOverlayZ();
         this.mercuryCanvas.layers.list.push(this);
+    }
+    move(options) {
+        this.coords.update({
+            x: options.x,
+            y: options.y,
+            width: this.coords.width + options.x,
+            height: this.coords.height + options.y
+        });
+        this.element.css({
+            top: this.coords.y,
+            left: this.coords.x
+        });
     }
     resize(options) {
         if (!options || typeof options.width != 'number' || typeof options.height != 'number') return;
@@ -50,6 +89,7 @@ class Layer {
         ctx.restore();
     }
     trim() {
+        console.log(this.coords);
         var pixels = this.context.getImageData(0, 0, this.coords.width, this.coords.height);
         var bound = {};
         var x, y;
