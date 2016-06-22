@@ -127,5 +127,6 @@ html, body, #wrapper {
         border-radius: 50%;
         border: 1px solid $black;
         display: none;
+        box-shadow: inset 0 0 0 1px $white;
     }
 }
