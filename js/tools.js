@@ -17,15 +17,18 @@ var topbarTools = [
     {
         name: 'brush',
         icon: 'fa-paint-brush',
+        selected: true,
         load: function () {
             var mc = this.mercuryCanvas;
-            var brushCursor = $('<div>', {
+            var cursor = $('<div>', {
                 class: 'brushCursor'
             }).hide();
-            brushCursor.appendTo(mc.layersContainer);
-            mc.state.session.mouse.brushCursor = brushCursor;
+            cursor.appendTo(mc.layersContainer);
+            this.cursor = cursor;
             this.canShow = false;
+            this.zIndex = 0;
             this.shown = false;
+            console.log(this);
         },
         select: function () {
             var mc = this.mercuryCanvas;
@@ -39,7 +42,7 @@ var topbarTools = [
         deselect: function () {
             var mc = this.mercuryCanvas;
 
-            mc.state.session.mouse.brushCursor.hide();
+            this.cursor.hide();
             mc.layersContainer.css({
                 cursor: 'default'
             });
@@ -101,17 +104,28 @@ var topbarTools = [
         mouseMove: function (e) {
             var mc = this.mercuryCanvas;
 
+            var css = {};
             if (this.canShow && !this.shown) {
                 this.shown = true;
-                mc.state.session.mouse.brushCursor.show();
+                this.cursor.show();
+            }
+            if (this.zIndex - 1 < mc.state.session.zIndex) {
+                css.zIndex = mc.state.session.zIndex + 1;
+                this.zIndex = mc.state.session.zIndex + 1;
+            }
+            if (mc.state.lineWidth != this.size) {
+                css.width = mc.state.lineWidth;
+                css.height = mc.state.lineWidth;
+                this.size = mc.state.lineWidth;
             }
 
             var mouse = mc.state.session.mouse;
             var pos = new coords(e).toCanvasSpace(mc);
-            mouse.brushCursor.css({
-                top: pos.y,
-                left: pos.x
-            });
+
+            css.top = pos.y - mc.state.lineWidth / 2;
+            css.left = pos.x - mc.state.lineWidth / 2;
+
+            this.cursor.css(css);
             if (!mouse.down) return;
 
             mouse.points.push(pos);
@@ -132,7 +146,6 @@ var topbarTools = [
     {
         name: 'select',
         icon: 'fa-mouse-pointer',
-        selected: true,
         select: function () {
             var mc = this.mercuryCanvas;
 

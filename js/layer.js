@@ -149,8 +149,10 @@ class Layer {
         this.element.remove();
     }
     updateOverlayZ() {
-        this.mercuryCanvas.overlay.coords.z = coords.z;
-        this.mercuryCanvas.overlay.element.css('zIndex', coords.z);
+        var mc = this.mercuryCanvas;
+        mc.overlay.coords.z = coords.z;
+        mc.overlay.element.css('zIndex', coords.z);
+        mc.state.session.zIndex = coords.z;
     }
 }
 
