@@ -45,8 +45,10 @@ class Tool {
 
         this.element.on('click', this.onClick.bind(this));
 
-        setTimeout(this.load);
-        if (this.selected) this.onClick();
+        setTimeout((function () {
+            this.load();
+            if (this.selected) this.onClick(true);
+        }).bind(this));
     }
     onClick(e) {
         if (this.disabled) return;
@@ -54,7 +56,7 @@ class Tool {
         if (this.parent.lastTool) {
             this.parent.lastTool.deselect();
         }
-        if (_.isObject(e)) this.select.bind(this)();
+        if (_.isObject(e) || e === true) this.select.bind(this)();
 
         if (this.action) return;
         this.parent.element.children('div').removeClass('selected');
