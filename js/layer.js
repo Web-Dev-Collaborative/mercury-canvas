@@ -39,8 +39,8 @@ class Layer {
 
                 var self = this;
                 setTimeout(() => {
-                    var x = (self.mercuryCanvas.state.session.width - self.imageData.width) / 2;
-                    var y = (self.mercuryCanvas.state.session.height - self.imageData.height) / 2;
+                    var x = (self.mercuryCanvas.session.width - self.imageData.width) / 2;
+                    var y = (self.mercuryCanvas.session.height - self.imageData.height) / 2;
 
                     self.element.css({
                         top: y,
@@ -145,14 +145,17 @@ class Layer {
     remove() {
         if (this.removable === false) return;
 
-        _.remove(this.mercuryCanvas.layers.list, this);
+        var mc = this.mercuryCanvas;
+
+        _.remove(mc.session.selectedLayers.list, this);
+        _.remove(mc.layers.list, this);
         this.element.remove();
     }
     updateOverlayZ() {
         var mc = this.mercuryCanvas;
         mc.overlay.coords.z = coords.z;
         mc.overlay.element.css('zIndex', coords.z);
-        mc.state.session.zIndex = coords.z;
+        mc.session.zIndex = coords.z;
     }
 }
 

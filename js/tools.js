@@ -51,7 +51,7 @@ var topbarTools = [
         },
         draw: function () {
             var mc = this.mercuryCanvas;
-            var points = mc.state.session.mouse.points;
+            var points = mc.session.mouse.points;
             if (!points.length) return;
 
             mc.overlay.clear();
@@ -91,7 +91,7 @@ var topbarTools = [
         mouseDown: function (e) {
             var mc = this.mercuryCanvas;
 
-            mc.state.session.mouse.points = [];
+            mc.session.mouse.points = [];
 
             mc.overlay.context.lineWidth = mc.state.lineWidth;
             mc.overlay.context.strokeStyle = mc.state.strokeColor;
@@ -109,9 +109,9 @@ var topbarTools = [
                 this.shown = true;
                 this.cursor.show();
             }
-            if (this.zIndex - 1 < mc.state.session.zIndex) {
-                css.zIndex = mc.state.session.zIndex + 1;
-                this.zIndex = mc.state.session.zIndex + 1;
+            if (this.zIndex - 1 < mc.session.zIndex) {
+                css.zIndex = mc.session.zIndex + 1;
+                this.zIndex = mc.session.zIndex + 1;
             }
             if (mc.state.lineWidth != this.size) {
                 css.width = mc.state.lineWidth;
@@ -119,7 +119,7 @@ var topbarTools = [
                 this.size = mc.state.lineWidth;
             }
 
-            var mouse = mc.state.session.mouse;
+            var mouse = mc.session.mouse;
             var pos = new coords(e).toCanvasSpace(mc);
 
             css.top = pos.y - mc.state.lineWidth / 2;
@@ -132,7 +132,7 @@ var topbarTools = [
         },
         mouseUp: function () {
             var mc = this.mercuryCanvas;
-            var mouse = mc.state.session.mouse;
+            var mouse = mc.session.mouse;
             if (!mouse.points.length) return;
 
             var newLayer = new Layer({
@@ -154,7 +154,7 @@ var topbarTools = [
         cursor: function (e) {
             var mc = this.mercuryCanvas;
             var pos = new coords(e).toCanvasSpace(mc);
-            var layerCoords = mc.state.session.selectedLayers.rect;
+            var layerCoords = mc.session.selectedLayers.rect;
 
             if (!layerCoords) return;
 
@@ -203,7 +203,7 @@ var topbarTools = [
             var mc = this.mercuryCanvas;
             var point = new coords(e).toCanvasSpace(mc);
 
-            var layer = mc.state.session.selectedLayers.list.length ? mc.state.session.selectedLayers.rect : point.toLayer(mc);
+            var layer = mc.session.selectedLayers.list.length ? mc.session.selectedLayers.rect : point.toLayer(mc);
 
             mc.overlay.clear();
             if (!layer) return;
@@ -221,7 +221,7 @@ var topbarTools = [
             rect.width = Math.ceil(rect.width) + 1;
             rect.height = Math.ceil(rect.height) + 1;
 
-            if (!mc.state.session.selectedLayers.list.length) {
+            if (!mc.session.selectedLayers.list.length) {
                 context.beginPath();
                 context.moveTo(rect.x, rect.y);
                 context.lineTo(rect.x + rect.width, rect.y);
@@ -305,7 +305,7 @@ var topbarTools = [
 
             if (!layer) return;
 
-            var selectedLayers = mc.state.session.selectedLayers;
+            var selectedLayers = mc.session.selectedLayers;
             selectedLayers.list.push(layer);
             selectedLayers.rect = this.makeBox(selectedLayers.list);
 
@@ -313,9 +313,9 @@ var topbarTools = [
         },
         mouseMove: function (e) {
             var mc = this.mercuryCanvas;
-            if (mc.state.session.mouse.down) return;
+            if (mc.session.mouse.down) return;
 
-            var mouse = mc.state.session.mouse;
+            var mouse = mc.session.mouse;
             mouse.action = this.cursor(e);
             mouse.action = mouse.action ? mouse.action : 'move';
             $(mc.layersContainer).css({
@@ -323,7 +323,7 @@ var topbarTools = [
             });
         },
         mouseUp: function (e) {
-            this.mercuryCanvas.state.session.mouse.action = undefined;
+            this.mercuryCanvas.session.mouse.action = undefined;
             this.mouseMove(e);
             requestAnimationFrame(this.draw.bind(this, e));
         }
