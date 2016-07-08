@@ -56,6 +56,11 @@ class Tool {
     remove() {
         this.element.remove();
     }
+    toggle(e) {
+        if (e) this.element.removeClass('disabled');
+        else this.element.addClass('disabled');
+        this.disabled = !e;
+    }
 }
 
 class Toolbar {
@@ -145,6 +150,14 @@ class Toolbar {
         }
         this.lastTool = e;
         activeTools.push(e);
+    }
+    toggleTool(e) {
+        if (!_.isObject(e) || !_.has(e, 'name' || !_.has(e, 'state'))) return;
+
+        _.forIn(this.tools, (tool) => {
+            if (tool.name != e.name) return;
+            tool.toggle(e.state);
+        });
     }
 }
 export default Toolbar;

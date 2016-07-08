@@ -89,7 +89,6 @@ class Layer {
         ctx.restore();
     }
     trim() {
-        console.log(this.coords);
         var pixels = this.context.getImageData(0, 0, this.coords.width, this.coords.height);
         var bound = {};
         var x, y;

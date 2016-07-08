@@ -58,6 +58,99 @@ class MercuryWorker {
     }
 }
 
+class Session {
+    constructor(e) {
+        _.extend(this, {
+            width: 0,
+            height: 0,
+            mouse: {
+                points: []
+            },
+            selectedLayers: {
+                list: []
+            },
+            mercuryCanvas: null,
+            operations: [],
+            operationIndex: 0
+        }, e);
+    }
+    undo() {
+        this.operationIndex = this.operationIndex - 1;
+
+        if (!this.updateToolbars()) return false;
+
+        var operation = this.operations[this.operationIndex];
+        if (_.isFunction(operation.tool.undo)) {
+            operation.tool.undo(operation);
+        }
+    }
+    redo() {
+        this.operationIndex = this.operationIndex + 1;
+
+        if (!this.updateToolbars()) return false;
+
+        var operation = this.operations[this.operationIndex];
+        if (_.isFunction(operation.tool.redo)) {
+            operation.tool.redo(operation);
+        }
+    }
+    updateToolbars() {
+        var mc = this.mercuryCanvas;
+
+        if (this.operationIndex == this.operations.length) {
+            this.toggleButton({
+                name: 'redo',
+                state: false
+            });
+        }
+        else if (this.operationIndex > this.operations.length) {
+            this.operationIndex = this.operations.length;
+            return mc.error({
+                module: 'state',
+                number: 1
+            });
+        }
+        else {
+            this.toggleButton({
+                name: 'redo',
+                state: true
+            });
+        }
+        if (this.operationIndex == 0) {
+            this.toggleButton({
+                name: 'undo',
+                state: false
+            });
+        }
+        else if (this.operationIndex < 0) {
+            this.operationIndex = 0;
+            return mc.error({
+                type: 'undo',
+                number: 0
+            });
+        }
+        else {
+            this.toggleButton({
+                name: 'undo',
+                state: true
+            });
+        }
+        return true;
+    }
+    addOperation(e) {
+        this.operations.push(e);
+        this.operationIndex++;
+        this.operations.splice(this.operationIndex);
+        this.updateToolbars();
+    }
+    toggleButton(e) {
+        var mc = this.mercuryCanvas;
+        _.forIn(mc.state.toolbars, (toolbar) => {
+            toolbar.toggleTool(e);
+        });
+    }
+}
+
 class MercuryCanvas {
     constructor(element) {
         this.element = element;
@@ -73,17 +166,9 @@ class MercuryCanvas {
             toolbars: [],
             activeTools: []
         };
-        this.session = {
-            width: 0,
-            height: 0,
-            mouse: {
-                points: []
-            },
-            selectedLayers: {
-                list: []
-            },
-            actions: []
-        };
+        this.session = new Session({
+            mercuryCanvas: this
+        });
 
         this.workers = [];
         if (typeof window.Worker == 'function') {
@@ -124,14 +209,14 @@ class MercuryCanvas {
         });
         this.layers.fitToWindow.push(this.base, this.overlay);
 
-        new Layer({
-            parent: this,
-            imageData: {
-                'data': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJIAAAApCAYAAADednA4AAADV0lEQVR4nO2cL0wbURzHP6KiAoFAICaa0CUkQ0wgEAjERMUEYgJRgWDJlkwsC4IsE00mJhCICcRExZKxBIFAIBDNFAKBQCAmTrCkyRAVFYiKTXzvwtFQ2l7vz7ve75t8DLR37959+37v/e73DkwmkylGlYB14DvgAV0fz//buv8Zk2mgFoEz4N8QzvzPmkz3VAK2gVuGmyjg1v+OyQRAGdhldAP1Y2YquMrAe6BNdBMFI5OFuQIqLgOFucAm4IVREgYKU0/vUkxZaB5oADckY6CAg5Sux5SyVtDNHWclNgneKI1aBb6iWOj5XABNLEHlkp6gVdQl6ZgnTPexhlWBwxEO0kbxtzxRN5iiaA7YAlqkb54wvUEN3PH/Oc7BzFDpqAxsAEekF7oihbZXEx7UDBW/ZtHK6ACFkayN089xf4MXY2xoG/jkd4JpfC2iOc8p40eHtLmX4S4BVwmcpAvsocmgabBmgJfAPgoVWZtjVHpAJXwhtRROeIBWehb21Pkb3K2IszZEVJr9F/YtxZN30YpwG6UXZob3e65VApbR3PGQ5DLMadOmbzQCOM+wQT00nLeQwxvAJholn6MMbR40j34YdeAzKgY7w53VVdwmevCBredA44bh+TfmCM0lGshwmyhMrPksoV9KhegJ0+D71dBxa6HzvUNzvyOUBJxGs4xtIsiHkYzsafJAOAsri9S6kR+u0Yg8VPsONNZwjw5aFI280n7hQKMNd+igOWikhPKJAxdg5NhAgZZwPx1vJMMNMRgorEl2FRj5wyPBh+xbFCsvUkROUe4t8cLEZSy3NG1co4x7hZQ1i+JmZ8wGG+5wg56jruGAzFD54pa7lz44WWnxFPhIvsseppW/wE/gNbAw6Aa6pgXgA/CL7DuwyPwBfgBvgWeP3jHHFbxPZ5TXoRjx0EEFgnWmtI5rBZVUWEIzfs7RamuVAu0jDPZa5aFo3UV6yDh7KM+Tl6K+RBWY6gRb8Q2ig0byHbREn8pwFbeqaN/cLjLXb7K/kWmPNpcor7OJvVsoVpVQh9ZQ+eouyoG0kNFc3BA4bIS5QEX+X4A3qESnElN/mSbQDHe103VUaNVA84imzzEyXwvtz/N8os7TvBCtEM0QDbQJdAMtNuYSuXqTqUj6D3etR2USRDYRAAAAAElFTkSuQmCC',
-                'width': 146,
-                'height': 41
-            }
-        });
+        // new Layer({
+        //     parent: this,
+        //     imageData: {
+        //         'data': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJIAAAApCAYAAADednA4AAADV0lEQVR4nO2cL0wbURzHP6KiAoFAICaa0CUkQ0wgEAjERMUEYgJRgWDJlkwsC4IsE00mJhCICcRExZKxBIFAIBDNFAKBQCAmTrCkyRAVFYiKTXzvwtFQ2l7vz7ve75t8DLR37959+37v/e73DkwmkylGlYB14DvgAV0fz//buv8Zk2mgFoEz4N8QzvzPmkz3VAK2gVuGmyjg1v+OyQRAGdhldAP1Y2YquMrAe6BNdBMFI5OFuQIqLgOFucAm4IVREgYKU0/vUkxZaB5oADckY6CAg5Sux5SyVtDNHWclNgneKI1aBb6iWOj5XABNLEHlkp6gVdQl6ZgnTPexhlWBwxEO0kbxtzxRN5iiaA7YAlqkb54wvUEN3PH/Oc7BzFDpqAxsAEekF7oihbZXEx7UDBW/ZtHK6ACFkayN089xf4MXY2xoG/jkd4JpfC2iOc8p40eHtLmX4S4BVwmcpAvsocmgabBmgJfAPgoVWZtjVHpAJXwhtRROeIBWehb21Pkb3K2IszZEVJr9F/YtxZN30YpwG6UXZob3e65VApbR3PGQ5DLMadOmbzQCOM+wQT00nLeQwxvAJholn6MMbR40j34YdeAzKgY7w53VVdwmevCBredA44bh+TfmCM0lGshwmyhMrPksoV9KhegJ0+D71dBxa6HzvUNzvyOUBJxGs4xtIsiHkYzsafJAOAsri9S6kR+u0Yg8VPsONNZwjw5aFI280n7hQKMNd+igOWikhPKJAxdg5NhAgZZwPx1vJMMNMRgorEl2FRj5wyPBh+xbFCsvUkROUe4t8cLEZSy3NG1co4x7hZQ1i+JmZ8wGG+5wg56jruGAzFD54pa7lz44WWnxFPhIvsseppW/wE/gNbAw6Aa6pgXgA/CL7DuwyPwBfgBvgWeP3jHHFbxPZ5TXoRjx0EEFgnWmtI5rBZVUWEIzfs7RamuVAu0jDPZa5aFo3UV6yDh7KM+Tl6K+RBWY6gRb8Q2ig0byHbREn8pwFbeqaN/cLjLXb7K/kWmPNpcor7OJvVsoVpVQh9ZQ+eouyoG0kNFc3BA4bIS5QEX+X4A3qESnElN/mSbQDHe103VUaNVA84imzzEyXwvtz/N8os7TvBCtEM0QDbQJdAMtNuYSuXqTqUj6D3etR2USRDYRAAAAAElFTkSuQmCC',
+        //         'width': 146,
+        //         'height': 41
+        //     }
+        // });
 
         this.resize = this.resize.bind(this);
         $(window).on('resize', _.throttle(this.resize, 33));
@@ -213,6 +298,10 @@ class MercuryCanvas {
     saveState() {
         var layer = this.layers.list[0];
         localStorage.setItem('layer', layer.context.getImageData(0, 0, layer.width, layer.height));
+    }
+    error(e) {
+        console.error(e);
+        return false;
     }
 }
 

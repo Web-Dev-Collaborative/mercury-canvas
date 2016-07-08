@@ -6,13 +6,21 @@ var topbarTools = [
     {
         name: 'undo',
         action: true,
-        disabled: true
+        select: function () {
+            var mc = this.mercuryCanvas;
+
+            mc.session.undo();
+        }
     },
     {
         name: 'redo',
         icon: 'fa-repeat',
-        disabled: true,
-        action: true
+        action: true,
+        select: function () {
+            var mc = this.mercuryCanvas;
+
+            mc.session.redo();
+        }
     },
     {
         name: 'brush',
@@ -28,7 +36,6 @@ var topbarTools = [
             this.canShow = false;
             this.zIndex = 0;
             this.shown = false;
-            console.log(this);
         },
         select: function () {
             var mc = this.mercuryCanvas;
@@ -139,8 +146,20 @@ var topbarTools = [
                 parent: mc
             });
             mc.overlay.copyTo(newLayer);
+            mc.session.addOperation({
+                tool: this,
+                layer: _.clone(newLayer),
+                mouse: _.clone(mouse)
+            });
             mc.overlay.clear();
             mouse.points = [];
+        },
+        undo: function (e) {
+            console.log(e);
+
+        },
+        redo: function (e) {
+            console.log(e);
         }
     },
     {
