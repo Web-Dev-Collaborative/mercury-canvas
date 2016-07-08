@@ -6,7 +6,7 @@ import 'font-awesome/css/font-awesome.min.css';
 import _ from 'lodash';
 
 import {topbarTools} from './js/tools.js';
-import './js/worker';
+// import './js/worker';
 import {coords} from './js/helpers.js';
 import Layer from './js/layer.js';
 import Toolbar from './js/toolbar.js';
@@ -15,18 +15,46 @@ class MercuryWorker {
     constructor() {
         this.worker = new Worker('./js/worker.js');
 
-        this.send({
-            start: true
-        });
         this.worker.onmessage = this.receive;
+        this.queue = {
+            init: {
+                cb: (a) => console.log(a)
+            }
+        };
+
+        this.receive = this.receive.bind(this);
     }
-    send(message) {
-        this.worker.postMessage(message);
+    send(data) {
+        var msg = {
+            which: data.which,
+            id: data.id,
+            data: data.data
+        };
+
+        this.worker.postMessage(msg);
     }
     receive(e) {
-        if (!e.data) return;
-        if (e.data.ready == true) return console.log('worker ready');
-        console.log('worker message', e.data);
+        if (!e || !e.data) return false;
+
+        var data = e.data;
+        if (!_.isObject(data)) return false;
+        if (_.isString(data.event) && _.isString(data.id)) {
+            if (data.event == 'finish') return delete this.queue[data.id];
+            if (data.event == 'progress') return this.queue[data.id].progress(data.progress);
+            if (data.event == 'data') return this.queue[data.id].cb(data.data);
+        }
+    }
+    action(data) {
+        data = _.merge({
+            which: 'active',
+            data: { test: true },
+            progress: (p) => console.log('Worker progress:', p),
+            cb: (data) => console.log(data)
+        }, data);
+
+        data.id = _.uniqueId('act_');
+        this.queue[data.id] = data;
+        this.send(data);
     }
 }
 
