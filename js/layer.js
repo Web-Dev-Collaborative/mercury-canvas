@@ -1,6 +1,5 @@
 import _ from 'lodash';
 import classnames from 'classnames';
-import {coords} from './helpers.js';
 import {Matrix} from 'transformation-matrix-js';
 
 class layerCoords {
@@ -8,7 +7,7 @@ class layerCoords {
         _.merge(this, {
             x: 0,
             y: 0,
-            z: coords.z,
+            z: layer.mercuryCanvas.session.zIndex,
             width: 0,
             height: 0
         }, options);
@@ -42,17 +41,17 @@ class Layer {
             name: ''
         }, options);
 
-        this.coords = new layerCoords(options, this);
+        this.mercuryCanvas = this.parent;
+        this.parent = this.parent.layersContainer;
 
         this.element = $('<canvas>', {
             class: classnames('layer', this.name),
             css: {
-                zIndex: this.name == 'base' ? 0 : coords.z
+                zIndex: this.name == 'base' ? 0 : this.mercuryCanvas.session.zIndex
             }
-        }).appendTo(this.parent.layersContainer);
+        }).appendTo(this.parent);
 
-        this.mercuryCanvas = this.parent;
-        this.parent = this.parent.layersContainer;
+        this.coords = new layerCoords(options, this);
         this.canvas = this.element[0];
         this.context = this.canvas.getContext('2d');
 
@@ -81,7 +80,7 @@ class Layer {
             };
         }
 
-        coords.z++;
+        this.mercuryCanvas.session.zIndex++;
         this.updateOverlayZ();
         this.mercuryCanvas.layers.list.push(this);
     }
@@ -173,9 +172,9 @@ class Layer {
     }
     updateOverlayZ() {
         var mc = this.mercuryCanvas;
-        mc.overlay.coords.z = coords.z;
-        mc.overlay.element.css('zIndex', coords.z);
-        mc.session.zIndex = coords.z;
+        mc.overlay.coords.z = mc.session.zIndex;
+        mc.overlay.element.css('zIndex', mc.session.zIndex);
+        mc.session.zIndex = mc.session.zIndex;
     }
 }
 

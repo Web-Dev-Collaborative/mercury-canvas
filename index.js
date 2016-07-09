@@ -71,7 +71,8 @@ class Session {
             },
             mercuryCanvas: null,
             operations: [],
-            operationIndex: 0
+            operationIndex: 0,
+            zIndex: 1
         }, e);
     }
     undo() {

@@ -1,7 +1,7 @@
 import _ from 'lodash';
 
 class coords {
-    constructor(options) {
+    constructor(options = {}) {
         if (options.hasOwnProperty('clientX')) {
             options = {
                 x: options.clientX,
@@ -11,7 +11,7 @@ class coords {
         _.merge(this, {
             x: 0,
             y: 0,
-            z: coords.z,
+            z: 0,
             width: 0,
             height: 0
         }, options);
@@ -40,7 +40,17 @@ class coords {
         });
         return chosenLayer;
     }
+    max(e, f) {
+        e = e || f;
+        if (!_.isObject(e)) return false;
+        if (!_.isObject(f)) f = this;
+        return new coords({
+            x: Math.max(e.x, f.x),
+            y: Math.max(e.y, f.y),
+            width: Math.max(e.width, f.width),
+            height: Math.max(e.height, f.height)
+        });
+    }
 }
-coords.z = 1;
 
 export {coords};
