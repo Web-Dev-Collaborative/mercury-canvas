@@ -43,12 +43,13 @@ class Tool {
     onClick(e) {
         if (this.disabled) return;
 
-        if (this.parent.lastTool) {
-            this.parent.lastTool.deselect();
-        }
         if (_.isObject(e) || e === true) this.select.bind(this)();
 
         if (this.action) return;
+
+        if (this.parent.lastTool) {
+            this.parent.lastTool.deselect();
+        }
         this.parent.element.children('div').removeClass('selected');
         this.element.addClass('selected');
         this.parent.selectTool(this);
