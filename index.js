@@ -75,7 +75,7 @@ class Session {
         }, e);
     }
     undo() {
-        this.operationIndex = this.operationIndex - 1;
+        this.operationIndex--;
 
         if (!this.updateToolbars()) return false;
 
@@ -85,11 +85,11 @@ class Session {
         }
     }
     redo() {
-        this.operationIndex = this.operationIndex + 1;
+        this.operationIndex++;
 
         if (!this.updateToolbars()) return false;
 
-        var operation = this.operations[this.operationIndex];
+        var operation = this.operations[this.operationIndex - 1];
         if (_.isFunction(operation.tool.redo)) {
             operation.tool.redo(operation);
         }
@@ -138,10 +138,17 @@ class Session {
         return true;
     }
     addOperation(e) {
+        this.clearOrphanOperations();
         this.operations.push(e);
         this.operationIndex++;
-        this.operations.splice(this.operationIndex);
         this.updateToolbars();
+    }
+    clearOrphanOperations() {
+        var removed = this.operations.splice(this.operationIndex);
+        _.forIn(removed, (operation) => {
+            if (!_.isFunction(operation.tool.operationRemove)) return;
+            operation.tool.operationRemove(operation);
+        });
     }
     toggleButton(e) {
         var mc = this.mercuryCanvas;

@@ -59,6 +59,12 @@ class Layer {
         this.updateOverlayZ();
         this.mercuryCanvas.layers.list.push(this);
     }
+    hide() {
+        this.element.hide();
+    }
+    show() {
+        this.element.show();
+    }
     move(options) {
         this.coords.update({
             x: options.x,

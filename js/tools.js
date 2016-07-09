@@ -154,12 +154,14 @@ var topbarTools = [
             mc.overlay.clear();
             mouse.points = [];
         },
+        operationRemove: function (e) {
+            e.layer.element.remove();
+        },
         undo: function (e) {
-            console.log(e);
-
+            e.layer.hide();
         },
         redo: function (e) {
-            console.log(e);
+            e.layer.show();
         }
     },
     {
