@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import {Matrix} from 'transformation-matrix-js';
 import {coords} from './helpers.js';
 import Layer from './layer.js';
 
@@ -36,6 +37,7 @@ var topbarTools = [
             this.canShow = false;
             this.zIndex = 0;
             this.shown = false;
+            this.matrix = new Matrix();
         },
         select: function () {
             var mc = this.mercuryCanvas;
@@ -129,8 +131,9 @@ var topbarTools = [
             var mouse = mc.session.mouse;
             var pos = new coords(e).toCanvasSpace(mc);
 
-            css.top = pos.y - mc.state.lineWidth / 2;
-            css.left = pos.x - mc.state.lineWidth / 2;
+            this.matrix.translate(pos.x - this.matrix.e, pos.y - this.matrix.f);
+            this.matrix.translate(-mc.state.lineWidth / 2, -mc.state.lineWidth / 2);
+            css.transform = this.matrix.toCSS();
 
             this.cursor.css(css);
             if (!mouse.down) return;
@@ -315,7 +318,7 @@ var topbarTools = [
         makeBox: function (e) {
             var rect = new coords();
             _.forIn(e, (layer) => {
-                rect.update(coords.max(rect, layer.coords));
+                rect.update(rect.max(layer.coords));
             });
             return rect;
         },
@@ -357,6 +360,9 @@ var topbarTools = [
         select: function () {
             var mc = this.mercuryCanvas;
             mc.overlay.clear();
+            mc.session.operationIndex = 0;
+            mc.session.clearOrphanOperations();
+            mc.session.updateToolbars();
 
             _.forIn(_.clone(mc.layers.list), (layer) => {
                 layer.remove();
