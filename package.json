@@ -23,6 +23,7 @@
     "font-awesome": "^4.6.3",
     "jquery": "^2.2.4",
     "lodash": "^4.13.1",
+    "loglevel": "^1.4.1",
     "node-sass": "^3.6.0",
     "nodemon": "^1.9.2",
     "normalize.css": "^4.1.1",
@@ -36,6 +37,7 @@
     "socket.io": "^1.4.5",
     "socket.io-client": "^1.4.5",
     "style-loader": "^0.13.1",
+    "transformation-matrix-js": "^2.6.5",
     "url-loader": "^0.5.7",
     "webpack": "^1.13.1",
     "webpack-dev-server": "^1.14.1"

@@ -1,6 +1,36 @@
 import _ from 'lodash';
 import classnames from 'classnames';
 import {coords} from './helpers.js';
+import {Matrix} from 'transformation-matrix-js';
+
+class layerCoords {
+    constructor(options = {}, layer) {
+        _.merge(this, {
+            x: 0,
+            y: 0,
+            z: coords.z,
+            width: 0,
+            height: 0
+        }, options);
+        this.matrix = new Matrix();
+        this.matrix.translate(this.x, this.y);
+        this.layer = layer;
+    }
+    update(options) {
+        if (_.isObject(options)) {
+            if (options.x) {
+                this.matrix.translateX(options.x - this.x);
+            }
+            if (options.y) {
+                this.matrix.translateY(options.y - this.y);
+            }
+            _.merge(this, options);
+        }
+        this.layer.element.css({
+            transform: this.matrix.toCSS()
+        });
+    }
+}
 
 class Layer {
     constructor(options) {
@@ -12,12 +42,12 @@ class Layer {
             name: ''
         }, options);
 
-        this.coords = new coords(options);
+        this.coords = new layerCoords(options, this);
 
         this.element = $('<canvas>', {
             class: classnames('layer', this.name),
             css: {
-                zIndex: this.name == 'base' ? 0 : this.coords.z
+                zIndex: this.name == 'base' ? 0 : coords.z
             }
         }).appendTo(this.parent.layersContainer);
 
@@ -42,10 +72,6 @@ class Layer {
                     var x = (self.mercuryCanvas.session.width - self.imageData.width) / 2;
                     var y = (self.mercuryCanvas.session.height - self.imageData.height) / 2;
 
-                    self.element.css({
-                        top: y,
-                        left: x
-                    });
                     self.coords.update({
                         x: x,
                         y: y
@@ -68,13 +94,7 @@ class Layer {
     move(options) {
         this.coords.update({
             x: options.x,
-            y: options.y,
-            width: this.coords.width + options.x,
-            height: this.coords.height + options.y
-        });
-        this.element.css({
-            top: this.coords.y,
-            left: this.coords.x
+            y: options.y
         });
     }
     resize(options) {
@@ -124,12 +144,7 @@ class Layer {
 
         var trimmed = this.context.getImageData(bound.left, bound.top, this.coords.width, this.coords.height);
 
-        this.element.css({
-            width: this.coords.width,
-            height: this.coords.height,
-            top: this.coords.y,
-            left: this.coords.x
-        }).attr({
+        this.element.attr({
             width: this.coords.width,
             height: this.coords.height
         });
