@@ -376,7 +376,7 @@ var topbarTools = [
         action: true,
         load: function () {
             $(document).on('fullscreenchange mozfullscreenchange webkitfullscreenchange msfullscreenchange', () => {
-                var fullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+                var fullscreen = window.fullScreen || document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
                 if (fullscreen) {
                     this.element.children('i').removeClass('fa-expand').addClass('fa-compress');
                 }
@@ -386,7 +386,8 @@ var topbarTools = [
             });
         },
         select: function () {
-            if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+            var fullscreen = window.fullScreen || document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+            if (!fullscreen) {
                 var el = document.documentElement;
                 if (el.requestFullscreen) {
                     el.requestFullscreen();
