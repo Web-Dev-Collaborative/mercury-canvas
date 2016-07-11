@@ -39,7 +39,7 @@ class Layer {
             },
             removable: true,
             visible: true,
-            name: options.parent.session.zIndex
+            name: 'Layer ' + options.parent.session.zIndex
         }, options);
 
         this.mercuryCanvas = this.parent;
