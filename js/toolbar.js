@@ -168,4 +168,98 @@ class Toolbar extends Menu {
     }
 }
 
-export {Toolbar};
+class LayerThumbnail {
+    constructor(options) {
+        this.layer = options.layer;
+        this.wrapper = $('<div>', {
+            class: 'layer'
+        });
+
+        this.visibleIcon = $('<i>', {
+            class: classnames('fa', 'fa-fw', {
+                'fa-eye': this.layer.visible,
+                'fa-eye-slash': !this.layer.visible
+            })
+        });
+        this.visibleIconWrapper = $('<div>', {
+            class: 'visible',
+            html: this.visibleIcon
+        }).appendTo(this.wrapper);
+
+        this.thumbnail = $('<div>', {
+            class: 'thumbnail'
+        }).append($('<div>', {
+            class: 'transparent'
+        })).append($('<div>', {
+            class: 'image',
+            style: `background-image: url("${this.layer.canvas.toDataURL()}")`
+        })).appendTo(this.wrapper);
+        this.thumbnail = this.thumbnail.children('.image');
+
+        this.name = $('<div>', {
+            class: 'name',
+            html: this.layer.name
+        }).appendTo(this.wrapper);
+
+        this.visibleIconWrapper.on('click', this.layer.toggleVisibility);
+
+        this.wrapper.prependTo(options.parent);
+    }
+    update() {
+        this.visibleIcon.attr('class', classnames('fa', 'fa-fw', {
+            'fa-eye': this.layer.visible,
+            'fa-eye-slash': !this.layer.visible
+        }));
+
+        this.thumbnail.css('background-image', `url("${this.layer.canvas.toDataURL()}")`);
+        this.name.html(this.layer.name);
+    }
+    remove() {
+        this.wrapper.remove();
+    }
+}
+
+class LayersPanel extends Menu {
+    constructor(options) {
+        super(options);
+        var self = this;
+        this.element.addClass('layersPanel');
+
+        this.layersList = $('<div>', {
+            class: 'layersList'
+        }).appendTo(this.element);
+        this.thumbnails = [];
+        var mc = this.mercuryCanvas;
+
+        _.forIn(mc.layers.list, (layer) => {
+            this.thumbnails.push(new LayerThumbnail({
+                layer: layer,
+                parent: this.layersList
+            }));
+        });
+
+        mc.on('layer.new', (layer) => {
+            self.thumbnails.push(new LayerThumbnail({
+                layer: layer,
+                parent: self.layersList
+            }));
+        });
+        mc.on('layer.remove', (layer) => {
+            _.remove(self.thumbnails, (thumbnail) => {
+                if (thumbnail.layer != layer) return false;
+
+                thumbnail.remove();
+                return true;
+            });
+        });
+        mc.on('layer.update', (layer) => {
+            _.forIn(self.thumbnails, (thumbnail) => {
+                if (thumbnail.layer != layer) return;
+
+                thumbnail.update();
+            });
+        });
+    }
+}
+
+export {Toolbar, LayersPanel};
