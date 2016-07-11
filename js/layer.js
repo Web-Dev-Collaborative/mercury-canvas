@@ -38,7 +38,8 @@ class Layer {
                 background: 'rgba(0, 0, 0, 0)'
             },
             removable: true,
-            name: ''
+            visible: true,
+            name: 'Layer ' + options.parent.session.zIndex
         }, options);
 
         this.mercuryCanvas = this.parent;
@@ -80,15 +81,23 @@ class Layer {
             };
         }
 
-        this.mercuryCanvas.session.zIndex++;
-        this.updateOverlayZ();
-        this.mercuryCanvas.layers.list.push(this);
+        this.toggleVisibility = this.toggleVisibility.bind(this);
+
+        this.mercuryCanvas.emit('layer.new', this);
+    }
+    toggleVisibility() {
+        if (this.visible) this.hide();
+        else this.show();
     }
     hide() {
+        this.visible = false;
         this.element.hide();
+        this.mercuryCanvas.emit('layer.update', this);
     }
     show() {
+        this.visible = true;
         this.element.show();
+        this.mercuryCanvas.emit('layer.update', this);
     }
     move(options) {
         this.coords.update({
@@ -148,33 +157,27 @@ class Layer {
             height: this.coords.height
         });
         this.context.putImageData(trimmed, 0, 0);
+        this.mercuryCanvas.emit('layer.update', this);
     }
     clear() {
         if (!this.dirty) return;
 
         this.dirty = false;
         this.context.clearRect(0, 0, this.element.attr('width'), this.element.attr('height'));
+        this.mercuryCanvas.emit('layer.update', this);
     }
     copyTo(targetLayer) {
         targetLayer.resize(this.coords);
         targetLayer.context.drawImage(this.element[0], 0, 0);
         targetLayer.dirty = true;
         if (this.name == 'overlay') targetLayer.trim();
+        this.mercuryCanvas.emit('layer.update', targetLayer);
     }
     remove() {
         if (this.removable === false) return;
 
-        var mc = this.mercuryCanvas;
-
-        _.remove(mc.session.selectedLayers.list, this);
-        _.remove(mc.layers.list, this);
         this.element.remove();
-    }
-    updateOverlayZ() {
-        var mc = this.mercuryCanvas;
-        mc.overlay.coords.z = mc.session.zIndex;
-        mc.overlay.element.css('zIndex', mc.session.zIndex);
-        mc.session.zIndex = mc.session.zIndex;
+        this.mercuryCanvas.emit('layer.remove', this);
     }
 }
 

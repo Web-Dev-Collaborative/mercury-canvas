@@ -4,12 +4,13 @@ import 'normalize.css';
 import './scss/common.scss';
 import 'font-awesome/css/font-awesome.min.css';
 import _ from 'lodash';
+import EventEmitter from 'eventemitter3';
 
 import {topbarTools} from './js/tools.js';
 var MWorker = window.MWorker = require('worker!./js/worker.js');
 import {coords} from './js/helpers.js';
 import Layer from './js/layer.js';
-import Toolbar from './js/toolbar.js';
+import {Toolbar, LayersPanel} from './js/toolbar.js';
 
 class MercuryWorker {
     constructor() {
@@ -162,6 +163,7 @@ class Session {
 
 class MercuryCanvas {
     constructor(element) {
+        _.merge(this, new EventEmitter());
         this.element = element;
         this.layers = {
             fitToWindow: [],
@@ -173,6 +175,7 @@ class MercuryCanvas {
             lineWidth: 20,
             handlerSize: 18,
             toolbars: [],
+            menus: [],
             activeTools: []
         };
         this.session = new Session({
@@ -193,6 +196,11 @@ class MercuryCanvas {
             classes: '',
             fixed: 'left',
             tools: topbarTools
+        }));
+        this.state.menus.push(new LayersPanel({
+            parent: this,
+            classes: '',
+            fixed: 'right'
         }));
 
         this.layersContainer = $('<div>', {
@@ -218,18 +226,24 @@ class MercuryCanvas {
         });
         this.layers.fitToWindow.push(this.base, this.overlay);
 
-        // new Layer({
-        //     parent: this,
-        //     imageData: {
-        //         'data': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJIAAAApCAYAAADednA4AAADV0lEQVR4nO2cL0wbURzHP6KiAoFAICaa0CUkQ0wgEAjERMUEYgJRgWDJlkwsC4IsE00mJhCICcRExZKxBIFAIBDNFAKBQCAmTrCkyRAVFYiKTXzvwtFQ2l7vz7ve75t8DLR37959+37v/e73DkwmkylGlYB14DvgAV0fz//buv8Zk2mgFoEz4N8QzvzPmkz3VAK2gVuGmyjg1v+OyQRAGdhldAP1Y2YquMrAe6BNdBMFI5OFuQIqLgOFucAm4IVREgYKU0/vUkxZaB5oADckY6CAg5Sux5SyVtDNHWclNgneKI1aBb6iWOj5XABNLEHlkp6gVdQl6ZgnTPexhlWBwxEO0kbxtzxRN5iiaA7YAlqkb54wvUEN3PH/Oc7BzFDpqAxsAEekF7oihbZXEx7UDBW/ZtHK6ACFkayN089xf4MXY2xoG/jkd4JpfC2iOc8p40eHtLmX4S4BVwmcpAvsocmgabBmgJfAPgoVWZtjVHpAJXwhtRROeIBWehb21Pkb3K2IszZEVJr9F/YtxZN30YpwG6UXZob3e65VApbR3PGQ5DLMadOmbzQCOM+wQT00nLeQwxvAJholn6MMbR40j34YdeAzKgY7w53VVdwmevCBredA44bh+TfmCM0lGshwmyhMrPksoV9KhegJ0+D71dBxa6HzvUNzvyOUBJxGs4xtIsiHkYzsafJAOAsri9S6kR+u0Yg8VPsONNZwjw5aFI280n7hQKMNd+igOWikhPKJAxdg5NhAgZZwPx1vJMMNMRgorEl2FRj5wyPBh+xbFCsvUkROUe4t8cLEZSy3NG1co4x7hZQ1i+JmZ8wGG+5wg56jruGAzFD54pa7lz44WWnxFPhIvsseppW/wE/gNbAw6Aa6pgXgA/CL7DuwyPwBfgBvgWeP3jHHFbxPZ5TXoRjx0EEFgnWmtI5rBZVUWEIzfs7RamuVAu0jDPZa5aFo3UV6yDh7KM+Tl6K+RBWY6gRb8Q2ig0byHbREn8pwFbeqaN/cLjLXb7K/kWmPNpcor7OJvVsoVpVQh9ZQ+eouyoG0kNFc3BA4bIS5QEX+X4A3qESnElN/mSbQDHe103VUaNVA84imzzEyXwvtz/N8os7TvBCtEM0QDbQJdAMtNuYSuXqTqUj6D3etR2USRDYRAAAAAElFTkSuQmCC',
-        //         'width': 146,
-        //         'height': 41
-        //     }
-        // });
-
         this.resize = this.resize.bind(this);
         $(window).on('resize', _.throttle(this.resize, 33));
         this.resize();
+
+        this.on('layer.new', (layer) => {
+            this.layers.list.push(layer);
+
+            this.session.zIndex++;
+            this.overlay.coords.z = this.session.zIndex;
+            this.overlay.element.css('zIndex', this.session.zIndex);
+            this.session.zIndex = this.session.zIndex;
+        });
+        this.on('layer.remove', (layer) => {
+            setTimeout(() => {
+                _.remove(this.session.selectedLayers.list, layer);
+                _.remove(this.layers.list, layer);
+            });
+        });
     }
     mouseDown(e) {
         var mouseCoords = new coords({
@@ -271,7 +285,7 @@ class MercuryCanvas {
             width: width,
             height: height
         });
-        _.forIn(this.state.toolbars, (toolbar) => {
+        _.forIn(this.state.toolbars.concat(this.state.menus), (toolbar) => {
             if (!toolbar.fixed) return;
 
             if (toolbar.fixed == 'top') layersOrigin.y += toolbar.element.outerHeight();

@@ -1,4 +1,5 @@
 @import 'variables';
+@import 'menu';
 
 html, body, #wrapper {
     width: 100%;
@@ -6,99 +7,6 @@ html, body, #wrapper {
     margin: 0;
     padding: 0;
     overflow: hidden;
-}
-
-.toolbar {
-    position: absolute;
-    padding: 5px;
-    border: 1px solid $grey-800;
-    background: #535353;
-    line-height: 0;
-    display: flex;
-    align-items: center;
-    align-content: flex-start;
-    z-index: 1000;
-    box-sizing: border-box;
-
-    &.top {
-        top: 0;
-    }
-    &.bottom {
-        bottom: 0;
-
-    }
-    &.left {
-        left: 0;
-    }
-    &.right {
-        right: 0;
-    }
-    &.horizontal {
-        width: 100%;
-        left: 0;
-        flex-direction: row;
-        box-shadow: 0 -#{$menuBlurLength} #{$menuBlurLength} -#{$menuBlurLength} $menuBlurColor, 0 #{$menuBlurLength} #{$menuBlurLength} -#{$menuBlurLength} $menuBlurColor;
-        z-index: 1;
-
-        .tool {
-            margin: 0 3px;
-
-            &:first-of-type{
-                margin-left: 0;
-            }
-            &:last-of-type {
-                margin-right: 0;
-            }
-            &.end.first {
-                margin-left: auto;
-            }
-        }
-    }
-    &.vertical {
-        height: 100%;
-        top: 0;
-        flex-direction: column;
-        box-shadow: -#{$menuBlurLength} 0 #{$menuBlurLength} -#{$menuBlurLength} $menuBlurColor, #{$menuBlurLength} 0 #{$menuBlurLength} -#{$menuBlurLength} $menuBlurColor;
-        z-index: 2;
-
-        .tool {
-            margin: 3px 0;
-
-            &:first-of-type{
-                margin-top: 0;
-            }
-            &:last-of-type {
-                margin-bottom: 0;
-            }
-            &.end.first {
-                margin-top: auto;
-            }
-        }
-    }
-
-    .tool {
-        display: inline-block;
-        padding: 6px 4px;
-        border: 1px solid rgba($black, 0);
-        cursor: pointer;
-        color: $grey-300;
-        font-size: 16px;
-        overflow: hidden;
-
-        &:hover {
-            border-color: $grey-500;
-        }
-        &.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        &.end {
-            order: 999;
-        }
-        &.selected {
-            border-color: $grey-300;
-        }
-    }
 }
 
 .layersContainer {
@@ -130,3 +38,4 @@ html, body, #wrapper {
         box-shadow: inset 0 0 0 1px $white;
     }
 }
+

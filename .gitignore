@@ -1,4 +1,8 @@
 /.sass-cache/
 /.brackets.json
 /node_modules/
+<<<<<<< HEAD
 *.log
+=======
+/.vscode/
+>>>>>>> 40545032d9de49e81f0847481463f13b768117b0
