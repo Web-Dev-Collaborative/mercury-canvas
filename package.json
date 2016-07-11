@@ -40,7 +40,8 @@
     "transformation-matrix-js": "^2.6.5",
     "url-loader": "^0.5.7",
     "webpack": "^1.13.1",
-    "webpack-dev-server": "^1.14.1"
+    "webpack-dev-server": "^1.14.1",
+    "worker-loader": "^0.7.0"
   },
   "dependencies": {}
 }

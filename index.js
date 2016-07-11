@@ -6,16 +6,17 @@ import 'font-awesome/css/font-awesome.min.css';
 import _ from 'lodash';
 
 import {topbarTools} from './js/tools.js';
-// import './js/worker';
+var MWorker = window.MWorker = require('worker!./js/worker.js');
 import {coords} from './js/helpers.js';
 import Layer from './js/layer.js';
 import Toolbar from './js/toolbar.js';
 
 class MercuryWorker {
     constructor() {
-        this.worker = new Worker('./js/worker.js');
+        this.worker = new MWorker();
 
-        this.worker.onmessage = this.receive;
+        this.worker.onmessage = this.receive.bind(this);
+        this.worker.onerror = (a) => console.log('Worker Error:', a);
         this.queue = {
             init: {
                 cb: (a) => console.log(a)
@@ -182,7 +183,7 @@ class MercuryCanvas {
         if (typeof window.Worker == 'function') {
             let numberOfWorkers = navigator.hardwareConcurrency > 0 ? navigator.hardwareConcurrency : 1;
             for (let i = 0; i < numberOfWorkers; i++) {
-                let worker = new MercuryWorker(this);
+                let worker = new MercuryWorker();
                 this.workers.push(worker);
             }
         }
