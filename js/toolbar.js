@@ -64,7 +64,7 @@ class Tool {
     }
 }
 
-class Toolbar {
+class Menu {
     constructor(options) {
         _.merge(this, {
             classes: '',
@@ -72,8 +72,7 @@ class Toolbar {
             orientation: {
                 horizontal: false,
                 vertical: false
-            },
-            tools: []
+            }
         }, options);
 
         if (this.fixed.length > 0 && !this.orientation.horizontal && !this.orientation.vertical) {
@@ -81,20 +80,15 @@ class Toolbar {
             this.orientation.vertical = this.fixed == 'left' || this.fixed == 'right';
         }
 
-        var toolbar = $('<div>', {
-            class: classnames('toolbar', {
+        var menu = $('<div>', {
+            class: classnames('menu', {
                 'horizontal': this.orientation.horizontal,
                 'vertical': this.orientation.vertical
             }, this.classes, this.fixed)
         }).appendTo(this.parent.element);
 
         this.mercuryCanvas = this.parent;
-        this.element = toolbar;
-        this.tools = [];
-
-        if (options.tools && options.tools.length > 0) {
-            this.addTools(options.tools);
-        }
+        this.element = menu;
     }
     resize(options) {
         if (this.fixed.length > 0) {
@@ -112,6 +106,18 @@ class Toolbar {
         }
         else {
             // dragable menu, make sure it stays on screen
+        }
+    }
+}
+
+class Toolbar extends Menu {
+    constructor(options) {
+        super(options);
+        this.element.addClass('toolbar');
+        this.tools = [];
+
+        if (options.tools && options.tools.length > 0) {
+            this.addTools(options.tools);
         }
     }
     addTools(tools) {
@@ -161,4 +167,5 @@ class Toolbar {
         });
     }
 }
-export default Toolbar;
+
+export {Toolbar};
