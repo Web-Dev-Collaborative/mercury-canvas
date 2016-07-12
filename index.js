@@ -230,6 +230,21 @@ class MercuryCanvas {
         $(window).on('resize', _.throttle(this.resize, 33));
         this.resize();
 
+        var self = this;
+        if (localStorage.getItem('layer')) {
+            var temp = JSON.parse(localStorage.getItem('layer'));
+            var img = $('<img>', {
+                src: temp.imageData
+            });
+            img.on('load', () => {
+                new Layer({
+                    image: img[0],
+                    parent: self,
+                    name: temp.name
+                });
+            });
+        }
+
         this.on('layer.new', (layer) => {
             this.layers.list.push(layer);
 

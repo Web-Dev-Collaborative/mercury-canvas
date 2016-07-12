@@ -58,27 +58,19 @@ class Layer {
 
         if (this.name == 'base' || this.name == 'overlay') return;
 
-        if (this.imageData) {
-            this.resize(this.imageData);
-            var image = document.createElement('img');
-            image.src = this.imageData.data;
-            image.onload = () => {
-                this.context.drawImage(image, 0, 0);
-                this.dirty = true;
-                // this.trim();
+        if (this.image) {
+            this.resize({
+                width: this.image.width,
+                height: this.image.height
+            });
+            this.context.drawImage(this.image, 0, 0);
+            this.dirty = true;
 
-                var self = this;
-                setTimeout(() => {
-                    var x = (self.mercuryCanvas.session.width - self.imageData.width) / 2;
-                    var y = (self.mercuryCanvas.session.height - self.imageData.height) / 2;
-
-                    self.coords.update({
-                        x: x,
-                        y: y
-                    });
-                    delete this.imageData;
-                }, 10);
-            };
+            this.coords.update({
+                x: (this.mercuryCanvas.layersContainer.coords.width - this.image.width) / 2,
+                y: (this.mercuryCanvas.layersContainer.coords.height - this.image.height) / 2
+            });
+            delete this.image;
         }
 
         this.toggleVisibility = this.toggleVisibility.bind(this);
