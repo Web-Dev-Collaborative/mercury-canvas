@@ -1,5 +1,7 @@
 import _ from 'lodash';
 import classnames from 'classnames';
+import dragula from 'dragula';
+import 'dragula/dist/dragula.min.css';
 
 class Tool {
     constructor(options, parent) {
@@ -172,7 +174,7 @@ class LayerThumbnail {
     constructor(options) {
         this.layer = options.layer;
         this.wrapper = $('<div>', {
-            class: 'layer'
+            class: 'layerThumbnail'
         });
 
         this.visibleIcon = $('<i>', {
@@ -184,6 +186,10 @@ class LayerThumbnail {
         this.visibleIconWrapper = $('<div>', {
             class: 'visible',
             html: this.visibleIcon
+        }).appendTo(this.wrapper);
+
+        $('<div>', {
+            class: 'divider'
         }).appendTo(this.wrapper);
 
         this.thumbnail = $('<div>', {
@@ -228,6 +234,14 @@ class LayersPanel extends Menu {
         this.layersList = $('<div>', {
             class: 'layersList'
         }).appendTo(this.element);
+
+        window.a = dragula([this.layersList[0]], {
+            invalid: function (el) {
+                if (el.className.indexOf('visible') != -1) return true;
+                return false;
+            }
+        });
+
         this.thumbnails = [];
         var mc = this.mercuryCanvas;
 
