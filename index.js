@@ -1,4 +1,18 @@
-import $ from './js/jQuery';
+var loggingLevel = 'info';
+
+import 'script!loglevel';
+var log = require('loglevel-message-prefix')(window.log, {
+    prefixes: ['level'],
+    staticPrefixes: ['index'],
+    separator: '/'
+});
+var loggers = ['toolbar.js', 'tools.js', 'layer.js', 'helpers.js', 'worker.js'];
+for (var i = 0; i < loggers.length; i++) {
+    window.log.getLogger(loggers[i]).setLevel(loggingLevel);
+}
+window.log.setLevel(loggingLevel);
+
+import $ from './js/jQuery.js';
 window.$ = window.jQuery = window.jquery = $;
 import 'normalize.css';
 import './scss/common.scss';
@@ -17,10 +31,10 @@ class MercuryWorker {
         this.worker = new MWorker();
 
         this.worker.onmessage = this.receive.bind(this);
-        this.worker.onerror = (a) => console.log('Worker Error:', a);
+        this.worker.onerror = (a) => log.error('Worker Error:', a);
         this.queue = {
             init: {
-                cb: (a) => console.log(a)
+                cb: (a) => log.debug(a)
             }
         };
 
@@ -237,11 +251,13 @@ class MercuryCanvas {
                 src: temp.imageData
             });
             img.on('load', () => {
-                new Layer({
-                    image: img[0],
-                    parent: self,
-                    name: temp.name
-                });
+                for (var i = 0; i < 5; i++) {
+                    new Layer({
+                        image: img[0],
+                        parent: self,
+                        name: temp.name + ' ' + i
+                    });
+                }
             });
         }
 

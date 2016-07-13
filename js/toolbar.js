@@ -1,7 +1,11 @@
+var log = require('loglevel-message-prefix')(window.log.getLogger('toolbar.js'), {
+    prefixes: ['level'],
+    staticPrefixes: ['toolbar.js'],
+    separator: '/'
+});
 import _ from 'lodash';
 import classnames from 'classnames';
-import dragula from 'dragula';
-import 'dragula/dist/dragula.min.css';
+import sortable from 'sortablejs';
 
 class Tool {
     constructor(options, parent) {
@@ -177,12 +181,7 @@ class LayerThumbnail {
             class: 'layerThumbnail'
         });
 
-        this.visibleIcon = $('<i>', {
-            class: classnames('fa', 'fa-fw', {
-                'fa-eye': this.layer.visible,
-                'fa-eye-slash': !this.layer.visible
-            })
-        });
+        this.visibleIcon = $('<i>');
         this.visibleIconWrapper = $('<div>', {
             class: 'visible',
             html: this.visibleIcon
@@ -197,25 +196,28 @@ class LayerThumbnail {
         }).append($('<div>', {
             class: 'transparent'
         })).append($('<div>', {
-            class: 'image',
-            style: `background-image: url("${this.layer.canvas.toDataURL()}")`
+            class: 'image'
         })).appendTo(this.wrapper);
         this.thumbnail = this.thumbnail.children('.image');
 
         this.name = $('<div>', {
-            class: 'name',
-            html: this.layer.name
+            class: 'name'
         }).appendTo(this.wrapper);
 
-        this.visibleIconWrapper.on('click', this.layer.toggleVisibility);
+        this.update();
 
+        this.visibleIconWrapper.on('click', this.layer.toggleVisibility);
         this.wrapper.prependTo(options.parent);
     }
     update() {
         this.visibleIcon.attr('class', classnames('fa', 'fa-fw', {
             'fa-eye': this.layer.visible,
-            'fa-eye-slash': !this.layer.visible
+            'fa-square': !this.layer.visible
         }));
+
+        this.wrapper.css({
+            zIndex: this.layer.coords.z
+        });
 
         this.thumbnail.css('background-image', `url("${this.layer.canvas.toDataURL()}")`);
         this.name.html(this.layer.name);
@@ -234,11 +236,48 @@ class LayersPanel extends Menu {
         this.layersList = $('<div>', {
             class: 'layersList'
         }).appendTo(this.element);
+        this.buttons = $('<div>', {
+            class: 'buttons'
+        }).appendTo(this.element);
+        $('<div>', {
+            class: 'tool',
+            html: $('<i>', {
+                class: 'fa fa-fw fa-trash'
+            })
+        }).appendTo(this.buttons);
 
-        window.a = dragula([this.layersList[0]], {
-            invalid: function (el) {
-                if (el.className.indexOf('visible') != -1) return true;
-                return false;
+        this.sortable = new sortable(this.layersList[0], {
+            animation: 150,
+            filter: '.visible',
+            draggable: '.layerThumbnail',
+            onEnd: (event) => {
+                var x = this.thumbnails.length - 1;
+                self.thumbnails.splice(x - event.newIndex, 0, self.thumbnails.splice(x - event.oldIndex, 1)[0]);
+                this.updateZIndexes();
+            },
+            onMove: (event) => {
+                var t0 = performance.now();
+                var dragged = event.dragged;
+                var related = event.related;
+
+                _.each(this.thumbnails, (thumbnail) => {
+                    if (thumbnail.wrapper[0] == dragged) {
+                        dragged = thumbnail.layer.coords;
+                    }
+                    if (thumbnail.wrapper[0] == related) {
+                        related = thumbnail.layer.coords;
+                    }
+                });
+                var a = dragged.z;
+                dragged.update({
+                    z: related.z
+                });
+                related.update({
+                    z: a
+                });
+
+                var t1 = performance.now();
+                log.debug('I spent ' + (t1 - t0) + 'ms to switch the z-indexes between the dragged layers');
             }
         });
 
@@ -267,10 +306,17 @@ class LayersPanel extends Menu {
             });
         });
         mc.on('layer.update', (layer) => {
-            _.forIn(self.thumbnails, (thumbnail) => {
+            _.each(self.thumbnails, (thumbnail) => {
                 if (thumbnail.layer != layer) return;
 
                 thumbnail.update();
+            });
+        });
+    }
+    updateZIndexes() {
+        _.each(this.thumbnails, (thumbnail, index) => {
+            thumbnail.layer.coords.update({
+                z: index
             });
         });
     }
