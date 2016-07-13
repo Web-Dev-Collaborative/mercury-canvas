@@ -26,7 +26,8 @@ class layerCoords {
             _.merge(this, options);
         }
         this.layer.element.css({
-            transform: this.matrix.toCSS()
+            transform: this.matrix.toCSS(),
+            zIndex: this.z
         });
     }
 }
