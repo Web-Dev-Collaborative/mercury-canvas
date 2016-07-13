@@ -1,3 +1,8 @@
+var log = require('loglevel-message-prefix')(window.log.getLogger('tools.js'), {
+    prefixes: ['level'],
+    staticPrefixes: ['tools.js'],
+    separator: '/'
+});
 import _ from 'lodash';
 import {Matrix} from 'transformation-matrix-js';
 import {coords} from './helpers.js';
@@ -59,6 +64,7 @@ var topbarTools = [
             this.canShow = false;
         },
         draw: function () {
+            var t0 = performance.now();
             var mc = this.mercuryCanvas;
             var points = mc.session.mouse.points;
             if (!points.length) return;
@@ -96,6 +102,8 @@ var topbarTools = [
 
             mc.overlay.context.stroke();
             mc.overlay.dirty = true;
+            var t1 = performance.now();
+            log.debug('I spent ' + (t1 - t0) + 'ms to draw the overlay');
         },
         mouseDown: function (e) {
             var mc = this.mercuryCanvas;

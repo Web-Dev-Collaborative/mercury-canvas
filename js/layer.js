@@ -1,3 +1,8 @@
+var log = require('loglevel-message-prefix')(window.log.getLogger('layer.js'), {
+    prefixes: ['level'],
+    staticPrefixes: ['layer.js'],
+    separator: '/'
+});
 import _ from 'lodash';
 import classnames from 'classnames';
 import {Matrix} from 'transformation-matrix-js';
@@ -116,6 +121,7 @@ class Layer {
         ctx.restore();
     }
     trim() {
+        var t0 = performance.now();
         var pixels = this.context.getImageData(0, 0, this.coords.width, this.coords.height);
         var bound = {};
         var x, y;
@@ -151,6 +157,8 @@ class Layer {
         });
         this.context.putImageData(trimmed, 0, 0);
         this.mercuryCanvas.emit('layer.update', this);
+        var t1 = performance.now();
+        log.debug('I spent ' + (t1 - t0) + 'ms to trim the layer');
     }
     clear() {
         if (!this.dirty) return;

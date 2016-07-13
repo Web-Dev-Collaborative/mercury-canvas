@@ -1,3 +1,8 @@
+var log = require('loglevel-message-prefix')(window.log.getLogger('helpers.js'), {
+    prefixes: ['level'],
+    staticPrefixes: ['helpers.js'],
+    separator: '/'
+});
 import _ from 'lodash';
 
 class coords {
@@ -42,7 +47,7 @@ class coords {
     }
     max(e, f) {
         e = e || f;
-        if (!_.isObject(e)) return false;
+        if (!_.isObject(e)) return log.warn('Coords.max received too few arguments');
         if (!_.isObject(f)) f = this;
         return new coords({
             x: Math.max(e.x, f.x),
