@@ -260,6 +260,8 @@ class LayersPanel extends Menu {
                 var dragged = event.dragged;
                 var related = event.related;
 
+                if (dragged == related) return;
+
                 _.each(this.thumbnails, (thumbnail) => {
                     if (thumbnail.wrapper[0] == dragged) {
                         dragged = thumbnail.layer.coords;
