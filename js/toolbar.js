@@ -236,21 +236,28 @@ class LayersPanel extends Menu {
         this.layersList = $('<div>', {
             class: 'layersList'
         }).appendTo(this.element);
-        this.buttons = $('<div>', {
+        this.buttons = {};
+        this.buttons.wrapper = $('<div>', {
             class: 'buttons'
         }).appendTo(this.element);
-        $('<div>', {
-            class: 'tool',
+        this.buttons.trash = $('<div>', {
+            class: 'tool trash',
             html: $('<i>', {
                 class: 'fa fa-fw fa-trash'
             })
-        }).appendTo(this.buttons);
+        }).appendTo(this.buttons.wrapper);
 
         this.sortable = new sortable(this.layersList[0], {
+            group: {
+                name: 'layerThumbnails',
+                put: false,
+                pull: true
+            },
             animation: 150,
             filter: '.visible',
             draggable: '.layerThumbnail',
             onEnd: (event) => {
+                if (!this.thumbnails.length) return;
                 var x = this.thumbnails.length - 1;
                 self.thumbnails.splice(x - event.newIndex, 0, self.thumbnails.splice(x - event.oldIndex, 1)[0]);
                 this.updateZIndexes();
@@ -260,9 +267,10 @@ class LayersPanel extends Menu {
                 var dragged = event.dragged;
                 var related = event.related;
 
-                if (dragged == related) return;
+                if (dragged == related || !dragged.className.indexOf('layerThumbnail') || !related.className.indexOf('layerThumbnail')) return;
 
                 _.each(this.thumbnails, (thumbnail) => {
+                    if (!thumbnail) return;
                     if (thumbnail.wrapper[0] == dragged) {
                         dragged = thumbnail.layer.coords;
                     }
@@ -282,16 +290,22 @@ class LayersPanel extends Menu {
                 log.debug('I spent ' + (t1 - t0) + 'ms to switch the z-indexes between the dragged layers');
             }
         });
+        this.trashSortable = new sortable(this.buttons.trash[0], {
+            group: {
+                name: 'layerThumbnails',
+                put: true,
+                pull: false
+            },
+            onAdd: function (event) {
+                var thumbnail = self.elementToThumbnail({
+                    element: event.item
+                });
+                thumbnail.layer.remove();
+            },
+        });
 
         this.thumbnails = [];
         var mc = this.mercuryCanvas;
-
-        _.forIn(mc.layers.list, (layer) => {
-            this.thumbnails.push(new LayerThumbnail({
-                layer: layer,
-                parent: this.layersList
-            }));
-        });
 
         mc.on('layer.new', (layer) => {
             self.thumbnails.push(new LayerThumbnail({
@@ -300,6 +314,8 @@ class LayersPanel extends Menu {
             }));
         });
         mc.on('layer.remove', (layer) => {
+            if (self.thumbnails.length == 0) return;
+
             _.remove(self.thumbnails, (thumbnail) => {
                 if (thumbnail.layer != layer) return false;
 
@@ -308,15 +324,40 @@ class LayersPanel extends Menu {
             });
         });
         mc.on('layer.update', (layer) => {
-            _.each(self.thumbnails, (thumbnail) => {
-                if (thumbnail.layer != layer) return;
-
-                thumbnail.update();
+            var thumbnail = this.elementToThumbnail({
+                layer: layer
             });
+            if (!thumbnail) return;
+            thumbnail.update();
         });
+    }
+    elementToThumbnail(options) {
+        if (!_.isObject(options) || (!_.has(options, 'layer') && !_.has(options, 'element'))) return false;
+        var a;
+        if (options.layer) {
+            if (_.isFunction(options.layer.get)) options.layer = options.layer.get(0);
+            if (_.has(options.layer, 'name')) options.layer = options.layer.element[0];
+        }
+        if (options.element) {
+            if (_.isFunction(options.element.get)) options.element = [options.element.get(0)];
+        }
+
+        _.each(this.thumbnails, (thumbnail) => {
+            if (!thumbnail) return;
+            if (thumbnail.layer.element[0] == options.layer) {
+                a = thumbnail;
+                return false;
+            }
+            if (thumbnail.wrapper[0] == options.element) {
+                a = thumbnail;
+                return false;
+            }
+        });
+        return a;
     }
     updateZIndexes() {
         _.each(this.thumbnails, (thumbnail, index) => {
+            if (!thumbnail) return;
             thumbnail.layer.coords.update({
                 z: index + 1
             });
