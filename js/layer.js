@@ -62,7 +62,10 @@ class Layer {
         this.canvas = this.element[0];
         this.context = this.canvas.getContext('2d');
 
-        if (this.name == 'base' || this.name == 'overlay') return;
+        if (this.name == 'base' || this.name == 'overlay') {
+            if (this.name == 'base') this.coords.z = 0;
+            return;
+        }
 
         if (this.image) {
             this.resize({
