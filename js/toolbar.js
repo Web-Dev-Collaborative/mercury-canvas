@@ -318,7 +318,7 @@ class LayersPanel extends Menu {
     updateZIndexes() {
         _.each(this.thumbnails, (thumbnail, index) => {
             thumbnail.layer.coords.update({
-                z: index
+                z: index + 1
             });
         });
     }
