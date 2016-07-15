@@ -177,8 +177,10 @@ class Toolbar extends Menu {
 class LayerThumbnail {
     constructor(options) {
         this.layer = options.layer;
+        this.id = options.id;
         this.wrapper = $('<div>', {
-            class: 'layerThumbnail'
+            class: 'layerThumbnail',
+            'data-id': this.id
         });
 
         this.visibleIcon = $('<i>');
@@ -253,16 +255,21 @@ class LayersPanel extends Menu {
             })
         }).appendTo(this.buttons.wrapper);
 
+        this.last = {};
         this.sortable = new sortable(this.layersList[0], {
             group: {
                 name: 'layerThumbnails',
                 put: false,
                 pull: 'clone'
             },
+            dataIdAttr: 'data-id',
             animation: 150,
             filter: '.visible',
             draggable: '.layerThumbnail',
             onEnd: this.onEnd.bind(this),
+            onStart: (event) => {
+                this.last.oldIndex = event.oldIndex;
+            },
             onMove: (event) => {
                 var t0 = performance.now();
                 var dragged = event.dragged;
@@ -297,7 +304,11 @@ class LayersPanel extends Menu {
                 put: true,
                 pull: false
             },
-            onAdd: function (event) {
+            onAdd: (event) => {
+                this.moveThumbnail({
+                    newIndex: this.last.oldIndex,
+                    element: event.item
+                });
                 var thumbnail = self.elementToThumbnail({
                     element: event.item
                 });
@@ -307,12 +318,15 @@ class LayersPanel extends Menu {
         });
 
         this.thumbnails = [];
+        this.lastID = 0;
         var mc = this.mercuryCanvas;
 
         mc.on('layer.new', (layer) => {
+            this.lastID++;
             self.thumbnails.unshift(new LayerThumbnail({
                 layer: layer,
-                parent: self.layersList
+                parent: self.layersList,
+                id: this.lastID
             }));
         });
         mc.on('layer.update', (layer) => {
@@ -382,11 +396,9 @@ class LayersPanel extends Menu {
         });
         mc.on('undo.layer.remove', (operation) => {
             operation.layer.restore();
-            this.updateZIndexes();
         });
         mc.on('redo.layer.remove', (operation) => {
             operation.layer.remove(true);
-            this.updateZIndexes();
         });
     }
     elementToThumbnail(options) {
@@ -428,7 +440,7 @@ class LayersPanel extends Menu {
         return a;
     }
     onEnd(event) {
-        if (!_.isNumber(event.oldIndex) || !_.isNumber(event.newIndex) || _.isNaN(event.oldIndex) || _.isNaN(event.newIndex) || event.oldIndex == event.newIndex) return;
+        if (!_.isNumber(event.oldIndex) || !_.isNumber(event.newIndex) || _.isNaN(event.oldIndex) || _.isNaN(event.newIndex) || event.oldIndex == event.newIndex || event.explicitOriginalTarget.className.indexOf('fa-fw') != -1) return;
 
         var thumbnail = this.thumbnails.splice(event.oldIndex, 1)[0];
         this.thumbnails.splice(event.newIndex, 0, thumbnail);
@@ -453,6 +465,9 @@ class LayersPanel extends Menu {
         });
     }
     moveThumbnail(options) {
+        if (!options.oldIndex && options.element) {
+            options.oldIndex = this.thumbnails.indexOf(options.element.attributes['data-id'].value);
+        }
         var order = this.sortable.toArray();
         var thumbnailID = order.splice(options.oldIndex, 1)[0];
         order.splice(options.newIndex, 0, thumbnailID);
