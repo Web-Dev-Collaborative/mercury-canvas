@@ -169,10 +169,10 @@ var topbarTools = [
             e.layer.element.remove();
         },
         undo: function (e) {
-            e.layer.hide();
+            e.layer.remove();
         },
         redo: function (e) {
-            e.layer.show();
+            e.layer.restore();
         }
     },
     {

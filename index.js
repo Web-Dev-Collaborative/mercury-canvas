@@ -97,8 +97,11 @@ class Session {
         if (!this.updateToolbars()) return false;
 
         var operation = this.operations[this.operationIndex];
-        if (_.isFunction(operation.tool.undo)) {
+        if (_.isObject(operation.tool) && _.isFunction(operation.tool.undo)) {
             operation.tool.undo(operation);
+        }
+        if (_.isString(operation.type)) {
+            this.mercuryCanvas.emit('undo.' + operation.type, operation);
         }
     }
     redo() {
@@ -107,8 +110,11 @@ class Session {
         if (!this.updateToolbars()) return false;
 
         var operation = this.operations[this.operationIndex - 1];
-        if (_.isFunction(operation.tool.redo)) {
+        if (_.isObject(operation.tool) && _.isFunction(operation.tool.redo)) {
             operation.tool.redo(operation);
+        }
+        if (_.isString(operation.type)) {
+            this.mercuryCanvas.emit('redo.' + operation.type, operation);
         }
     }
     updateToolbars() {
@@ -163,7 +169,7 @@ class Session {
     clearOrphanOperations() {
         var removed = this.operations.splice(this.operationIndex);
         _.forIn(removed, (operation) => {
-            if (!_.isFunction(operation.tool.operationRemove)) return;
+            if (!_.isObject(operation.tool) || !_.isFunction(operation.tool.operationRemove)) return;
             operation.tool.operationRemove(operation);
         });
     }
@@ -244,22 +250,22 @@ class MercuryCanvas {
         $(window).on('resize', _.throttle(this.resize, 33));
         this.resize();
 
-        var self = this;
-        if (localStorage.getItem('layer')) {
-            var temp = JSON.parse(localStorage.getItem('layer'));
-            var img = $('<img>', {
-                src: temp.imageData
-            });
-            img.on('load', () => {
-                for (var i = 0; i < 5; i++) {
-                    new Layer({
-                        image: img[0],
-                        parent: self,
-                        name: temp.name + ' ' + i
-                    });
-                }
-            });
-        }
+        // var self = this;
+        // if (localStorage.getItem('layer')) {
+        //     var temp = JSON.parse(localStorage.getItem('layer'));
+        //     var img = $('<img>', {
+        //         src: temp.imageData
+        //     });
+        //     img.on('load', () => {
+        //         for (var i = 0; i < 5; i++) {
+        //             new Layer({
+        //                 image: img[0],
+        //                 parent: self,
+        //                 name: temp.name + ' ' + i
+        //             });
+        //         }
+        //     });
+        // }
 
         this.on('layer.new', (layer) => {
             this.layers.list.push(layer);

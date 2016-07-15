@@ -222,8 +222,14 @@ class LayerThumbnail {
         this.thumbnail.css('background-image', `url("${this.layer.canvas.toDataURL()}")`);
         this.name.html(this.layer.name);
     }
-    remove() {
+    delete() {
         this.wrapper.remove();
+    }
+    remove() {
+        this.wrapper.hide();
+    }
+    restore() {
+        this.wrapper.show();
     }
 }
 
@@ -251,17 +257,12 @@ class LayersPanel extends Menu {
             group: {
                 name: 'layerThumbnails',
                 put: false,
-                pull: true
+                pull: 'clone'
             },
             animation: 150,
             filter: '.visible',
             draggable: '.layerThumbnail',
-            onEnd: (event) => {
-                if (!this.thumbnails.length) return;
-                var x = this.thumbnails.length - 1;
-                self.thumbnails.splice(x - event.newIndex, 0, self.thumbnails.splice(x - event.oldIndex, 1)[0]);
-                this.updateZIndexes();
-            },
+            onEnd: this.onEnd.bind(this),
             onMove: (event) => {
                 var t0 = performance.now();
                 var dragged = event.dragged;
@@ -301,6 +302,7 @@ class LayersPanel extends Menu {
                     element: event.item
                 });
                 thumbnail.layer.remove();
+                event.item.remove();
             },
         });
 
@@ -308,20 +310,10 @@ class LayersPanel extends Menu {
         var mc = this.mercuryCanvas;
 
         mc.on('layer.new', (layer) => {
-            self.thumbnails.push(new LayerThumbnail({
+            self.thumbnails.unshift(new LayerThumbnail({
                 layer: layer,
                 parent: self.layersList
             }));
-        });
-        mc.on('layer.remove', (layer) => {
-            if (self.thumbnails.length == 0) return;
-
-            _.remove(self.thumbnails, (thumbnail) => {
-                if (thumbnail.layer != layer) return false;
-
-                thumbnail.remove();
-                return true;
-            });
         });
         mc.on('layer.update', (layer) => {
             var thumbnail = this.elementToThumbnail({
@@ -329,6 +321,72 @@ class LayersPanel extends Menu {
             });
             if (!thumbnail) return;
             thumbnail.update();
+        });
+        mc.on('layer.remove', (layer) => {
+            var thumbnail = self.elementToThumbnail({
+                layer: layer
+            });
+            if (!thumbnail) return;
+
+            if (!this.layersList[0].contains(thumbnail.wrapper[0])) {
+                thumbnail.wrapper = $('.sortable-chosen', this.layersList).removeClass('sortable-chosen');
+            }
+            thumbnail.remove();
+        });
+        mc.on('layer.restore', (layer) => {
+            var thumbnail = self.elementToThumbnail({
+                layer: layer
+            });
+            if (!thumbnail) return;
+            thumbnail.restore();
+        });
+        mc.on('layer.detele', (layer) => {
+            _.remove(self.thumbnails, (thumbnail) => {
+                if (thumbnail.layer != layer) return false;
+
+                thumbnail.delete();
+                return true;
+            });
+        });
+        mc.on('layer.z.update', (options) => {
+            var thumbnail = this.elementToThumbnail({
+                layer: options.layer
+            });
+
+            var l = self.thumbnails.length;
+            var thumbnailIndex = self.thumbnails.indexOf(thumbnail);
+            if (thumbnailIndex == l - options.z) return;
+
+            this.moveThumbnail({
+                oldIndex: thumbnailIndex,
+                newIndex: l - options.z
+            });
+            this.onEnd({
+                oldIndex: thumbnailIndex,
+                newIndex: l - options.z,
+                simulated: true,
+                session: options.session
+            });
+        });
+        mc.on('undo.layer.zIndex', (operation) => {
+            operation.layer.coords.update({
+                z: operation.old.z,
+                session: true
+            });
+        });
+        mc.on('redo.layer.zIndex', (operation) => {
+            operation.layer.coords.update({
+                z: operation.new.z,
+                session: true
+            });
+        });
+        mc.on('undo.layer.remove', (operation) => {
+            operation.layer.restore();
+            this.updateZIndexes();
+        });
+        mc.on('redo.layer.remove', (operation) => {
+            operation.layer.remove(true);
+            this.updateZIndexes();
         });
     }
     elementToThumbnail(options) {
@@ -355,13 +413,50 @@ class LayersPanel extends Menu {
         });
         return a;
     }
-    updateZIndexes() {
+    updateZIndexes(layer) {
+        var a;
+        var l = this.thumbnails.length;
         _.each(this.thumbnails, (thumbnail, index) => {
             if (!thumbnail) return;
+            var i = l - index;
+            if (thumbnail.layer == layer) a = i;
+
             thumbnail.layer.coords.update({
-                z: index + 1
+                z: i
             });
         });
+        return a;
+    }
+    onEnd(event) {
+        if (!_.isNumber(event.oldIndex) || !_.isNumber(event.newIndex) || _.isNaN(event.oldIndex) || _.isNaN(event.newIndex) || event.oldIndex == event.newIndex) return;
+
+        var thumbnail = this.thumbnails.splice(event.oldIndex, 1)[0];
+        this.thumbnails.splice(event.newIndex, 0, thumbnail);
+
+        if (!event.simulated) {
+            event.oldIndex = this.thumbnails.length - event.oldIndex - 1;
+            event.newIndex = this.thumbnails.length - event.newIndex - 1;
+        }
+        this.updateZIndexes();
+
+        if (event.session || thumbnail.layer.removed) return;
+
+        this.mercuryCanvas.session.addOperation({
+            type: 'layer.zIndex',
+            layer: thumbnail.layer,
+            old: {
+                z: event.oldIndex + 1
+            },
+            new: {
+                z: event.newIndex + 1
+            }
+        });
+    }
+    moveThumbnail(options) {
+        var order = this.sortable.toArray();
+        var thumbnailID = order.splice(options.oldIndex, 1)[0];
+        order.splice(options.newIndex, 0, thumbnailID);
+        this.sortable.sort(order);
     }
 }
 

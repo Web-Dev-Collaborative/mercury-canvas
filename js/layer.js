@@ -22,18 +22,28 @@ class layerCoords {
     }
     update(options) {
         if (_.isObject(options)) {
+            var oldZ = this.z;
             if (options.x) {
                 this.matrix.translateX(options.x - this.x);
             }
             if (options.y) {
                 this.matrix.translateY(options.y - this.y);
             }
-            _.merge(this, options);
+            this.z = options.z;
+            this.width = options.width;
+            this.height = options.height;
         }
         this.layer.element.css({
             transform: this.matrix.toCSS(),
             zIndex: this.z
         });
+        if (options.z && options.z != oldZ) {
+            this.layer.mercuryCanvas.emit('layer.z.update', {
+                z: options.z,
+                layer: this.layer,
+                session: options.session
+            });
+        }
     }
 }
 
@@ -90,15 +100,15 @@ class Layer {
         if (this.visible) this.hide();
         else this.show();
     }
-    hide() {
+    hide(e) {
         this.visible = false;
         this.element.hide();
-        this.mercuryCanvas.emit('layer.update', this);
+        if (!e) this.mercuryCanvas.emit('layer.update', this);
     }
-    show() {
+    show(e) {
         this.visible = true;
         this.element.show();
-        this.mercuryCanvas.emit('layer.update', this);
+        if (!e) this.mercuryCanvas.emit('layer.update', this);
     }
     move(options) {
         this.coords.update({
@@ -177,11 +187,26 @@ class Layer {
         if (this.name == 'overlay') targetLayer.trim();
         this.mercuryCanvas.emit('layer.update', targetLayer);
     }
-    remove() {
+    delete() {
+        this.element.remove();
+        this.mercuryCanvas.emit('layer.delete', this);
+    }
+    remove(e) {
         if (this.removable === false) return;
 
-        this.element.remove();
+        if (!e) this.mercuryCanvas.session.addOperation({
+            type: 'layer.remove',
+            layer: this
+        });
+        this.removed = true;
+        this.hide(true);
         this.mercuryCanvas.emit('layer.remove', this);
+    }
+    restore() {
+        if (!this.removed) return;
+        this.removed = false;
+        this.show(true);
+        this.mercuryCanvas.emit('layer.restore', this);
     }
 }
 
