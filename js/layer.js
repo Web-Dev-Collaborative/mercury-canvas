@@ -23,15 +23,15 @@ class layerCoords {
     update(options) {
         if (_.isObject(options)) {
             var oldZ = this.z;
-            if (options.x) {
+            if (_.has(options, 'x')) {
                 this.matrix.translateX(options.x - this.x);
             }
-            if (options.y) {
+            if (_.has(options, 'y')) {
                 this.matrix.translateY(options.y - this.y);
             }
-            this.z = options.z;
-            this.width = options.width;
-            this.height = options.height;
+            if (_.has(options, 'z')) this.z = options.z;
+            if (_.has(options, 'width')) this.width = options.width;
+            if (_.has(options, 'height')) this.height = options.height;
         }
         this.layer.element.css({
             transform: this.matrix.toCSS(),
@@ -117,8 +117,9 @@ class Layer {
         });
     }
     resize(options) {
-        if (!options || typeof options.width != 'number' || typeof options.height != 'number') return;
+        if (!_.isObject(options) || !_.isNumber(options.width) || !_.isNumber(options.height)) return;
         var ctx = this.context;
+        ctx.save();
         this.element.attr({
             width: options.width,
             height: options.height
@@ -128,9 +129,11 @@ class Layer {
             height: options.height
         });
 
-        if (this.options.background) ctx.fillStyle = this.options.background;
-        ctx.rect(0, 0, options.width, options.height);
-        ctx.fill();
+        if (_.has(this.options, 'background')) {
+            ctx.fillStyle = this.options.background;
+            ctx.rect(0, 0, options.width, options.height);
+            ctx.fill();
+        }
         ctx.restore();
     }
     trim() {
