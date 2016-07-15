@@ -169,7 +169,7 @@ var topbarTools = [
             e.layer.element.remove();
         },
         undo: function (e) {
-            e.layer.remove();
+            e.layer.remove(true);
         },
         redo: function (e) {
             e.layer.restore();
