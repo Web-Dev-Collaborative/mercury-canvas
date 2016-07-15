@@ -25,9 +25,11 @@ class layerCoords {
             var oldZ = this.z;
             if (_.has(options, 'x')) {
                 this.matrix.translateX(options.x - this.x);
+                this.x = options.x;
             }
             if (_.has(options, 'y')) {
                 this.matrix.translateY(options.y - this.y);
+                this.y = options.y;
             }
             if (_.has(options, 'z')) this.z = options.z;
             if (_.has(options, 'width')) this.width = options.width;
