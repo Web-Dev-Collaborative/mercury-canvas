@@ -188,6 +188,7 @@ var topbarTools = [
             this.canShow = false;
             this.zIndex = 0;
             this.shown = false;
+            this.oldCoords = [];
             this.matrix = new Matrix();
             var selectedLayers = mc.session.selectedLayers;
             mc.on('layer.remove', () => {
@@ -197,6 +198,21 @@ var topbarTools = [
 
             mc.on('key.up', () => this.mouseMove(mc.session.mouse.last));
             mc.on('key.down', () => this.mouseMove(mc.session.mouse.last));
+
+            mc.on('undo.layer.move', (operation) => {
+                _.each(operation.layers, (layer, index) => {
+                    layer.coords.update(operation.old[index]);
+                });
+                selectedLayers.rect = this.makeBox(selectedLayers.list);
+                this.mouseMove(mc.session.mouse.last);
+            });
+            mc.on('redo.layer.move', (operation) => {
+                _.each(operation.layers, (layer, index) => {
+                    layer.coords.update(operation.new[index]);
+                });
+                selectedLayers.rect = this.makeBox(selectedLayers.list);
+                this.mouseMove(mc.session.mouse.last);
+            });
         },
         select: function () {
             var mc = this.mercuryCanvas;
@@ -213,6 +229,7 @@ var topbarTools = [
             var mc = this.mercuryCanvas;
             var layerCoords = mc.session.selectedLayers.rect;
 
+            if (mc.session.keys.ctrl) return 'copy';
             if (!layerCoords) return 'default';
 
             var pos = new coords(e).toCanvasSpace(mc);
@@ -261,7 +278,9 @@ var topbarTools = [
             var mc = this.mercuryCanvas;
             var point = new coords(e).toCanvasSpace(mc);
 
-            var layer = mc.session.selectedLayers.list.length ? mc.session.selectedLayers.rect : point.toLayer(mc);
+            var layer;
+            if (mc.session.keys.ctrl || !mc.session.selectedLayers.list.length) layer = point.toLayer(mc);
+            else layer = mc.session.selectedLayers.rect;
 
             mc.overlay.clear();
             if (!layer) return;
@@ -278,7 +297,7 @@ var topbarTools = [
             rect.y = Math.floor(rect.y) - 0.5;
             rect.width = Math.ceil(rect.width) + 1;
             rect.height = Math.ceil(rect.height) + 1;
-            if (!mc.session.selectedLayers.list.length) {
+            if (!mc.session.selectedLayers.list.length || mc.session.keys.ctrl) {
                 context.beginPath();
                 context.moveTo(rect.x, rect.y);
                 context.lineTo(rect.x + rect.width, rect.y);
@@ -375,10 +394,13 @@ var topbarTools = [
             var layer = pos.toLayer(mc);
             var selectedLayers = mc.session.selectedLayers;
 
-            if (layer && selectedLayers.list.indexOf(layer) == -1) {
+            if (layer && selectedLayers.list.indexOf(layer) == -1 && (mc.session.keys.ctrl || !selectedLayers.list.length)) {
                 selectedLayers.list.push(layer);
                 selectedLayers.rect = this.makeBox(selectedLayers.list);
             }
+            _.each(selectedLayers.list, (layer, index) => {
+                this.oldCoords[index] = _.clone(layer.coords);
+            });
             mc.session.mouse.initial = {
                 dist: [],
                 mouse: _.clone(pos),
@@ -411,18 +433,18 @@ var topbarTools = [
                     var rotation = Math.atan2(res.y, res.x) - Math.PI * 5 / 4;
                     this.matrix.rotate(rotation);
 
-                    $('.removeMe').remove();
-                    $('<div>', {
-                        class: 'removeMe',
-                        css: {
-                            position: 'absolute',
-                            top: center.y,
-                            left: center.x,
-                            background: 'red',
-                            width: 10,
-                            height: 10
-                        }
-                    }).appendTo($(document.body));
+                    // $('.removeMe').remove();
+                    // $('<div>', {
+                    //     class: 'removeMe',
+                    //     css: {
+                    //         position: 'absolute',
+                    //         top: center.y,
+                    //         left: center.x,
+                    //         background: 'red',
+                    //         width: 10,
+                    //         height: 10
+                    //     }
+                    // }).appendTo($(document.body));
 
                     if (!this.shown) {
                         this.shown = true;
@@ -542,10 +564,13 @@ var topbarTools = [
             //         console.log(action + " for select");
             //         break;
             // }
+            this.actioned = true;
             switch (mouse.action) {
                 case 'move':
                     var selectedLayers = mc.session.selectedLayers;
                     var dist = mouse.initial.dist;
+                    var oldCoords = [];
+                    var newCoords = [];
                     _.each(selectedLayers.list, (layer, index) => {
                         if (!_.isObject(mouse.initial.dist[index])) {
                             dist[index] = {
@@ -553,7 +578,8 @@ var topbarTools = [
                                 y: mouse.initial.mouse.y - mouse.initial.selectedLayers[index].y
                             };
                         }
-                        var newCoords = {
+                        oldCoords[index] = _.clone(layer.coords);
+                        var coords = {
                             x: pos.x - dist[index].x,
                             y: pos.y - dist[index].y
                         };
@@ -566,18 +592,19 @@ var topbarTools = [
 
                             if (delta.x > mc.state.snapDistance || delta.y > mc.state.snapDistance) {
                                 if (delta.x > delta.y) {
-                                    newCoords.y = original.y;
+                                    coords.y = original.y;
                                 }
                                 else {
-                                    newCoords.x = original.x;
+                                    coords.x = original.x;
                                 }
                             }
                             else {
-                                newCoords.x = original.x;
-                                newCoords.y = original.y;
+                                coords.x = original.x;
+                                coords.y = original.y;
                             }
                         }
-                        layer.coords.update(newCoords);
+                        newCoords[index] = _.clone(coords);
+                        layer.coords.update(coords);
                     });
 
                     selectedLayers.rect = this.makeBox(selectedLayers.list);
@@ -586,7 +613,23 @@ var topbarTools = [
             }
         },
         mouseUp: function (e) {
-            this.mercuryCanvas.session.mouse.reset();
+            var mc = this.mercuryCanvas;
+            var selectedLayers = mc.session.selectedLayers;
+            if (this.actioned) {
+                this.actioned = false;
+                var newCoords = [];
+                _.each(selectedLayers.list, (layer, index) => {
+                    newCoords[index] = _.clone(layer.coords);
+                });
+                mc.session.addOperation({
+                    type: 'layer.move',
+                    layers: _.clone(selectedLayers.list),
+                    old: this.oldCoords,
+                    new: newCoords
+                });
+            }
+            this.oldCoords = [];
+            mc.session.mouse.reset();
             this.mouseMove(e);
             requestAnimationFrame(this.draw.bind(this, e));
         }
