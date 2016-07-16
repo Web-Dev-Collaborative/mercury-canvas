@@ -31,7 +31,6 @@ var topbarTools = [
     {
         name: 'brush',
         icon: 'fa-paint-brush',
-        selected: true,
         load: function () {
             var mc = this.mercuryCanvas;
             var cursor = $('<div>', {
@@ -178,18 +177,42 @@ var topbarTools = [
     {
         name: 'select',
         icon: 'fa-mouse-pointer',
+        selected: true,
+        load: function () {
+            var mc = this.mercuryCanvas;
+            var cursor = $('<div>', {
+                class: 'selectCursor'
+            }).hide();
+            cursor.appendTo(mc.layersContainer);
+            this.cursor = cursor;
+            this.canShow = false;
+            this.zIndex = 0;
+            this.shown = false;
+            this.matrix = new Matrix();
+            var selectedLayers = mc.session.selectedLayers;
+            mc.on('layer.remove', () => {
+                selectedLayers.rect = this.makeBox(selectedLayers.list);
+                requestAnimationFrame(this.draw.bind(this, mc.session.mouse.last));
+            });
+        },
         select: function () {
             var mc = this.mercuryCanvas;
 
             mc.overlay.clear();
+            this.canShow = true;
         },
-        cursor: function (e) {
+        deselect: function () {
+            this.cursor.hide();
+            this.shown = false;
+            this.canShow = false;
+        },
+        chooseCursor: function (e) {
             var mc = this.mercuryCanvas;
-            var pos = new coords(e).toCanvasSpace(mc);
             var layerCoords = mc.session.selectedLayers.rect;
 
-            if (!layerCoords) return;
+            if (!layerCoords) return 'default';
 
+            var pos = new coords(e).toCanvasSpace(mc);
             var selectedRect = _.clone(layerCoords);
             var handlerSize = mc.state.handlerSize;
             var sh = handlerSize / 2;
@@ -229,7 +252,7 @@ var topbarTools = [
             if (pos.x > selectedRect.x && pos.x < selectedRect.x + selectedRect.width && pos.y > selectedRect.y && pos.y < selectedRect.y + selectedRect.height) {
                 return 'move';
             }
-            // return 'rotate';
+            return 'rotate';
         },
         draw: function (e) {
             var mc = this.mercuryCanvas;
@@ -246,13 +269,12 @@ var topbarTools = [
             context.lineCap = mc.overlay.context.lineJoin = 'square';
             context.fillStyle = 'rgba(255, 255, 255, 0.1)';
 
-            var rect = _.clone(layer.coords ? layer.coords : layer);
+            var rect = _.clone(_.has(layer, 'coords') ? layer.coords : layer);
             var handlerSize = mc.state.handlerSize;
             rect.x = Math.floor(rect.x) - 0.5;
             rect.y = Math.floor(rect.y) - 0.5;
             rect.width = Math.ceil(rect.width) + 1;
             rect.height = Math.ceil(rect.height) + 1;
-
             if (!mc.session.selectedLayers.list.length) {
                 context.beginPath();
                 context.moveTo(rect.x, rect.y);
@@ -324,45 +346,254 @@ var topbarTools = [
             mc.overlay.dirty = true;
         },
         makeBox: function (e) {
-            var rect = new coords();
-            _.forIn(e, (layer) => {
-                rect.update(rect.max(layer.coords));
+            var rect = new coords({
+                x: Infinity,
+                y: Infinity
             });
+            rect.x2 = 0;
+            rect.y2 = 0;
+            _.each(e, (layer) => {
+                var end = {
+                    x: layer.coords.x + layer.coords.width,
+                    y: layer.coords.y + layer.coords.height
+                };
+                rect.x = Math.min(rect.x, layer.coords.x);
+                rect.y = Math.min(rect.y, layer.coords.y);
+                rect.x2 = Math.max(rect.x2, end.x);
+                rect.y2 = Math.max(rect.y2, end.y);
+            });
+            rect.width = rect.x2 - rect.x;
+            rect.height = rect.y2 - rect.y;
             return rect;
         },
         mouseDown: function (e) {
             var mc = this.mercuryCanvas;
             var pos = new coords(e).toCanvasSpace(mc);
             var layer = pos.toLayer(mc);
-
-            if (!layer) return;
-
             var selectedLayers = mc.session.selectedLayers;
-            selectedLayers.list.push(layer);
-            selectedLayers.rect = this.makeBox(selectedLayers.list);
 
+            if (layer && selectedLayers.list.indexOf(layer) == -1) {
+                selectedLayers.list.push(layer);
+                selectedLayers.rect = this.makeBox(selectedLayers.list);
+            }
+            mc.session.mouse.initial = {
+                dist: [],
+                mouse: _.clone(pos),
+                selectedLayers: selectedLayers.list.map(layer => _.clone(layer.coords))
+            };
             requestAnimationFrame(this.draw.bind(this, e));
         },
         mouseMove: function (e) {
             var mc = this.mercuryCanvas;
-            if (mc.session.mouse.down) return;
-
             var mouse = mc.session.mouse;
-            mouse.action = this.cursor(e);
-            mouse.action = mouse.action ? mouse.action : 'move';
-            $(mc.layersContainer).css({
-                cursor: mouse.action
-            });
+            var pos = new coords(e).toCanvasSpace(mc);
+            mouse.last = e;
+
+            if (!mouse.down) {
+                mouse.action = this.chooseCursor(e);
+                if (mouse.action == 'rotate') {
+                    this.matrix.reset();
+                    this.matrix.translate(pos.x, pos.y);
+
+                    var base = mc.session.selectedLayers.rect;
+                    var center = {
+                        x: base.x + base.width / 2,
+                        y: base.y + base.height / 2
+                    };
+
+                    var res = {
+                        x: pos.x - center.x,
+                        y: pos.y - center.y
+                    };
+                    var rotation = Math.atan2(res.y, res.x) - Math.PI * 5 / 4;
+                    this.matrix.rotate(rotation);
+
+                    $('.removeMe').remove();
+                    $('<div>', {
+                        class: 'removeMe',
+                        css: {
+                            position: 'absolute',
+                            top: center.y,
+                            left: center.x,
+                            background: 'red',
+                            width: 10,
+                            height: 10
+                        }
+                    }).appendTo($(document.body));
+
+                    if (!this.shown) {
+                        this.shown = true;
+                        this.cursor.show();
+                    }
+                    this.cursor.css({
+                        transform: this.matrix.toCSS()
+                    });
+                    mc.layersContainer.css({
+                        cursor: 'none'
+                    });
+                }
+                else {
+                    if (this.shown) {
+                        this.shown = false;
+                        this.cursor.hide();
+                    }
+                    mc.layersContainer.css({
+                        cursor: mouse.action
+                    });
+                }
+                return;
+            }
+            // switch (action) {
+            //     case 'nw':
+            //         newWidth = selectedLayer.width + (selectedLayer.x - pos.x);
+            //         newHeight = selectedLayer.height + (selectedLayer.y - pos.y);
+            //         newX = pos.x;
+            //         newY = pos.y;
+            //         if (keys.shift) {
+            //             wProp = newWidth / original.width;
+            //             hProp = newHeight / original.height;
+            //             newHeight = original.height * (wProp + hProp) / 2;
+            //             newWidth = original.width * (wProp + hProp) / 2;
+
+            //             newX = Math.min(selectedLayer.x + selectedLayer.width - newWidth, selectedLayer.x + selectedLayer.width);
+            //             newY = Math.min(selectedLayer.y + selectedLayer.height - newHeight, selectedLayer.y + selectedLayer.height);
+            //         }
+            //         if (keys.alt) {
+            //             newX = Math.min(newX, selectedLayer.x + selectedLayer.width);
+            //             newY = Math.min(newY, selectedLayer.y + selectedLayer.height);
+            //             newWidth = newWidth - Math.sign(newX - selectedLayer.x) * Math.abs(selectedLayer.width - newWidth);
+            //             newHeight = newHeight - Math.sign(newY - selectedLayer.y) * Math.abs(selectedLayer.height - newHeight);
+            //         }
+            //         newX = Math.min(newX, selectedLayer.x + selectedLayer.width);
+            //         newY = Math.min(newY, selectedLayer.y + selectedLayer.height);
+            //         break;
+            //     case 'ne':
+            //         newWidth = selectedLayer.width + (pos.x - (selectedLayer.x + selectedLayer.width));
+            //         newHeight = selectedLayer.height - (pos.y - selectedLayer.y);
+            //         if (keys.shift) {
+            //             wProp = newWidth / original.width;
+            //             hProp = newHeight / original.height;
+            //             newHeight = original.height * (wProp + hProp) / 2;
+            //             newWidth = original.width * (wProp + hProp) / 2;
+
+            //             newY = Math.min(selectedLayer.y + selectedLayer.height - newHeight, selectedLayer.y + selectedLayer.height);
+            //         }
+            //         else {
+            //             newY = Math.min(pos.y, selectedLayer.y + selectedLayer.height);
+            //         }
+            //         newX = selectedLayer.x;
+            //         break;
+            //     case 'se':
+            //         newWidth = selectedLayer.width + (pos.x - selectedLayer.x - selectedLayer.width);
+            //         newHeight = selectedLayer.height + (pos.y - selectedLayer.y - selectedLayer.height);
+            //         if (keys.shift) {
+            //             wProp = newWidth / original.width;
+            //             hProp = newHeight / original.height;
+            //             newHeight = original.height * (wProp + hProp) / 2;
+            //             newWidth = original.width * (wProp + hProp) / 2;
+            //         }
+            //         newX = selectedLayer.x;
+            //         newY = selectedLayer.y;
+            //         break;
+            //     case 'sw':
+            //         newWidth = selectedLayer.width + (selectedLayer.x - pos.x);
+            //         newHeight = selectedLayer.height + (pos.y - selectedLayer.y - selectedLayer.height);
+            //         if (keys.shift) {
+            //             wProp = newWidth / original.width;
+            //             hProp = newHeight / original.height;
+            //             newHeight = original.height * (wProp + hProp) / 2;
+            //             newWidth = original.width * (wProp + hProp) / 2;
+
+            //             newX = Math.min(selectedLayer.x + selectedLayer.width - newWidth, selectedLayer.x + selectedLayer.width);
+            //         }
+            //         else {
+            //             newX = Math.min(pos.x, selectedLayer.x + selectedLayer.width);
+            //         }
+            //         newY = selectedLayer.y;
+            //         break;
+            //     case 'n':
+            //         newWidth = selectedLayer.width;
+            //         newHeight = selectedLayer.height + (selectedLayer.y - pos.y);
+            //         newX = selectedLayer.x;
+            //         newY = Math.min(pos.y, selectedLayer.y + selectedLayer.height);
+            //         break;
+            //     case 'w':
+            //         newWidth = selectedLayer.width + (selectedLayer.x - pos.x);
+            //         newHeight = selectedLayer.height;
+            //         newX = Math.min(pos.x, selectedLayer.x + selectedLayer.width);
+            //         newY = selectedLayer.y;
+            //         break;
+            //     case 's':
+            //         newWidth = selectedLayer.width;
+            //         newHeight = selectedLayer.height + (pos.y - selectedLayer.y - selectedLayer.height);
+            //         newX = selectedLayer.x;
+            //         newY = selectedLayer.y;
+            //         break;
+            //     case 'e':
+            //         newWidth = selectedLayer.width + (pos.x - (selectedLayer.x + selectedLayer.width));
+            //         newHeight = selectedLayer.height;
+            //         newX = selectedLayer.x;
+            //         newY = selectedLayer.y;
+            //         break;
+            //     default:
+            //         console.log(action + " for select");
+            //         break;
+            // }
+            switch (mouse.action) {
+                case 'move':
+                    var selectedLayers = mc.session.selectedLayers;
+                    var dist = mouse.initial.dist;
+                    _.each(selectedLayers.list, (layer, index) => {
+                        if (!_.isObject(mouse.initial.dist[index])) {
+                            dist[index] = {
+                                x: mouse.initial.mouse.x - mouse.initial.selectedLayers[index].x,
+                                y: mouse.initial.mouse.y - mouse.initial.selectedLayers[index].y
+                            };
+                        }
+                        var newCoords = {
+                            x: pos.x - dist[index].x,
+                            y: pos.y - dist[index].y
+                        };
+                        var keys = {
+                            shift: false
+                        };
+                        if (keys.shift) {
+                            var original = mouse.initial.selectedLayers[index];
+                            var delta = {
+                                x: Math.abs(pos.x - mouse.initial.mouse.x),
+                                y: Math.abs(pos.y - mouse.initial.mouse.y)
+                            };
+
+                            if (delta.x > 20 || delta.y > 20) {
+                                if (delta.x > delta.y) {
+                                    newCoords.y = original.y;
+                                }
+                                else {
+                                    newCoords.x = original.x;
+                                }
+                            }
+                            else {
+                                newCoords.x = original.x;
+                                newCoords.y = original.y;
+                            }
+                        }
+                        layer.coords.update(newCoords);
+                    });
+
+                    selectedLayers.rect = this.makeBox(selectedLayers.list);
+                    requestAnimationFrame(this.draw.bind(this, e));
+                    break;
+            }
         },
         mouseUp: function (e) {
-            this.mercuryCanvas.session.mouse.action = undefined;
+            this.mercuryCanvas.session.mouse.reset();
             this.mouseMove(e);
             requestAnimationFrame(this.draw.bind(this, e));
         }
     },
     {
         name: 'clear',
-        icon: 'fa-trash',
+        icon: 'fa-file',
         action: true,
         end: true,
         select: function () {

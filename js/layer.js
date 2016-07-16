@@ -35,10 +35,7 @@ class layerCoords {
             if (_.has(options, 'width')) this.width = options.width;
             if (_.has(options, 'height')) this.height = options.height;
         }
-        this.layer.element.css({
-            transform: this.matrix.toCSS(),
-            zIndex: this.z
-        });
+        this.updateCSS();
         if (options.z && options.z != oldZ) {
             this.layer.mercuryCanvas.emit('layer.z.update', {
                 z: options.z,
@@ -46,6 +43,27 @@ class layerCoords {
                 session: options.session
             });
         }
+    }
+    add(options) {
+        if (_.isObject(options)) {
+            if (_.has(options, 'x')) {
+                this.matrix.translateX(options.x);
+                this.x += options.x;
+            }
+            if (_.has(options, 'y')) {
+                this.matrix.translateY(options.y);
+                this.y += options.y;
+            }
+            if (_.has(options, 'width')) this.width += options.width;
+            if (_.has(options, 'height')) this.height += options.height;
+        }
+        this.updateCSS();
+    }
+    updateCSS() {
+        this.layer.element.css({
+            transform: this.matrix.toCSS(),
+            zIndex: this.z
+        });
     }
 }
 
@@ -203,6 +221,7 @@ class Layer {
             type: 'layer.remove',
             layer: this
         });
+        _.remove(this.mercuryCanvas.session.selectedLayers.list, this);
         this.removed = true;
         this.hide(true);
         this.mercuryCanvas.emit('layer.remove', this);

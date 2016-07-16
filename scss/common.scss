@@ -37,5 +37,16 @@ html, body, #wrapper {
         display: none;
         box-shadow: inset 0 0 0 1px $white;
     }
+    .selectCursor{
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 40px;
+        height: 20px;
+        display: none;
+        background-color: red;
+        background: url('../img/rotateCursor.png') no-repeat;
+        background-size: contain;
+    }
 }
 
