@@ -74,14 +74,21 @@ class MercuryWorker {
     }
 }
 
+class Mouse {
+    constructor() {
+        this.points = [];
+    }
+    reset() {
+        this.points = [];
+    }
+}
+
 class Session {
     constructor(e) {
         _.extend(this, {
             width: 0,
             height: 0,
-            mouse: {
-                points: []
-            },
+            mouse: new Mouse(),
             selectedLayers: {
                 list: []
             },
@@ -250,22 +257,22 @@ class MercuryCanvas {
         $(window).on('resize', _.throttle(this.resize, 33));
         this.resize();
 
-        // var self = this;
-        // if (localStorage.getItem('layer')) {
-        //     var temp = JSON.parse(localStorage.getItem('layer'));
-        //     var img = $('<img>', {
-        //         src: temp.imageData
-        //     });
-        //     img.on('load', () => {
-        //         for (var i = 0; i < 5; i++) {
-        //             new Layer({
-        //                 image: img[0],
-        //                 parent: self,
-        //                 name: temp.name + ' ' + i
-        //             });
-        //         }
-        //     });
-        // }
+        var self = this;
+        if (localStorage.getItem('layer')) {
+            var temp = JSON.parse(localStorage.getItem('layer'));
+            var img = $('<img>', {
+                src: temp.imageData
+            });
+            img.on('load', () => {
+                for (var i = 0; i < 5; i++) {
+                    new Layer({
+                        image: img[0],
+                        parent: self,
+                        name: temp.name + ' ' + i
+                    });
+                }
+            });
+        }
 
         this.on('layer.new', (layer) => {
             this.layers.list.push(layer);
@@ -274,12 +281,6 @@ class MercuryCanvas {
             this.overlay.coords.z = this.session.zIndex;
             this.overlay.element.css('zIndex', this.session.zIndex);
             this.session.zIndex = this.session.zIndex;
-        });
-        this.on('layer.remove', (layer) => {
-            setTimeout(() => {
-                _.remove(this.session.selectedLayers.list, layer);
-                _.remove(this.layers.list, layer);
-            });
         });
     }
     mouseDown(e) {
