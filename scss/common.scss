@@ -9,6 +9,10 @@ html, body, #wrapper {
     overflow: hidden;
 }
 
+#wrapper {
+    user-select: none;
+}
+
 .layersContainer {
     background: red;
     position: absolute;
