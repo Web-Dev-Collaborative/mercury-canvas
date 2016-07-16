@@ -194,6 +194,9 @@ var topbarTools = [
                 selectedLayers.rect = this.makeBox(selectedLayers.list);
                 requestAnimationFrame(this.draw.bind(this, mc.session.mouse.last));
             });
+
+            mc.on('key.up', () => this.mouseMove(mc.session.mouse.last));
+            mc.on('key.down', () => this.mouseMove(mc.session.mouse.last));
         },
         select: function () {
             var mc = this.mercuryCanvas;
@@ -554,17 +557,14 @@ var topbarTools = [
                             x: pos.x - dist[index].x,
                             y: pos.y - dist[index].y
                         };
-                        var keys = {
-                            shift: false
-                        };
-                        if (keys.shift) {
+                        if (mc.session.keys.shift) {
                             var original = mouse.initial.selectedLayers[index];
                             var delta = {
                                 x: Math.abs(pos.x - mouse.initial.mouse.x),
                                 y: Math.abs(pos.y - mouse.initial.mouse.y)
                             };
 
-                            if (delta.x > 20 || delta.y > 20) {
+                            if (delta.x > mc.state.snapDistance || delta.y > mc.state.snapDistance) {
                                 if (delta.x > delta.y) {
                                     newCoords.y = original.y;
                                 }

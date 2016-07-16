@@ -19,6 +19,7 @@ import './scss/common.scss';
 import 'font-awesome/css/font-awesome.min.css';
 import _ from 'lodash';
 import EventEmitter from 'eventemitter3';
+import Mousetrap from 'mousetrap';
 
 import {topbarTools} from './js/tools.js';
 var MWorker = window.MWorker = require('worker!./js/worker.js');
@@ -93,10 +94,13 @@ class Session {
                 list: []
             },
             mercuryCanvas: null,
+            keys: {},
             operations: [],
             operationIndex: 0,
             zIndex: 1
         }, e);
+        Mousetrap.bind('mod+z', this.undo.bind(this));
+        Mousetrap.bind(['mod+shift+z', 'mod+y'], this.redo.bind(this));
     }
     undo() {
         this.operationIndex--;
@@ -203,7 +207,8 @@ class MercuryCanvas {
             handlerSize: 18,
             toolbars: [],
             menus: [],
-            activeTools: []
+            activeTools: [],
+            snapDistance: 20
         };
         this.session = new Session({
             mercuryCanvas: this
@@ -256,6 +261,29 @@ class MercuryCanvas {
         this.resize = this.resize.bind(this);
         $(window).on('resize', _.throttle(this.resize, 33));
         this.resize();
+
+        var keycodes = {
+            16: 'shift',
+            17: 'ctrl',
+            18: 'alt'
+        };
+        var keys = function (e) {
+            return _.isUndefined(keycodes[e]) ? false : keycodes[e];
+        };
+        $(document.body).on({
+            'keydown': (e) => {
+                var key = keys(e.which);
+                if (key === false || this.session.keys[key]) return;
+                this.session.keys[key] = true;
+                this.emit('key.down');
+            },
+            'keyup': (e) => {
+                var key = keys(e.which);
+                if (key === false || !this.session.keys[key]) return;
+                this.session.keys[key] = false;
+                this.emit('key.up');
+            }
+        });
 
         var self = this;
         if (localStorage.getItem('layer')) {

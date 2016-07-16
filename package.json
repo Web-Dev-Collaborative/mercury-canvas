@@ -27,6 +27,7 @@
     "lodash": "^4.13.1",
     "loglevel": "^1.4.1",
     "loglevel-message-prefix": "^1.1.1",
+    "mousetrap": "^1.6.0",
     "node-sass": "^3.8.0",
     "nodemon": "^1.9.2",
     "normalize.css": "^4.2.0",
