@@ -21,6 +21,22 @@ class coords {
             height: 0
         }, options);
     }
+    add(options, fields = ['x', 'y', 'width', 'height']) {
+        if (!_.isObject(options) || !_.isArray(fields)) return;
+
+        if (_.has(options, 'x') && fields.indexOf('x') != -1) this.x += options.x;
+        if (_.has(options, 'y') && fields.indexOf('y') != -1) this.y += options.y;
+        if (_.has(options, 'width') && fields.indexOf('width') != -1) this.width += options.width;
+        if (_.has(options, 'height') && fields.indexOf('height') != -1) this.height += options.height;
+    }
+    divide(n, fields = ['x', 'y']) {
+        if (!_.isNumber(n) || !_.isArray(fields)) return;
+
+        if (fields.indexOf('x') != -1) this.x /= n;
+        if (fields.indexOf('y') != -1) this.y /= n;
+        if (fields.indexOf('width') != -1) this.width /= n;
+        if (fields.indexOf('height') != -1) this.height /= n;
+    }
     update(options) {
         _.merge(this, options);
     }
@@ -39,22 +55,11 @@ class coords {
     toLayer(mc) {
         var chosenLayer;
         _.forIn(mc.layers.list, (layer) => {
-            if (this.inside(layer.coords) && (chosenLayer === undefined || layer.coords.z > chosenLayer.coords.z)) {
+            if (!layer.removed && layer.visible && this.inside(layer.coords) && (chosenLayer === undefined || layer.coords.z > chosenLayer.coords.z)) {
                 chosenLayer = layer;
             }
         });
         return chosenLayer;
-    }
-    max(e, f) {
-        e = e || f;
-        if (!_.isObject(e)) return log.warn('Coords.max received too few arguments');
-        if (!_.isObject(f)) f = this;
-        return new coords({
-            x: Math.max(e.x, f.x),
-            y: Math.max(e.y, f.y),
-            width: Math.max(e.width, f.width),
-            height: Math.max(e.height, f.height)
-        });
     }
 }
 
