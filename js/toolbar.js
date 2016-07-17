@@ -6,6 +6,7 @@ var log = require('loglevel-message-prefix')(window.log.getLogger('toolbar.js'),
 import _ from 'lodash';
 import classnames from 'classnames';
 import sortable from 'sortablejs';
+import {coords} from './helpers';
 
 class Tool {
     constructor(options, parent) {
@@ -75,6 +76,7 @@ class Menu {
         _.merge(this, {
             classes: '',
             fixed: false,
+            mouseDown: false,
             orientation: {
                 horizontal: false,
                 vertical: false
@@ -95,6 +97,49 @@ class Menu {
 
         this.mercuryCanvas = this.parent;
         this.element = menu;
+
+        var mc = this.mercuryCanvas;
+        if (this.fixed === false) {
+            this.handle = $('<div>', {
+                class: 'handle'
+            }).prependTo(menu);
+            this.coords = new coords();
+            this.handle.on('mousedown', () => {
+                this.mouseDown = true;
+            });
+            mc.on('mouseup', () => {
+                this.mouseDown = false;
+                this.dist = undefined;
+            });
+            mc.on('mousemove', (e) => {
+                if (!this.mouseDown) {
+                    return;
+                }
+                if (!this.dist) {
+                    this.dist = {
+                        x: this.coords.x - e.pageX,
+                        y: this.coords.y - e.pageY
+                    };
+                }
+
+                this.coords.update({
+                    x: this.dist.x + e.pageX,
+                    y: this.dist.y + e.pageY
+                });
+            });
+            this.coords.on('update', () => {
+                this.element.css({
+                    top: this.coords.y,
+                    left: this.coords.x
+                });
+            });
+            setTimeout(() => {
+                this.coords.update({
+                    width: this.element.width(),
+                    height: this.element.height()
+                });
+            });
+        }
     }
     resize(options) {
         if (this.fixed.length > 0) {

@@ -105,7 +105,7 @@ class Session {
     undo() {
         this.operationIndex--;
 
-        if (!this.updateToolbars()) return false;
+        if (!this.updateMenus()) return false;
 
         var operation = this.operations[this.operationIndex];
         if (_.isObject(operation.tool) && _.isFunction(operation.tool.undo)) {
@@ -118,7 +118,7 @@ class Session {
     redo() {
         this.operationIndex++;
 
-        if (!this.updateToolbars()) return false;
+        if (!this.updateMenus()) return false;
 
         var operation = this.operations[this.operationIndex - 1];
         if (_.isObject(operation.tool) && _.isFunction(operation.tool.redo)) {
@@ -128,7 +128,7 @@ class Session {
             this.mercuryCanvas.emit('redo.' + operation.type, operation);
         }
     }
-    updateToolbars() {
+    updateMenus() {
         var mc = this.mercuryCanvas;
 
         if (this.operationIndex == this.operations.length) {
@@ -175,7 +175,7 @@ class Session {
         this.clearOrphanOperations();
         this.operations.push(e);
         this.operationIndex++;
-        this.updateToolbars();
+        this.updateMenus();
     }
     clearOrphanOperations() {
         var removed = this.operations.splice(this.operationIndex);
@@ -186,8 +186,10 @@ class Session {
     }
     toggleButton(e) {
         var mc = this.mercuryCanvas;
-        _.forIn(mc.state.toolbars, (toolbar) => {
-            toolbar.toggleTool(e);
+        _.forIn(mc.state.menus, (menu) => {
+            if (_.isFunction(menu.toggleTool)) {
+                menu.toggleTool(e);
+            }
         });
     }
 }
@@ -205,7 +207,6 @@ class MercuryCanvas {
             strokeColor: '#000',
             lineWidth: 20,
             handlerSize: 18,
-            toolbars: [],
             menus: [],
             activeTools: [],
             snapDistance: 20
@@ -223,10 +224,10 @@ class MercuryCanvas {
             }
         }
 
-        this.state.toolbars.push(new Toolbar({
+        this.state.menus.push(new Toolbar({
             parent: this,
             classes: '',
-            fixed: 'left',
+            fixed: false,
             tools: topbarTools
         }));
         this.state.menus.push(new LayersPanel({
@@ -282,7 +283,10 @@ class MercuryCanvas {
                 if (key === false || !this.session.keys[key]) return;
                 this.session.keys[key] = false;
                 this.emit('key.up');
-            }
+            },
+            'mousedown': e => this.emit('mousedown', e),
+            'mousemove': e => this.emit('mousemove', e),
+            'mouseup': e => this.emit('mouseup', e)
         });
 
         var self = this;
@@ -316,7 +320,14 @@ class MercuryCanvas {
             x: e.clientX,
             y: e.clientY
         });
-        if (!mouseCoords.inside(this.layersContainer.coords)) return;
+        var ok = true;
+        _.each(this.state.menus, (menu) => {
+            if (mouseCoords.inside(menu.coords)) {
+                ok = false;
+                return false;
+            }
+        });
+        if (!mouseCoords.inside(this.layersContainer.coords) || !ok) return;
         this.session.mouse.down = true;
         _.forIn(this.state.activeTools, (tool) => {
             tool.mouseDown(e);
@@ -351,13 +362,13 @@ class MercuryCanvas {
             width: width,
             height: height
         });
-        _.forIn(this.state.toolbars.concat(this.state.menus), (toolbar) => {
-            if (!toolbar.fixed) return;
+        _.forIn(this.state.menus, (menu) => {
+            if (!menu.fixed) return;
 
-            if (toolbar.fixed == 'top') layersOrigin.y += toolbar.element.outerHeight();
-            if (toolbar.fixed == 'bottom') layersOrigin.height -= toolbar.element.outerHeight();
-            if (toolbar.fixed == 'left') layersOrigin.x += toolbar.element.outerWidth();
-            if (toolbar.fixed == 'right') layersOrigin.width -= toolbar.element.outerWidth();
+            if (menu.fixed == 'top') layersOrigin.y += menu.element.outerHeight();
+            if (menu.fixed == 'bottom') layersOrigin.height -= menu.element.outerHeight();
+            if (menu.fixed == 'left') layersOrigin.x += menu.element.outerWidth();
+            if (menu.fixed == 'right') layersOrigin.width -= menu.element.outerWidth();
         });
         layersOrigin.width -= layersOrigin.x;
         layersOrigin.height -= layersOrigin.y;
@@ -374,7 +385,7 @@ class MercuryCanvas {
             width: layersOrigin.width,
             height: layersOrigin.height
         }));
-        _.forIn(this.state.toolbars, (toolbar) => toolbar.resize({
+        _.forIn(this.state.menus, (menu) => menu.resize({
             width: width,
             height: height,
             topHeight: layersOrigin.y,

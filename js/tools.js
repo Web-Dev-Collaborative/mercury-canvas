@@ -644,11 +644,21 @@ var topbarTools = [
             mc.overlay.clear();
             mc.session.operationIndex = 0;
             mc.session.clearOrphanOperations();
-            mc.session.updateToolbars();
+            mc.session.updateMenus();
 
             _.forIn(_.clone(mc.layers.list), (layer) => {
                 layer.remove();
             });
+        }
+    },
+    {
+        name: 'colorPicker',
+        icon: 'fa-tint',
+        action: true,
+        end: true,
+        select: function () {
+            // var mc = this.mercuryCanvas;
+            // console.log(mc);
         }
     },
     {

@@ -4,9 +4,11 @@ var log = require('loglevel-message-prefix')(window.log.getLogger('helpers.js'),
     separator: '/'
 });
 import _ from 'lodash';
+import EventEmitter from 'eventemitter3';
 
 class coords {
     constructor(options = {}) {
+        _.merge(this, new EventEmitter());
         if (options.hasOwnProperty('clientX')) {
             options = {
                 x: options.clientX,
@@ -28,6 +30,7 @@ class coords {
         if (_.has(options, 'y') && fields.indexOf('y') != -1) this.y += options.y;
         if (_.has(options, 'width') && fields.indexOf('width') != -1) this.width += options.width;
         if (_.has(options, 'height') && fields.indexOf('height') != -1) this.height += options.height;
+        this.emit('update');
     }
     divide(n, fields = ['x', 'y']) {
         if (!_.isNumber(n) || !_.isArray(fields)) return;
@@ -39,8 +42,10 @@ class coords {
     }
     update(options) {
         _.merge(this, options);
+        this.emit('update');
     }
     inside(coord) {
+        if (!_.isObject(coord)) return;
         return this.x >= coord.x && this.x <= coord.x + coord.width && this.y >= coord.y && this.y <= coord.y + coord.height;
     }
     toCanvasSpace(mc) {
