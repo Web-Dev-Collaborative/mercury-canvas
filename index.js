@@ -245,8 +245,10 @@ class MercuryCanvas {
         }).appendTo(this.element);
         $(document.body).on('mousedown', this.mouseDown.bind(this));
         $(document.body).on('mousemove', this.mouseMove.bind(this));
-        $(document.body).on('mouseup', this.mouseUp.bind(this));
+        $(document.body).on('mouseup touchcancel touchend', this.mouseUp.bind(this));
         $(document.body).on('mouseout', this.mouseLeave.bind(this));
+        $(document.body).on('touchstart', this.touchStart.bind(this));
+        $(document.body).on('touchmove', this.touchMove.bind(this));
 
         this.base = new Layer({
             name: 'base',
@@ -384,6 +386,16 @@ class MercuryCanvas {
     mouseLeave(e) {
         _.forIn(this.state.activeTools, (tool) => {
             tool.mouseLeave(e);
+        });
+    }
+    touchStart(e) {
+        this.mouseDown(e.originalEvent.touches[0]);
+    }
+    touchMove(e) {
+        _.forIn(this.state.activeTools, (tool) => {
+            if (_.isFunction(tool.touchMove)) tool.touchMove(e);
+            else if (_.isFunction(tool.mouseMove)) tool.mouseMove(e.originalEvent.touches[0]);
+            if (typeof tool.draw == 'function') requestAnimationFrame(tool.draw.bind(tool, e.originalEvent.touches[0]));
         });
     }
     resize(forced) {

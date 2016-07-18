@@ -9,7 +9,7 @@ import EventEmitter from 'eventemitter3';
 class coords {
     constructor(options = {}) {
         _.merge(this, new EventEmitter());
-        if (options.hasOwnProperty('clientX')) {
+        if (_.isNumber(options.identifier) || _.has(options, 'clientX')) {
             options = {
                 x: options.clientX,
                 y: options.clientY
@@ -65,6 +65,15 @@ class coords {
             }
         });
         return chosenLayer;
+    }
+    print() {
+        return {
+            x: this.x,
+            y: this.y,
+            z: this.z,
+            width: this.width,
+            height: this.height
+        };
     }
 }
 
