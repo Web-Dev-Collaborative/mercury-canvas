@@ -272,13 +272,13 @@ class MercuryCanvas {
             return _.isUndefined(keycodes[e]) ? false : keycodes[e];
         };
         $(document.body).on({
-            'keydown': (e) => {
+            'keydown': e => {
                 var key = keys(e.which);
                 if (key === false || this.session.keys[key]) return;
                 this.session.keys[key] = true;
                 this.emit('key.down');
             },
-            'keyup': (e) => {
+            'keyup': e => {
                 var key = keys(e.which);
                 if (key === false || !this.session.keys[key]) return;
                 this.session.keys[key] = false;
@@ -292,6 +292,18 @@ class MercuryCanvas {
             },
             'mouseup': e => {
                 this.emit('mouseup', e);
+            },
+            'touchstart': e => {
+                this.emit('touchstart', e);
+            },
+            'touchend': e => {
+                this.emit('touchend', e);
+            },
+            'touchmove': e => {
+                this.emit('touchmove', e);
+            },
+            'touchcancel': e => {
+                this.emit('touchcancel', e);
             }
         });
 

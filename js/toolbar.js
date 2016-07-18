@@ -6,6 +6,7 @@ var log = require('loglevel-message-prefix')(window.log.getLogger('toolbar.js'),
 import _ from 'lodash';
 import classnames from 'classnames';
 import sortable from 'sortablejs';
+import {Matrix} from 'transformation-matrix-js';
 import {coords} from './helpers';
 
 class Tool {
@@ -87,11 +88,15 @@ class Menu {
             this.orientation.horizontal = this.fixed == 'top' || this.fixed == 'bottom';
             this.orientation.vertical = this.fixed == 'left' || this.fixed == 'right';
         }
+        if (!this.orientation.horizontal && !this.orientation.vertical) {
+            this.orientation.vertical = true;
+        }
 
         var menu = $('<div>', {
             class: classnames('menu', {
                 'horizontal': this.orientation.horizontal,
-                'vertical': this.orientation.vertical
+                'vertical': this.orientation.vertical,
+                'fixed': this.fixed !== false
             }, this.classes, this.fixed)
         }).appendTo(this.parent.element);
 
@@ -101,17 +106,33 @@ class Menu {
         var mc = this.mercuryCanvas;
         if (this.fixed === false) {
             this.handle = $('<div>', {
-                class: 'handle'
+                class: 'handle',
+                html: $('<i>', {
+                    class: 'fa fa-fw fa-bars'
+                })
             }).prependTo(menu);
+
+            this.matrix = new Matrix();
             this.coords = new coords();
-            this.handle.on('mousedown', () => {
+            this.handle.on('mousedown touchstart', (e) => {
                 this.mouseDown = true;
+                if (e.pageX && e.pageY) {
+                    this.dist = {
+                        x: this.coords.x - e.pageX,
+                        y: this.coords.y - e.pageY
+                    };
+                }
             });
-            mc.on('mouseup', () => {
+            var mouseup = function () {
                 this.mouseDown = false;
                 this.dist = undefined;
-            });
-            mc.on('mousemove', (e) => {
+            };
+            mouseup = mouseup.bind(this);
+            mc.on('mouseup', mouseup);
+            mc.on('touchcancel', mouseup);
+            mc.on('touchend', mouseup);
+
+            var mousemove = function (e) {
                 if (!this.mouseDown) {
                     return;
                 }
@@ -126,11 +147,16 @@ class Menu {
                     x: this.dist.x + e.pageX,
                     y: this.dist.y + e.pageY
                 });
-            });
+            };
+            mousemove = mousemove.bind(this);
+            mc.on('mousemove', mousemove);
+            mc.on('touchmove', (e) => mousemove(e.originalEvent.touches[0]));
+
             this.coords.on('update', () => {
+                this.matrix.reset();
+                this.matrix.translate(this.coords.x, this.coords.y);
                 this.element.css({
-                    top: this.coords.y,
-                    left: this.coords.x
+                    transform: this.matrix.toCSS()
                 });
             });
             setTimeout(() => {
