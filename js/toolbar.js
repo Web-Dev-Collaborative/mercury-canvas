@@ -591,7 +591,7 @@ class LayersPanel extends Menu {
         return a;
     }
     onEnd(event) {
-        if (!_.isNumber(event.oldIndex) || !_.isNumber(event.newIndex) || _.isNaN(event.oldIndex) || _.isNaN(event.newIndex) || event.oldIndex == event.newIndex || !event.explicitOriginalTarget || event.explicitOriginalTarget.className.indexOf('fa-fw') != -1) return;
+        if (!_.isNumber(event.oldIndex) || !_.isNumber(event.newIndex) || _.isNaN(event.oldIndex) || _.isNaN(event.newIndex) || event.oldIndex == event.newIndex || !event.explicitOriginalTarget || !event.explicitOriginalTarget.className || event.explicitOriginalTarget.className.indexOf('fa-fw') != -1) return;
 
         var thumbnail = this.thumbnails.splice(event.oldIndex, 1)[0];
         this.thumbnails.splice(event.newIndex, 0, thumbnail);
