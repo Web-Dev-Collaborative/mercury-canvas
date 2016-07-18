@@ -91,13 +91,7 @@ class Menu {
             }
         }, options);
 
-        if (this.fixed.length > 0 && !this.orientation.horizontal && !this.orientation.vertical) {
-            this.orientation.horizontal = this.fixed == 'top' || this.fixed == 'bottom';
-            this.orientation.vertical = this.fixed == 'left' || this.fixed == 'right';
-        }
-        if (!this.orientation.horizontal && !this.orientation.vertical) {
-            this.orientation.vertical = true;
-        }
+        this.determineOrientation();
 
         var menu = $('<div>', {
             class: classnames('menu', {
@@ -133,6 +127,16 @@ class Menu {
             var mouseup = function () {
                 this.mouseDown = false;
                 this.dist = undefined;
+                if (this.clone) {
+                    this.removeClone();
+                    if (!this.snap) return;
+
+                    this.fixed = this.snap;
+                    this.determineOrientation();
+
+                    this.element.removeClass('horizontal vertical left right top bottom').addClass(this.fixed).addClass('fixed').removeAttr('style');
+                    this.element.addClass(this.orientation.horizontal ? 'horizontal' : 'vertical');
+                }
             };
             mouseup = mouseup.bind(this);
             mc.on('mouseup', mouseup);
@@ -154,6 +158,40 @@ class Menu {
                     x: this.dist.x + e.pageX,
                     y: this.dist.y + e.pageY
                 });
+
+                var mc = this.mercuryCanvas;
+                var newSnap = this.calculateSnap({
+                    x: e.pageX,
+                    y: e.pageY
+                });
+
+                if (newSnap) {
+                    if (this.clone && this.snap == newSnap) return;
+                    if (this.snap != newSnap) this.removeClone();
+
+                    this.clone = this.element.clone().removeAttr('style').addClass('fixed');
+                    if (newSnap == 'left') {
+                        this.clone.addClass('left vertical').removeClass('horizontal');
+                    }
+                    if (newSnap == 'right') {
+                        this.clone.addClass('right vertical').removeClass('horizontal');
+                    }
+                    if (newSnap == 'top') {
+                        this.clone.addClass('top horizontal').removeClass('vertical');
+                    }
+                    if (newSnap == 'bottom') {
+                        this.clone.addClass('bottom horizontal').removeClass('vertical');
+                    }
+                    this.clone.css({
+                        zIndex: 1001
+                    });
+                    this.clone.appendTo(mc.element);
+                    this.element.hide();
+                }
+                else if (this.clone) {
+                    this.removeClone();
+                }
+                this.snap = newSnap;
             };
             mousemove = mousemove.bind(this);
             mc.on('mousemove', mousemove);
@@ -173,6 +211,38 @@ class Menu {
                 });
             });
         }
+    }
+    determineOrientation() {
+        if (this.fixed.length > 0 && !this.orientation.horizontal && !this.orientation.vertical) {
+            this.orientation.horizontal = this.fixed == 'top' || this.fixed == 'bottom';
+            this.orientation.vertical = this.fixed == 'left' || this.fixed == 'right';
+        }
+        if (!this.orientation.horizontal && !this.orientation.vertical) {
+            this.orientation.vertical = true;
+        }
+    }
+    removeClone() {
+        if (!this.clone) return;
+        this.clone.remove();
+        this.clone = undefined;
+        this.element.show();
+    }
+    calculateSnap(e, distance) {
+        var mc = this.mercuryCanvas;
+        if (!_.isNumber(distance) || _.isNaN(distance) || distance <= 0) distance = mc.state.snap.menuDistance;
+        if (e.x < distance) {
+            return 'left';
+        }
+        if (e.y < distance) {
+            return 'top';
+        }
+        if (e.x > mc.session.width - distance) {
+            return 'right';
+        }
+        if (e.y > mc.session.height - distance) {
+            return 'bottom';
+        }
+        return false;
     }
     resize(options) {
         if (this.fixed.length > 0) {

@@ -207,7 +207,13 @@ class MercuryCanvas {
             handlerSize: 18,
             menus: [],
             activeTools: [],
-            snapDistance: 20
+            snap: {
+                menuDistance: 40,
+                distance: 20,
+                toStartPosition: true,
+                toWindowMargin: true,
+                toLayer: false
+            }
         };
         this.session = new Session({
             mercuryCanvas: this

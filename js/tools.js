@@ -590,7 +590,7 @@ var topbarTools = [
                                 y: Math.abs(pos.y - mouse.initial.mouse.y)
                             };
 
-                            if (delta.x > mc.state.snapDistance || delta.y > mc.state.snapDistance) {
+                            if (delta.x > mc.state.snap.distance || delta.y > mc.state.snap.distance || !mc.state.snap.toStartPosition) {
                                 if (delta.x > delta.y) {
                                     coords.y = original.y;
                                 }
@@ -598,7 +598,7 @@ var topbarTools = [
                                     coords.x = original.x;
                                 }
                             }
-                            else {
+                            else if (mc.state.snap.toStartPosition) {
                                 coords.x = original.x;
                                 coords.y = original.y;
                             }
