@@ -132,10 +132,11 @@ class Menu {
                     if (!this.snap) return;
 
                     this.fixed = this.snap;
-                    this.determineOrientation();
+                    this.determineOrientation(true);
 
                     this.element.removeClass('horizontal vertical left right top bottom').addClass(this.fixed).addClass('fixed').removeAttr('style');
                     this.element.addClass(this.orientation.horizontal ? 'horizontal' : 'vertical');
+                    mc.resize(true);
                 }
             };
             mouseup = mouseup.bind(this);
@@ -212,8 +213,8 @@ class Menu {
             });
         }
     }
-    determineOrientation() {
-        if (this.fixed.length > 0 && !this.orientation.horizontal && !this.orientation.vertical) {
+    determineOrientation(e) {
+        if (this.fixed.length > 0 && (e || (!this.orientation.horizontal && !this.orientation.vertical))) {
             this.orientation.horizontal = this.fixed == 'top' || this.fixed == 'bottom';
             this.orientation.vertical = this.fixed == 'left' || this.fixed == 'right';
         }
@@ -307,8 +308,10 @@ class Toolbar extends Menu {
     selectTool(e) {
         var activeTools = this.parent.state.activeTools;
         if (this.lastTool) {
+            this.lastTool.selected = false;
             activeTools.splice(activeTools.indexOf(this.lastTool), 1);
         }
+        e.selected = true;
         this.lastTool = e;
         activeTools.push(e);
     }

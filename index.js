@@ -386,11 +386,11 @@ class MercuryCanvas {
             tool.mouseLeave(e);
         });
     }
-    resize() {
+    resize(forced) {
         let width = document.body.clientWidth;
         let height = document.body.clientHeight;
 
-        if (width == this.session.width && height == this.session.height) return;
+        if (!forced && width == this.session.width && height == this.session.height) return;
 
         var layersOrigin = new coords({
             x: 0,
