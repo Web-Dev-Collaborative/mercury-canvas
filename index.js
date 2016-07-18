@@ -284,9 +284,15 @@ class MercuryCanvas {
                 this.session.keys[key] = false;
                 this.emit('key.up');
             },
-            'mousedown': e => this.emit('mousedown', e),
-            'mousemove': e => this.emit('mousemove', e),
-            'mouseup': e => this.emit('mouseup', e)
+            'mousedown': e => {
+                this.emit('mousedown', e);
+            },
+            'mousemove': e => {
+                this.emit('mousemove', e);
+            },
+            'mouseup': e => {
+                this.emit('mouseup', e);
+            }
         });
 
         var self = this;
