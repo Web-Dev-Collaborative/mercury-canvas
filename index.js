@@ -99,8 +99,6 @@ class Session {
             operationIndex: 0,
             zIndex: 1
         }, e);
-        Mousetrap.bind('mod+z', this.undo.bind(this));
-        Mousetrap.bind(['mod+shift+z', 'mod+y'], this.redo.bind(this));
     }
     undo() {
         this.operationIndex--;
@@ -332,6 +330,20 @@ class MercuryCanvas {
             this.overlay.element.css('zIndex', this.session.zIndex);
             this.session.zIndex = this.session.zIndex;
         });
+    }
+    addShortcut(shortcuts, callback) {
+        var temp;
+        if (_.isArray(shortcuts)) {
+            temp = [];
+            _.each(shortcuts, (shortcut, index) => {
+                temp[index] = shortcut.replace(/ \+ /ig, '+');
+            });
+        }
+        if (_.isString(shortcuts) && shortcuts.length) {
+            temp = shortcuts.replace(/ \+ /ig, '+');
+        }
+        if (!temp) return;
+        Mousetrap.bind(temp, callback);
     }
     mouseDown(e) {
         var mouseCoords = new coords({

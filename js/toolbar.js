@@ -41,6 +41,13 @@ class Tool {
             })
         }).appendTo(this.parent.element);
 
+        if (_.isString(this.key) || _.isArray(this.key)) {
+            this.mercuryCanvas.addShortcut(this.key, (e) => {
+                e.preventDefault();
+                this.onClick(true);
+            });
+        }
+
         this.element.on('click', this.onClick.bind(this));
 
         setTimeout((function () {

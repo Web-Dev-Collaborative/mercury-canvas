@@ -12,25 +12,24 @@ var topbarTools = [
     {
         name: 'undo',
         action: true,
+        key: 'mod + z',
         select: function () {
-            var mc = this.mercuryCanvas;
-
-            mc.session.undo();
+            this.mercuryCanvas.session.undo();
         }
     },
     {
         name: 'redo',
         icon: 'fa-repeat',
         action: true,
+        key: ['mod + y', 'mod + shift + z'],
         select: function () {
-            var mc = this.mercuryCanvas;
-
-            mc.session.redo();
+            this.mercuryCanvas.session.redo();
         }
     },
     {
         name: 'brush',
         icon: 'fa-paint-brush',
+        key: 'b',
         load: function () {
             var mc = this.mercuryCanvas;
             var cursor = $('<div>', {
@@ -178,6 +177,7 @@ var topbarTools = [
         name: 'select',
         icon: 'fa-mouse-pointer',
         selected: true,
+        key: 'v',
         load: function () {
             var mc = this.mercuryCanvas;
             var cursor = $('<div>', {
@@ -639,6 +639,7 @@ var topbarTools = [
         icon: 'fa-file',
         action: true,
         end: true,
+        key: 'mod + n',
         select: function () {
             var mc = this.mercuryCanvas;
             mc.overlay.clear();
