@@ -158,36 +158,45 @@ class Layer {
         }
         ctx.restore();
     }
-    trim() {
+    trim(options) {
         var t0 = performance.now();
-        var pixels = this.context.getImageData(0, 0, this.coords.width, this.coords.height);
-        var bound = {};
-        var x, y;
-
-        for (var i = 0, l = pixels.data.length; i < l; i += 4) {
-            if (pixels.data[i + 3] === 0) continue;
-
-            x = (i / 4) % this.coords.width;
-            y = ~~((i / 4) / this.coords.width);
-
-            bound.top = bound.top === undefined ? y : (y < bound.top ? y : bound.top);
-            bound.bottom = bound.bottom === undefined ? y : (y > bound.bottom ? y : bound.bottom);
-            bound.left = bound.left === undefined ? x : (x < bound.left ? x : bound.left);
-            bound.right = bound.right === undefined ? x : (x > bound.right ? x : bound.right);
+        var bound = {
+            x: Infinity,
+            y: Infinity,
+            x2: 0,
+            y2: 0,
+        };
+        if (_.isObject(options)) {
+            bound = options;
         }
-        bound.left--;
-        bound.top--;
-        bound.right += 2;
-        bound.bottom += 2;
+        else {
+            var pixels = this.context.getImageData(0, 0, this.coords.width, this.coords.height);
+            var x, y;
 
+            for (var i = 0, l = pixels.data.length; i < l; i += 4) {
+                if (pixels.data[i + 3] === 0) continue;
+
+                x = (i / 4) % this.coords.width;
+                y = ~~((i / 4) / this.coords.width);
+
+                bound.x = Math.min(x, bound.x);
+                bound.y = Math.min(y, bound.y);
+                bound.x2 = Math.max(x, bound.x2);
+                bound.y2 = Math.max(y, bound.y2);
+            }
+            bound.x--;
+            bound.y--;
+            bound.x2 += 2;
+            bound.y2 += 2;
+        }
         this.coords.update({
-            x: this.coords.x + bound.left,
-            y: this.coords.y + bound.top,
-            width: bound.right - bound.left,
-            height: bound.bottom - bound.top
+            x: this.coords.x + bound.x,
+            y: this.coords.y + bound.y,
+            width: bound.x2 - bound.x,
+            height: bound.y2 - bound.y
         });
 
-        var trimmed = this.context.getImageData(bound.left, bound.top, this.coords.width, this.coords.height);
+        var trimmed = this.context.getImageData(bound.x, bound.y, this.coords.width, this.coords.height);
 
         this.element.attr({
             width: this.coords.width,
@@ -205,11 +214,11 @@ class Layer {
         this.context.clearRect(0, 0, this.element.attr('width'), this.element.attr('height'));
         this.mercuryCanvas.emit('layer.update', this);
     }
-    copyTo(targetLayer) {
+    copyTo(targetLayer, trimOptions) {
         targetLayer.resize(this.coords);
         targetLayer.context.drawImage(this.element[0], 0, 0);
         targetLayer.state.dirty = true;
-        if (this.name == 'overlay') targetLayer.trim();
+        if (this.name == 'overlay') targetLayer.trim(trimOptions);
         this.mercuryCanvas.emit('layer.update', targetLayer);
     }
     delete() {

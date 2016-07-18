@@ -154,7 +154,31 @@ var topbarTools = [
             var newLayer = new Layer({
                 parent: mc
             });
-            mc.overlay.copyTo(newLayer);
+            var min = {
+                x: Infinity,
+                y: Infinity
+            };
+            var max = {
+                x: 0,
+                y: 0
+            };
+            _.each(mouse.points, (point) => {
+                min.x = Math.min(point.x, min.x);
+                min.y = Math.min(point.y, min.y);
+                max.x = Math.max(point.x, max.x);
+                max.y = Math.max(point.y, max.y);
+            });
+            min.x -= mc.state.lineWidth / 2 + 1;
+            min.y -= mc.state.lineWidth / 2 + 1;
+            max.x += mc.state.lineWidth / 2 + 1;
+            max.y += mc.state.lineWidth / 2 + 1;
+
+            mc.overlay.copyTo(newLayer, {
+                x: min.x,
+                y: min.y,
+                x2: max.x,
+                y2: max.y
+            });
             mc.session.addOperation({
                 tool: this,
                 layer: _.clone(newLayer),
@@ -409,7 +433,7 @@ var topbarTools = [
             requestAnimationFrame(this.draw.bind(this, e));
         },
         mouseMove: function (e) {
-            if  (!this.selected) return;
+            if (!this.selected) return;
             var mc = this.mercuryCanvas;
             var mouse = mc.session.mouse;
             var pos = new coords(e).toCanvasSpace(mc);
