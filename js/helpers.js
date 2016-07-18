@@ -60,7 +60,7 @@ class coords {
     toLayer(mc) {
         var chosenLayer;
         _.forIn(mc.layers.list, (layer) => {
-            if (!layer.removed && layer.visible && this.inside(layer.coords) && (chosenLayer === undefined || layer.coords.z > chosenLayer.coords.z)) {
+            if (!layer.state.removed && layer.state.visible && this.inside(layer.coords) && (chosenLayer === undefined || layer.coords.z > chosenLayer.coords.z)) {
                 chosenLayer = layer;
             }
         });

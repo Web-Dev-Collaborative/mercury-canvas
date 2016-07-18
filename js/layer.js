@@ -73,8 +73,10 @@ class Layer {
             options: {
                 background: 'rgba(0, 0, 0, 0)'
             },
-            removable: true,
-            visible: true,
+            state: {
+                removable: true,
+                visible: true,
+            },
             name: 'Layer ' + options.parent.session.zIndex
         }, options);
 
@@ -103,7 +105,7 @@ class Layer {
                 height: this.image.height
             });
             this.context.drawImage(this.image, 0, 0);
-            this.dirty = true;
+            this.state.dirty = true;
 
             this.coords.update({
                 x: (this.mercuryCanvas.layersContainer.coords.width - this.image.width) / 2,
@@ -117,16 +119,16 @@ class Layer {
         this.mercuryCanvas.emit('layer.new', this);
     }
     toggleVisibility() {
-        if (this.visible) this.hide();
+        if (this.state.visible) this.hide();
         else this.show();
     }
     hide(e) {
-        this.visible = false;
+        this.state.visible = false;
         this.element.hide();
         if (!e) this.mercuryCanvas.emit('layer.update', this);
     }
     show(e) {
-        this.visible = true;
+        this.state.visible = true;
         this.element.show();
         if (!e) this.mercuryCanvas.emit('layer.update', this);
     }
@@ -197,16 +199,16 @@ class Layer {
         log.debug('I spent ' + (t1 - t0) + 'ms to trim the layer');
     }
     clear() {
-        if (!this.dirty) return;
+        if (!this.state.dirty) return;
 
-        this.dirty = false;
+        this.state.dirty = false;
         this.context.clearRect(0, 0, this.element.attr('width'), this.element.attr('height'));
         this.mercuryCanvas.emit('layer.update', this);
     }
     copyTo(targetLayer) {
         targetLayer.resize(this.coords);
         targetLayer.context.drawImage(this.element[0], 0, 0);
-        targetLayer.dirty = true;
+        targetLayer.state.dirty = true;
         if (this.name == 'overlay') targetLayer.trim();
         this.mercuryCanvas.emit('layer.update', targetLayer);
     }
@@ -215,20 +217,20 @@ class Layer {
         this.mercuryCanvas.emit('layer.delete', this);
     }
     remove(e) {
-        if (this.removable === false) return;
+        if (this.state.removable === false) return;
 
         if (!e) this.mercuryCanvas.session.addOperation({
             type: 'layer.remove',
             layer: this
         });
         _.remove(this.mercuryCanvas.session.selectedLayers.list, this);
-        this.removed = true;
+        this.state.removed = true;
         this.hide(true);
         this.mercuryCanvas.emit('layer.remove', this);
     }
     restore() {
-        if (!this.removed) return;
-        this.removed = false;
+        if (!this.state.removed) return;
+        this.state.removed = false;
         this.show(true);
         this.mercuryCanvas.emit('layer.restore', this);
     }

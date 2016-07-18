@@ -364,8 +364,8 @@ class LayerThumbnail {
     }
     update() {
         this.visibleIcon.attr('class', classnames('fa', 'fa-fw', {
-            'fa-eye': this.layer.visible,
-            'fa-square': !this.layer.visible
+            'fa-eye': this.layer.state.visible,
+            'fa-square': !this.layer.state.visible
         }));
 
         this.wrapper.css({
@@ -602,7 +602,7 @@ class LayersPanel extends Menu {
         }
         this.updateZIndexes();
 
-        if (event.session || thumbnail.layer.removed) return;
+        if (event.session || thumbnail.layer.state.removed) return;
 
         this.mercuryCanvas.session.addOperation({
             type: 'layer.zIndex',

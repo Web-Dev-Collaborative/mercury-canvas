@@ -252,8 +252,10 @@ class MercuryCanvas {
 
         this.base = new Layer({
             name: 'base',
-            removable: false,
             parent: this,
+            state: {
+                removable: false
+            },
             options: {
                 background: this.state.background
             }
@@ -261,7 +263,9 @@ class MercuryCanvas {
         this.overlay = new Layer({
             name: 'overlay',
             parent: this,
-            removable: false
+            state: {
+                removable: false
+            }
         });
         this.layers.fitToWindow.push(this.base, this.overlay);
 

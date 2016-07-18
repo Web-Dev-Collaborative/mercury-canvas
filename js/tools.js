@@ -78,7 +78,7 @@ var topbarTools = [
                 mc.overlay.context.arc(b.x, b.y, mc.overlay.context.lineWidth / 2, 0, Math.PI * 2, false);
                 mc.overlay.context.fill();
                 mc.overlay.context.closePath();
-                mc.overlay.dirty = true;
+                mc.overlay.state.dirty = true;
                 return;
             }
 
@@ -99,7 +99,7 @@ var topbarTools = [
             );
 
             mc.overlay.context.stroke();
-            mc.overlay.dirty = true;
+            mc.overlay.state.dirty = true;
             var t1 = performance.now();
             log.debug('I spent ' + (t1 - t0) + 'ms to draw the overlay');
         },
@@ -365,7 +365,7 @@ var topbarTools = [
                     context.closePath();
                 }
             }
-            mc.overlay.dirty = true;
+            mc.overlay.state.dirty = true;
         },
         makeBox: function (e) {
             var rect = new coords({
