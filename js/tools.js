@@ -409,6 +409,7 @@ var topbarTools = [
             requestAnimationFrame(this.draw.bind(this, e));
         },
         mouseMove: function (e) {
+            if  (!this.selected) return;
             var mc = this.mercuryCanvas;
             var mouse = mc.session.mouse;
             var pos = new coords(e).toCanvasSpace(mc);
