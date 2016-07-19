@@ -184,10 +184,10 @@ class Menu {
                         this.clone.addClass('bottom horizontal').removeClass('vertical');
                     }
                     this.clone.css({
-                        zIndex: 1001
+                        zIndex: 1001,
+                        opacity: 0.8
                     });
                     this.clone.appendTo(mc.element);
-                    this.element.hide();
                 }
                 else if (this.clone) {
                     this.removeClone();
@@ -226,7 +226,6 @@ class Menu {
         if (!this.clone) return;
         this.clone.remove();
         this.clone = undefined;
-        this.element.show();
     }
     calculateSnap(e, distance) {
         var mc = this.mercuryCanvas;
