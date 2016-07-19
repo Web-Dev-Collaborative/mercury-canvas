@@ -58,12 +58,15 @@ class coords {
         });
     }
     toLayer(mc) {
+        var t0 = performance.now();
         var chosenLayer;
         _.forIn(mc.layers.list, (layer) => {
             if (!layer.state.removed && layer.state.visible && this.inside(layer.coords) && (chosenLayer === undefined || layer.coords.z > chosenLayer.coords.z)) {
                 chosenLayer = layer;
             }
         });
+        var t1 = performance.now();
+        log.debug('I spent ' + (t1 - t0) + 'ms to search for a layer under the cursor.');
         return chosenLayer;
     }
     print() {
