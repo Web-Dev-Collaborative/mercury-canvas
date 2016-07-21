@@ -4,6 +4,39 @@ var log = require('loglevel-message-prefix')(window.log.getLogger('session.js'),
     separator: '/'
 });
 import _ from 'lodash';
+import {coords} from './helpers.js';
+
+class SelectedLayer {
+    constructor() {
+        this.list = [];
+        this.rect = {};
+    }
+    makeBox() {
+        var rect = new coords({
+            x: Infinity,
+            y: Infinity
+        });
+        rect.x2 = 0;
+        rect.y2 = 0;
+        _.each(this.list, (layer) => {
+            var end = {
+                x: layer.coords.x + layer.coords.width,
+                y: layer.coords.y + layer.coords.height
+            };
+            rect.x = Math.min(rect.x, layer.coords.x);
+            rect.y = Math.min(rect.y, layer.coords.y);
+            rect.x2 = Math.max(rect.x2, end.x);
+            rect.y2 = Math.max(rect.y2, end.y);
+        });
+        rect.width = rect.x2 - rect.x;
+        rect.height = rect.y2 - rect.y;
+        this.rect = rect;
+    }
+    select(layer) {
+        this.list.push(layer);
+        this.makeBox();
+    }
+}
 
 class Mouse {
     constructor() {
@@ -25,9 +58,7 @@ class Session {
             width: 0,
             height: 0,
             mouse: new Mouse(),
-            selectedLayers: {
-                list: []
-            },
+            selectedLayers: new SelectedLayer(),
             mercuryCanvas: null,
             keys: {},
             operations: [],

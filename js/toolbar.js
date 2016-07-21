@@ -358,7 +358,13 @@ class LayerThumbnail {
 
         this.update();
 
-        this.visibleIconWrapper.on('click', this.layer.toggleVisibility);
+        this.visibleIconWrapper.on('click', (e) => {
+            e.stopPropagation();
+            this.layer.toggleVisibility(e);
+        });
+        this.wrapper.on('click', () => {
+            this.layer.select();
+        });
         this.wrapper.prependTo(options.parent);
     }
     update() {

@@ -207,7 +207,7 @@ var topbarTools = [
             this.matrix = new Matrix();
             var selectedLayers = mc.session.selectedLayers;
             mc.on('layer.remove', () => {
-                selectedLayers.rect = this.makeBox(selectedLayers.list);
+                selectedLayers.makeBox();
                 requestAnimationFrame(this.draw.bind(this, mc.session.mouse.last));
             });
 
@@ -218,14 +218,14 @@ var topbarTools = [
                 _.each(operation.layers, (layer, index) => {
                     layer.coords.update(operation.old[index]);
                 });
-                selectedLayers.rect = this.makeBox(selectedLayers.list);
+                selectedLayers.makeBox();
                 this.mouseMove(mc.session.mouse.last);
             });
             mc.on('redo.layer.move', (operation) => {
                 _.each(operation.layers, (layer, index) => {
                     layer.coords.update(operation.new[index]);
                 });
-                selectedLayers.rect = this.makeBox(selectedLayers.list);
+                selectedLayers.makeBox();
                 this.mouseMove(mc.session.mouse.last);
             });
         },
@@ -395,27 +395,6 @@ var topbarTools = [
             }
             mc.overlay.state.dirty = true;
         },
-        makeBox: function (e) {
-            var rect = new coords({
-                x: Infinity,
-                y: Infinity
-            });
-            rect.x2 = 0;
-            rect.y2 = 0;
-            _.each(e, (layer) => {
-                var end = {
-                    x: layer.coords.x + layer.coords.width,
-                    y: layer.coords.y + layer.coords.height
-                };
-                rect.x = Math.min(rect.x, layer.coords.x);
-                rect.y = Math.min(rect.y, layer.coords.y);
-                rect.x2 = Math.max(rect.x2, end.x);
-                rect.y2 = Math.max(rect.y2, end.y);
-            });
-            rect.width = rect.x2 - rect.x;
-            rect.height = rect.y2 - rect.y;
-            return rect;
-        },
         mouseDown: function (e) {
             var mc = this.mercuryCanvas;
             var pos = new coords(e).toCanvasSpace(mc);
@@ -423,8 +402,7 @@ var topbarTools = [
             var selectedLayers = mc.session.selectedLayers;
 
             if (layer && selectedLayers.list.indexOf(layer) == -1 && (mc.session.keys.ctrl || !selectedLayers.list.length)) {
-                selectedLayers.list.push(layer);
-                selectedLayers.rect = this.makeBox(selectedLayers.list);
+                layer.select();
             }
             _.each(selectedLayers.list, (layer, index) => {
                 this.oldCoords[index] = _.clone(layer.coords);
@@ -636,7 +614,7 @@ var topbarTools = [
                         layer.coords.update(coords);
                     });
 
-                    selectedLayers.rect = this.makeBox(selectedLayers.list);
+                    selectedLayers.makeBox();
                     requestAnimationFrame(this.draw.bind(this, e));
                     break;
             }

@@ -138,6 +138,9 @@ class Layer {
             y: options.y
         });
     }
+    select() {
+        this.mercuryCanvas.session.selectedLayers.select(this);
+    }
     resize(options) {
         if (!_.isObject(options) || !_.isNumber(options.width) || !_.isNumber(options.height)) return;
         var ctx = this.context;
