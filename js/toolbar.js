@@ -50,10 +50,10 @@ class Tool {
 
         this.element.on('click', this.onClick.bind(this));
 
-        setTimeout((function () {
+        setTimeout(() => {
             this.load();
             if (this.selected) this.onClick(true);
-        }).bind(this));
+        });
     }
     onClick(e) {
         if (this.disabled) return;
