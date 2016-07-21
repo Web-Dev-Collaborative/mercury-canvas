@@ -58,7 +58,7 @@ class Tool {
     onClick(e) {
         if (this.disabled) return;
 
-        if (_.isObject(e) || e === true) this.select.bind(this)();
+        if (_.isObject(e) || e === true) this.select.bind(this, e)();
 
         if (this.action) return;
 

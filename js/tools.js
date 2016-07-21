@@ -701,7 +701,7 @@ var topbarTools = [
                 }
             }).appendTo(this.element);
             this.colorPicker = new colorPicker({
-                color: '#FF0000',
+                color: this.mercuryCanvas.state.strokeColor,
                 background: '#454545',
                 el: this.colorPickerWrapper[0]
             });
@@ -709,10 +709,12 @@ var topbarTools = [
                 this.mercuryCanvas.state.strokeColor = color;
             });
             this.colorPickerWrapper.on('mouseup touchend', () => {
+                this.mercuryCanvas.state.save();
                 setTimeout(() => this.mercuryCanvas.session.undo());
             });
         },
-        select: function () {
+        select: function (e) {
+            if (e.target.className.indexOf('colorPicker') == -1 && e.target.className.indexOf('fa') == -1) return;
             this.visible = !this.visible;
             if (this.visible) {
                 this.colorPickerWrapper.show();
