@@ -148,6 +148,23 @@ var topbarTools = [
             this.cursor.css(css);
             if (!mouse.down) return;
 
+            if (mc.session.keys.shift && mouse.points.length) {
+                var initial = mouse.points[0];
+                if (!_.isNumber(mouse.delta.x) || !_.isNumber(mouse.delta.y)) {
+                    mouse.delta = {
+                        x: Math.abs(pos.x - initial.x),
+                        y: Math.abs(pos.y - initial.y)
+                    };
+                }
+
+                if (mouse.delta.x > mouse.delta.y) {
+                    pos.y = initial.y;
+                }
+                else {
+                    pos.x = initial.x;
+                }
+            }
+
             mouse.points.push(pos);
             mouse.extremes = {
                 x: Math.min(mouse.extremes.x, pos.x),
