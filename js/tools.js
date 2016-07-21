@@ -8,6 +8,9 @@ import {Matrix} from 'transformation-matrix-js';
 import {coords} from './helpers.js';
 import Layer from './layer.js';
 
+import colorPicker from 'simple-color-picker';
+import 'simple-color-picker/simple-color-picker.css';
+
 var topbarTools = [
     {
         name: 'undo',
@@ -249,6 +252,16 @@ var topbarTools = [
             this.shown = false;
             this.canShow = false;
         },
+        chooseRotateCursor: function (e) {
+            var pos = e.pos;
+            var selectedRect = e.selectedRect;
+            if (pos.x < selectedRect.x) {
+                if (pos.y < selectedRect.y) {
+                    return 'rotate-0';
+                }
+
+            }
+        },
         chooseCursor: function (e) {
             var mc = this.mercuryCanvas;
             var layerCoords = mc.session.selectedLayers.rect;
@@ -296,7 +309,10 @@ var topbarTools = [
             if (pos.x > selectedRect.x && pos.x < selectedRect.x + selectedRect.width && pos.y > selectedRect.y && pos.y < selectedRect.y + selectedRect.height) {
                 return 'move';
             }
-            return 'rotate';
+            return this.chooseRotateCursor({
+                pos: pos,
+                selectedRect: selectedRect
+            });
         },
         draw: function (e) {
             var mc = this.mercuryCanvas;
@@ -682,9 +698,40 @@ var topbarTools = [
         icon: 'fa-tint',
         action: true,
         end: true,
+        load: function () {
+            this.visible = false;
+            this.element.css({
+                position: 'relative',
+                overflow: 'visible'
+            });
+            this.colorPickerWrapper = $('<div>', {
+                css: {
+                    position: 'absolute',
+                    top: -60,
+                    left: 40,
+                    display: 'none'
+                }
+            }).appendTo(this.element);
+            this.colorPicker = new colorPicker({
+                color: '#FF0000',
+                background: '#454545',
+                el: this.colorPickerWrapper[0]
+            });
+            this.colorPicker.onChange((color) => {
+                this.mercuryCanvas.state.strokeColor = color;
+            });
+            this.colorPickerWrapper.on('mouseup touchend', () => {
+                setTimeout(() => this.mercuryCanvas.session.undo());
+            });
+        },
         select: function () {
-            // var mc = this.mercuryCanvas;
-            // console.log(mc);
+            this.visible = !this.visible;
+            if (this.visible) {
+                this.colorPickerWrapper.show();
+            }
+            else {
+                this.colorPickerWrapper.hide();
+            }
         }
     },
     {
