@@ -192,6 +192,9 @@
     border-top: 1px solid $borderColor;
     border-bottom: 1px solid $borderColor;
 
+    &.selected{
+        background: rgba($blue-500, 0.2);
+    }
     &:first-of-type{
         margin-top: 0;
         border-top: 0;

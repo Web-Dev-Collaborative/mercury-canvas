@@ -375,7 +375,10 @@ class LayerThumbnail {
 
         this.wrapper.css({
             zIndex: this.layer.coords.z
-        });
+        }).attr('class', classnames({
+            layerThumbnail: true,
+            selected: this.layer.selected
+        }));
 
         this.thumbnail.css('background-image', `url("${this.layer.canvas.toDataURL()}")`);
         this.name.html(this.layer.name);
@@ -537,6 +540,13 @@ class LayersPanel extends Menu {
                 simulated: true,
                 session: options.session
             });
+        });
+        mc.on('layer.select', (layer) => {
+            var thumbnail = self.elementToThumbnail({
+                layer: layer
+            });
+            if (!thumbnail) return;
+            thumbnail.update();
         });
         mc.on('undo.layer.zIndex', (operation) => {
             operation.layer.coords.update({

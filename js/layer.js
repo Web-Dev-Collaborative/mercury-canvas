@@ -139,7 +139,9 @@ class Layer {
         });
     }
     select() {
+        this.selected = true;
         this.mercuryCanvas.session.selectedLayers.select(this);
+        this.mercuryCanvas.emit('layer.select', this);
     }
     resize(options) {
         if (!_.isObject(options) || !_.isNumber(options.width) || !_.isNumber(options.height)) return;
