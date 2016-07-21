@@ -718,6 +718,14 @@ var topbarTools = [
             this.visible = !this.visible;
             if (this.visible) {
                 this.colorPickerWrapper.show();
+                var visible = this.colorPickerWrapper.visible();
+                visible.top = visible.top != 0 ? visible.top - 5 : 0;
+                visible.bottom = visible.bottom != 0 ? visible.bottom + 5 : 0;
+                visible.left = visible.left != 0 ? visible.left - 5 : 0;
+                visible.right = visible.right != 0 ? visible.right + 5 : 0;
+
+                this.colorPickerWrapper.css('top', '+=' + (visible.top - visible.bottom));
+                this.colorPickerWrapper.css('left', '+=' + (visible.left - visible.right));
             }
             else {
                 this.colorPickerWrapper.hide();

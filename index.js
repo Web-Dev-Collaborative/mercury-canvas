@@ -26,6 +26,8 @@ var MWorker = window.MWorker = require('worker!./js/worker.js');
 import {coords} from './js/helpers.js';
 import Layer from './js/layer.js';
 import {Toolbar, LayersPanel} from './js/toolbar.js';
+import visible from './js/jquery.visible.js';
+visible($);
 
 class MercuryWorker {
     constructor() {
