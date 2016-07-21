@@ -32,6 +32,7 @@ var topbarTools = [
     {
         name: 'brush',
         icon: 'fa-paint-brush',
+        selected: true,
         key: 'b',
         load: function () {
             var mc = this.mercuryCanvas;
@@ -148,6 +149,12 @@ var topbarTools = [
             if (!mouse.down) return;
 
             mouse.points.push(pos);
+            mouse.extremes = {
+                x: Math.min(mouse.extremes.x, pos.x),
+                y: Math.min(mouse.extremes.y, pos.y),
+                x2: Math.max(mouse.extremes.x2, pos.x),
+                y2: Math.max(mouse.extremes.y2, pos.y)
+            };
         },
         mouseUp: function () {
             var mc = this.mercuryCanvas;
@@ -157,38 +164,20 @@ var topbarTools = [
             var newLayer = new Layer({
                 parent: mc
             });
-            var min = {
-                x: Infinity,
-                y: Infinity
-            };
-            var max = {
-                x: 0,
-                y: 0
-            };
-            _.each(mouse.points, (point) => {
-                min.x = Math.min(point.x, min.x);
-                min.y = Math.min(point.y, min.y);
-                max.x = Math.max(point.x, max.x);
-                max.y = Math.max(point.y, max.y);
-            });
-            min.x -= mc.state.lineWidth / 2 + 1;
-            min.y -= mc.state.lineWidth / 2 + 1;
-            max.x += mc.state.lineWidth / 2 + 1;
-            max.y += mc.state.lineWidth / 2 + 1;
 
-            mc.overlay.copyTo(newLayer, {
-                x: min.x,
-                y: min.y,
-                x2: max.x,
-                y2: max.y
-            });
+            mouse.extremes.x -= mc.state.lineWidth / 2 + 1;
+            mouse.extremes.y -= mc.state.lineWidth / 2 + 1;
+            mouse.extremes.x2 += mc.state.lineWidth / 2 + 1;
+            mouse.extremes.y2 += mc.state.lineWidth / 2 + 1;
+
+            mc.overlay.copyTo(newLayer, mouse.extremes);
             mc.session.addOperation({
                 tool: this,
                 layer: _.clone(newLayer),
                 mouse: _.clone(mouse)
             });
             mc.overlay.clear();
-            mouse.points = [];
+            mouse.reset();
         },
         operationRemove: function (e) {
             e.layer.element.remove();
@@ -203,7 +192,6 @@ var topbarTools = [
     {
         name: 'select',
         icon: 'fa-mouse-pointer',
-        selected: true,
         key: 'v',
         load: function () {
             var mc = this.mercuryCanvas;

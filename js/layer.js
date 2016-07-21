@@ -159,36 +159,20 @@ class Layer {
         ctx.restore();
     }
     trim(options) {
-        var t0 = performance.now();
-        var bound = {
-            x: Infinity,
-            y: Infinity,
-            x2: 0,
-            y2: 0,
-        };
-        if (_.isObject(options)) {
-            bound = options;
+        if (_.isObject(options) && ['x', 'y', 'x2', 'y2'].every(k => k in options)) {
+            this.trimToCoords(options);
         }
         else {
-            var pixels = this.context.getImageData(0, 0, this.coords.width, this.coords.height);
-            var x, y;
-
-            for (var i = 0, l = pixels.data.length; i < l; i += 4) {
-                if (pixels.data[i + 3] === 0) continue;
-
-                x = (i / 4) % this.coords.width;
-                y = ~~((i / 4) / this.coords.width);
-
-                bound.x = Math.min(x, bound.x);
-                bound.y = Math.min(y, bound.y);
-                bound.x2 = Math.max(x, bound.x2);
-                bound.y2 = Math.max(y, bound.y2);
-            }
-            bound.x--;
-            bound.y--;
-            bound.x2 += 2;
-            bound.y2 += 2;
+            this.mercuryCanvas.workerMaster.addAction({
+                type: 'trim',
+                data: this.context.getImageData(0, 0, this.coords.width, this.coords.height),
+                finish: this.trimToCoords.bind(this)
+            });
         }
+    }
+    trimToCoords(bound) {
+        var t0 = performance.now();
+
         this.coords.update({
             x: this.coords.x + bound.x,
             y: this.coords.y + bound.y,

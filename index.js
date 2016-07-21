@@ -32,55 +32,173 @@ class MercuryWorker {
         this.worker = new MWorker();
 
         this.worker.onmessage = this.receive.bind(this);
-        this.worker.onerror = (a) => log.error('Worker Error:', a);
-        this.queue = {
-            init: {
-                cb: (a) => log.debug(a)
+        this.worker.onerror = e => log.error('Worker Error:', e);
+        this.queue = {};
+        this.addAction({
+            id: 'init',
+            type: 'active'
+        });
+        this.done = true;
+
+        this.receive = this.receive.bind(this);
+        this.processQueue();
+    }
+    send(data) {
+        this.worker.postMessage({
+            type: data.type,
+            id: data.id,
+            data: data.data
+        });
+        this.done = false;
+    }
+    receive(e) {
+        if (!e || !e.data || !_.isObject(e.data)) return false;
+        var data = e.data;
+
+        if (_.isString(data.event) && _.isString(data.id)) {
+            if (data.event == 'progress') {
+                this.done = true;
+
+                if (data.id == 'init') {
+                    log.info('Worker ready');
+                }
+                else {
+                    this.queue[data.id].progress(data);
+                }
+
+                delete this.queue[data.id];
+                this.processQueue();
+            }
+            if (data.event == 'log') log.info('Worker log', data.data);
+        }
+    }
+    addAction(data) {
+        data.type = _.isString(data.type) ? data.type : '';
+        data.priority = _.isNumber(data.priority) ? data.priority : 0;
+        data.progress = _.isFunction(data.progress) ? data.progress : () => { };
+        data.id = _.isString(data.id) ? data.id : _.uniqueId('actionPart_');
+
+        this.queue[data.id] = data;
+        this.processQueue();
+    }
+    processQueue() {
+        if (!this.done) return;
+
+        var max = 0, data;
+        _.forIn(this.queue, (task) => {
+            max = Math.max(task.priority, max);
+            if (max == task.priority) data = task;
+        });
+        if (data) {
+            this.send(data);
+        }
+    }
+}
+class WorkerMaster {
+    constructor(mc) {
+        this.mercuryCanvas = mc;
+        this.workers = [];
+        this.queue = {};
+        this.results = {};
+
+        if (typeof window.Worker == 'function') {
+            let numberOfWorkers = navigator.hardwareConcurrency > 0 ? navigator.hardwareConcurrency : mc.state.workers;
+            for (let i = 0; i < numberOfWorkers; i++) {
+                let worker = new MercuryWorker();
+                this.workers.push(worker);
+            }
+        }
+    }
+    addAction(task) {
+        task.type = _.isString(task.type) ? task.type : '';
+        task.originalProgress = _.isFunction(task.progress) ? task.progress : () => { };
+        task.finish = _.isFunction(task.finish) ? task.finish : () => { };
+
+        task.progress = (data) => {
+            console.log('progress');
+            var res = this.results[task.id];
+            var que = this.queue[task.id];
+
+            res.push(data.data);
+
+            if (_.isFunction(task.originalProgress)) task.originalProgress(data);
+
+            if (res.length == que.parts.length) {
+                var temp = {};
+                if (task.type == 'trim') {
+                    var max = {
+                        x: 0,
+                        y: 0
+                    };
+                    var min = {
+                        x: Infinity,
+                        y: Infinity
+                    };
+
+                    _.each(res, (part) => {
+                        min.x = Math.min(min.x, part.bound.x);
+                        min.y = Math.min(min.y, part.bound.y);
+                        max.x = Math.max(max.x, part.bound.x2);
+                        max.y = Math.max(max.y, part.bound.y2);
+                    });
+                    temp = {
+                        x: min.x,
+                        y: min.y,
+                        x2: max.x,
+                        y2: max.y
+                    };
+                }
+                console.log(temp);
+                if (_.isFunction(task.finish)) task.finish(temp);
             }
         };
 
-        this.receive = this.receive.bind(this);
+        task.id = _.uniqueId('action_');
+        this.queue[task.id] = task;
+        this.results[task.id] = [];
+        this.splitToWorkers(task);
     }
-    send(data) {
-        var msg = {
-            which: data.which,
-            id: data.id,
-            data: data.data
-        };
+    splitToWorkers(data) {
+        if (data.type == 'trim') {
+            data.parts = [];
+            var pixels = data.data.data;
+            var length = data.data.data.length;
 
-        this.worker.postMessage(msg);
-    }
-    receive(e) {
-        if (!e || !e.data) return false;
-
-        var data = e.data;
-        if (!_.isObject(data)) return false;
-        if (_.isString(data.event) && _.isString(data.id)) {
-            if (data.event == 'finish') return delete this.queue[data.id];
-            if (data.event == 'progress') return this.queue[data.id].progress(data.progress);
-            if (data.event == 'data') return this.queue[data.id].cb(data.data);
+            var last = 0;
+            for (var i = 0; i < this.workers.length; i++) {
+                var temp = {
+                    width: data.data.width,
+                    data: pixels.slice(length / this.workers.length * i, length / this.workers.length * (i + 1)),
+                };
+                temp.startIndex = last;
+                last += temp.data.length;
+                data.parts.push(temp);
+            }
         }
-    }
-    action(data) {
-        data = _.merge({
-            which: 'active',
-            data: { test: true },
-            progress: (p) => console.log('Worker progress:', p),
-            cb: (data) => console.log(data)
-        }, data);
-
-        data.id = _.uniqueId('act_');
-        this.queue[data.id] = data;
-        this.send(data);
+        _.each(data.parts, (part, index) => {
+            this.workers[index % this.workers.length].addAction({
+                type: 'trim',
+                taskID: data.id,
+                data: data.parts[index],
+                progress: data.progress,
+                finish: data.finish
+            });
+        });
     }
 }
 
 class Mouse {
     constructor() {
-        this.points = [];
+        this.reset();
     }
     reset() {
         this.points = [];
+        this.extremes = {
+            x: Infinity,
+            y: Infinity,
+            x2: 0,
+            y2: 0
+        };
     }
 }
 
@@ -203,6 +321,7 @@ class MercuryCanvas {
         this.state = {
             background: '#fff',
             strokeColor: '#000',
+            workers: 1,
             lineWidth: 20,
             handlerSize: 18,
             menus: [],
@@ -219,14 +338,7 @@ class MercuryCanvas {
             mercuryCanvas: this
         });
 
-        this.workers = [];
-        if (typeof window.Worker == 'function') {
-            let numberOfWorkers = navigator.hardwareConcurrency > 0 ? navigator.hardwareConcurrency : 1;
-            for (let i = 0; i < numberOfWorkers; i++) {
-                let worker = new MercuryWorker();
-                this.workers.push(worker);
-            }
-        }
+        this.workerMaster = new WorkerMaster(this);
 
         this.state.menus.push(new Toolbar({
             parent: this,
@@ -243,12 +355,6 @@ class MercuryCanvas {
         this.layersContainer = $('<div>', {
             class: 'layersContainer'
         }).appendTo(this.element);
-        $(document.body).on('mousedown', this.mouseDown.bind(this));
-        $(document.body).on('mousemove', this.mouseMove.bind(this));
-        $(document.body).on('mouseup touchcancel touchend', this.mouseUp.bind(this));
-        $(document.body).on('mouseout', this.mouseLeave.bind(this));
-        $(document.body).on('touchstart', this.touchStart.bind(this));
-        $(document.body).on('touchmove', this.touchMove.bind(this));
 
         this.base = new Layer({
             name: 'base',
@@ -294,25 +400,46 @@ class MercuryCanvas {
                 this.session.keys[key] = false;
                 this.emit('key.up');
             },
+            'mouseout': e => {
+                _.forIn(this.state.activeTools, (tool) => {
+                    tool.mouseLeave(e);
+                });
+                this.emit('mouseout', e);
+            },
             'mousedown': e => {
+                this.mouseDown(e);
                 this.emit('mousedown', e);
             },
             'mousemove': e => {
+                _.forIn(this.state.activeTools, (tool) => {
+                    if (typeof tool.mouseMove == 'function') tool.mouseMove(e);
+                    if (typeof tool.draw == 'function') requestAnimationFrame(tool.draw.bind(tool, e));
+                });
                 this.emit('mousemove', e);
             },
             'mouseup': e => {
+                e.stopPropagation();
+                this.mouseUp(e);
                 this.emit('mouseup', e);
             },
             'touchstart': e => {
+                this.mouseDown(e.originalEvent.touches[0]);
                 this.emit('touchstart', e);
             },
             'touchend': e => {
+                this.mouseUp(e);
                 this.emit('touchend', e);
             },
             'touchmove': e => {
+                _.forIn(this.state.activeTools, (tool) => {
+                    if (_.isFunction(tool.touchMove)) tool.touchMove(e);
+                    else if (_.isFunction(tool.mouseMove)) tool.mouseMove(e.originalEvent.touches[0]);
+                    if (typeof tool.draw == 'function') requestAnimationFrame(tool.draw.bind(tool, e.originalEvent.touches[0]));
+                });
                 this.emit('touchmove', e);
             },
             'touchcancel': e => {
+                this.mouseUp(e);
                 this.emit('touchcancel', e);
             }
         });
@@ -324,7 +451,7 @@ class MercuryCanvas {
                 src: temp.imageData
             });
             img.on('load', () => {
-                for (var i = 0; i < 5; i++) {
+                for (var i = 0; i < 1; i++) {
                     new Layer({
                         image: img[0],
                         parent: self,
@@ -375,31 +502,10 @@ class MercuryCanvas {
             tool.mouseDown(e);
         });
     }
-    mouseMove(e) {
-        _.forIn(this.state.activeTools, (tool) => {
-            if (typeof tool.mouseMove == 'function') tool.mouseMove(e);
-            if (typeof tool.draw == 'function') requestAnimationFrame(tool.draw.bind(tool, e));
-        });
-    }
     mouseUp(e) {
         this.session.mouse.down = false;
         _.forIn(this.state.activeTools, (tool) => {
             tool.mouseUp(e);
-        });
-    }
-    mouseLeave(e) {
-        _.forIn(this.state.activeTools, (tool) => {
-            tool.mouseLeave(e);
-        });
-    }
-    touchStart(e) {
-        this.mouseDown(e.originalEvent.touches[0]);
-    }
-    touchMove(e) {
-        _.forIn(this.state.activeTools, (tool) => {
-            if (_.isFunction(tool.touchMove)) tool.touchMove(e);
-            else if (_.isFunction(tool.mouseMove)) tool.mouseMove(e.originalEvent.touches[0]);
-            if (typeof tool.draw == 'function') requestAnimationFrame(tool.draw.bind(tool, e.originalEvent.touches[0]));
         });
     }
     resize(forced) {

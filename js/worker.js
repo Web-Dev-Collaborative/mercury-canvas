@@ -1,21 +1,11 @@
-/* eslint no-unused-vars: 0 */
 import _ from 'lodash';
 
 global.onmessage = (e) => {
-    if (!e) {
-        var init = {
-            id: 'init',
-            event: 'data',
-            data: 'Worker init'
-        };
+    // console.log(e);
+    if (!e) return;
 
-        global.postMessage(init);
-        init.event = 'finish';
-        return postMessage(init);
-    }
-    
     var data = e.data;
-    if (_.isFunction(global[data.which])) global[data.which](data);
+    if (_.isFunction(global[data.type])) global[data.type](data);
 };
 global.onmessage();
 
@@ -23,15 +13,44 @@ global.active = (data) => {
     postMessage({
         id: data.id,
         event: 'progress',
-        progress: 0.99 + 0.01
+        data: 'test'
     });
+};
+global.trim = (data) => {
+    var pixels = data.data;
+    var startIndex = data.data.startIndex;
+    var width = data.data.width;
+    var bound = {
+        x: Infinity,
+        y: Infinity,
+        x2: 0,
+        y2: 0,
+    };
+    var x, y;
+
+    for (var i = 0, l = pixels.data.length; i < l; i += 4) {
+        if (pixels.data[i + 3] === 0) continue;
+
+        var w = i + startIndex;
+        x = (w / 4) % width;
+        y = ~~((w / 4) / width);
+
+        bound.x = Math.min(x, bound.x);
+        bound.y = Math.min(y, bound.y);
+        bound.x2 = Math.max(x, bound.x2);
+        bound.y2 = Math.max(y, bound.y2);
+    }
+    bound.x--;
+    bound.y--;
+    bound.x2 += 2;
+    bound.y2 += 2;
     postMessage({
         id: data.id,
-        event: 'data',
-        data: 'Success'
-    });
-    postMessage({
-        id: data.id,
-        event: 'finish'
+        event: 'progress',
+        data: {
+            bound: bound,
+            startIndex: startIndex,
+            width: width
+        }
     });
 };
