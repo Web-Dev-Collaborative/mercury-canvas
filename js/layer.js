@@ -138,10 +138,14 @@ class Layer {
             y: options.y
         });
     }
-    select() {
+    select(type) {
         this.selected = true;
-        this.mercuryCanvas.session.selectedLayers.select(this);
+        this.mercuryCanvas.session.selectedLayers.select(this, type);
         this.mercuryCanvas.emit('layer.select', this);
+    }
+    deselect() {
+        this.selected = false;
+        this.mercuryCanvas.emit('layer.deselect', this);
     }
     resize(options) {
         if (!_.isObject(options) || !_.isNumber(options.width) || !_.isNumber(options.height)) return;

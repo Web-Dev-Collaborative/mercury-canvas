@@ -6,10 +6,14 @@ var log = require('loglevel-message-prefix')(window.log.getLogger('session.js'),
 import _ from 'lodash';
 import {coords} from './helpers.js';
 
-class SelectedLayer {
-    constructor() {
+class SelectedLayers {
+    constructor(mc) {
+        this.mercuryCanvas = mc;
         this.list = [];
         this.rect = {};
+        this.state = {
+            transform: false
+        };
     }
     makeBox() {
         var rect = new coords({
@@ -32,9 +36,21 @@ class SelectedLayer {
         rect.height = rect.y2 - rect.y;
         this.rect = rect;
     }
-    select(layer) {
-        this.list.push(layer);
+    select(layer, type) {
+        if (type == 'append') {
+            this.list.push(layer);
+        }
+        else if (type == 'only') {
+            _.each(this.list, (l) => {
+                l.deselect();
+            });
+            this.list = [layer];
+        }
         this.makeBox();
+    }
+    transformStart() {
+        if (this.state.transform) return;
+        this.state.transform = true;
     }
 }
 
@@ -58,13 +74,14 @@ class Session {
             width: 0,
             height: 0,
             mouse: new Mouse(),
-            selectedLayers: new SelectedLayer(),
+            selectedLayers: null,
             mercuryCanvas: null,
             keys: {},
             operations: [],
             operationIndex: 0,
             zIndex: 1
         }, e);
+        this.selectedLayers = new SelectedLayers(this.mercuryCanvas);
     }
     undo() {
         this.operationIndex--;

@@ -363,7 +363,15 @@ class LayerThumbnail {
             this.layer.toggleVisibility(e);
         });
         this.wrapper.on('click', () => {
-            this.layer.select();
+            if (this.layer.mercuryCanvas.session.keys['ctrl']) {
+                this.layer.select('append');
+            }
+            else if (this.layer.mercuryCanvas.session.keys['shift']) {
+                this.layer.select('append');
+            }
+            else {
+                this.layer.select('only');
+            }
         });
         this.wrapper.prependTo(options.parent);
     }
@@ -542,6 +550,13 @@ class LayersPanel extends Menu {
             });
         });
         mc.on('layer.select', (layer) => {
+            var thumbnail = self.elementToThumbnail({
+                layer: layer
+            });
+            if (!thumbnail) return;
+            thumbnail.update();
+        });
+        mc.on('layer.deselect', (layer) => {
             var thumbnail = self.elementToThumbnail({
                 layer: layer
             });
