@@ -201,6 +201,52 @@ class Mouse {
         };
     }
 }
+class State {
+    constructor() {
+        this.local = localStorage.getItem('mercuryCanvas');
+        try {
+            this.local = JSON.parse(this.local);
+        }
+        catch (e) {
+            log.warn('Local settings are corrupted');
+            this.local = {};
+        }
+        var saveDefaults;
+        if (!this.local) {
+            this.local = {};
+            saveDefaults = true;
+        }
+        _.merge(this, {
+            background: '#fff',
+            strokeColor: '#000',
+            workers: 1,
+            lineWidth: 20,
+            handlerSize: 18,
+            menus: [],
+            activeTools: [],
+            snap: {
+                menuDistance: 40,
+                distance: 20,
+                toStartPosition: true,
+                toWindowMargin: true,
+                toLayer: false
+            }
+        }, this.local);
+        if (saveDefaults) this.save();
+    }
+    save() {
+        var temp = _.clone(this);
+        delete temp.activeTools;
+        delete temp.menus;
+        delete temp.local;
+
+        var dif = _.reduce(temp, (result, value, key) => _.isEqual(value, this.local[key]) ? result : result.concat(key), []);
+
+        if (dif.length != 0) {
+            localStorage.setItem('mercuryCanvas', JSON.stringify(temp));
+        }
+    }
+}
 
 class Session {
     constructor(e) {
@@ -318,22 +364,7 @@ class MercuryCanvas {
             fitToWindow: [],
             list: []
         };
-        this.state = {
-            background: '#fff',
-            strokeColor: '#000',
-            workers: 1,
-            lineWidth: 20,
-            handlerSize: 18,
-            menus: [],
-            activeTools: [],
-            snap: {
-                menuDistance: 40,
-                distance: 20,
-                toStartPosition: true,
-                toWindowMargin: true,
-                toLayer: false
-            }
-        };
+        this.state = new State();
         this.session = new Session({
             mercuryCanvas: this
         });
@@ -418,7 +449,6 @@ class MercuryCanvas {
                 this.emit('mousemove', e);
             },
             'mouseup': e => {
-                e.stopPropagation();
                 this.mouseUp(e);
                 this.emit('mouseup', e);
             },
