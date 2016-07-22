@@ -5,6 +5,7 @@ var log = require('loglevel-message-prefix')(window.log.getLogger('session.js'),
 });
 import _ from 'lodash';
 import {coords} from './helpers.js';
+import Layer from './layer.js';
 
 class SelectedLayers {
     constructor(mc) {
@@ -36,30 +37,119 @@ class SelectedLayers {
         rect.height = rect.y2 - rect.y;
         this.rect = rect;
     }
-    select(layer, type) {
+    select(layer, type = 'only') {
         if (type == 'append') {
             this.list.push(layer);
         }
         else if (type == 'only') {
             _.each(this.list, (l) => {
+                if (l == layer) return;
                 l.deselect();
             });
             this.list = [layer];
         }
         this.makeBox();
     }
+    deselectAll() {
+        _.each(this.list, (layer) => {
+            layer.deselect();
+        });
+        this.list = [];
+    }
     transformStart() {
         if (this.state.transform) return;
         this.state.transform = true;
     }
 }
+class File {
+    constructor(mc) {
+        this.mercuryCanvas = mc;
+        this.input = $('<input>', {
+            type: 'file',
+            name: 'picture',
+            accept: 'image/*',
+            multiple: true
+        }).hide().appendTo(mc.element);
 
+        this.a = $('<a>', {
+            style: 'display: none',
+            download: mc.state.downloadName
+        }).appendTo(mc.element);
+
+        window.URL = window.URL || window.webkitURL;
+        this.useBlob = window.URL;
+
+        this.input.on('change', () => {
+            var files = this.input[0].files;
+            _.each(files, (file) => {
+                var reader = new FileReader();
+
+                reader.onload = () => {
+                    var image = new Image();
+                    image.addEventListener('load', () => {
+                        if (this.useBlob) {
+                            window.URL.revokeObjectURL(file);
+                        }
+                        this.load(image, {
+                            name: file.name,
+                            width: image.width,
+                            height: image.height,
+                            type: file.type,
+                            size: {
+                                mb: Math.round(file.size / 1024 / 1024),
+                                kb: Math.round(file.size / 1024),
+                                b: file.size
+                            }
+                        });
+                    });
+
+                    image.src = this.useBlob ? window.URL.createObjectURL(file) : reader.result;
+                };
+
+                reader.readAsDataURL(file);
+            });
+        });
+    }
+    load(image, imageInfo) {
+        if (imageInfo.size.mb > 0.5) log.warn('The image could slow the app down.');
+        new Layer({
+            image: image,
+            parent: this.mercuryCanvas,
+            name: imageInfo.name
+        });
+    }
+    openUploadDialog() {
+        this.input.click();
+    }
+    download() {
+        var mc = this.mercuryCanvas;
+        var zSorted = [];
+        _.each(mc.layers.list, (layer) => {
+            zSorted[layer.coords.z] = layer;
+        });
+
+        mc.overlay.context.drawImage(mc.base.canvas, 0, 0);
+        _.each(zSorted, (layer) => {
+            if (!layer) return;
+            mc.overlay.context.drawImage(layer.canvas, layer.coords.x, layer.coords.y);
+        });
+
+        mc.overlay.canvas.toBlob((blob) => {
+            var url = window.URL.createObjectURL(blob);
+            this.a[0].href = url;
+            this.a[0].click();
+            setTimeout(() => window.URL.revokeObjectURL(url));
+            mc.overlay.clear();
+        });
+    }
+}
 class Mouse {
     constructor() {
         this.reset();
     }
     reset() {
         this.points = [];
+        this.delta = {};
         this.extremes = {
             x: Infinity,
             y: Infinity,
@@ -76,11 +166,13 @@ class Session {
             mouse: new Mouse(),
             selectedLayers: null,
             mercuryCanvas: null,
+            file: null,
             keys: {},
             operations: [],
             operationIndex: 0,
             zIndex: 1
         }, e);
+        this.file = new File(this.mercuryCanvas);
         this.selectedLayers = new SelectedLayers(this.mercuryCanvas);
     }
     undo() {

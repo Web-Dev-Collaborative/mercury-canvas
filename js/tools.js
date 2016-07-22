@@ -13,6 +13,24 @@ import 'simple-color-picker/simple-color-picker.css';
 
 var topbarTools = [
     {
+        name: 'upload',
+        icon: 'fa-folder',
+        action: true,
+        key: 'mod + o',
+        select: function () {
+            this.mercuryCanvas.session.file.openUploadDialog();
+        }
+    },
+    {
+        name: 'download',
+        icon: 'fa-floppy-o',
+        action: true,
+        key: 'mod + s',
+        select: function () {
+            this.mercuryCanvas.session.file.download();
+        }
+    },
+    {
         name: 'undo',
         action: true,
         key: 'mod + z',

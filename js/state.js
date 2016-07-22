@@ -21,6 +21,7 @@ class State {
             saveDefaults = true;
         }
         _.merge(this, {
+            downloadName: 'Picture.png',
             background: '#fff',
             strokeColor: '#000',
             workers: 1,
