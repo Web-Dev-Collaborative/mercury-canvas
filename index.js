@@ -58,6 +58,11 @@ class MercuryCanvas {
             fixed: 'right'
         }));
 
+        $('<div>', {
+            class: 'dropText',
+            html: 'Drop to load'
+        }).appendTo(this.element);
+
         this.layersContainer = $('<div>', {
             class: 'layersContainer'
         }).appendTo(this.element);

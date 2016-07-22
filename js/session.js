@@ -80,34 +80,37 @@ class File {
         this.useBlob = window.URL;
 
         this.input.on('change', () => {
-            var files = this.input[0].files;
-            _.each(files, (file) => {
-                var reader = new FileReader();
+            this.readFiles(this.input[0].files);
+        });
+    }
+    readFiles(files) {
+        _.each(files, (file) => {
+            if (!file) return;
+            var reader = new FileReader();
 
-                reader.onload = () => {
-                    var image = new Image();
-                    image.addEventListener('load', () => {
-                        if (this.useBlob) {
-                            window.URL.revokeObjectURL(file);
+            reader.onload = () => {
+                var image = new Image();
+                image.addEventListener('load', () => {
+                    if (this.useBlob) {
+                        window.URL.revokeObjectURL(file);
+                    }
+                    this.load(image, {
+                        name: file.name,
+                        width: image.width,
+                        height: image.height,
+                        type: file.type,
+                        size: {
+                            mb: Math.round(file.size / 1024 / 1024),
+                            kb: Math.round(file.size / 1024),
+                            b: file.size
                         }
-                        this.load(image, {
-                            name: file.name,
-                            width: image.width,
-                            height: image.height,
-                            type: file.type,
-                            size: {
-                                mb: Math.round(file.size / 1024 / 1024),
-                                kb: Math.round(file.size / 1024),
-                                b: file.size
-                            }
-                        });
                     });
+                });
 
-                    image.src = this.useBlob ? window.URL.createObjectURL(file) : reader.result;
-                };
+                image.src = this.useBlob ? window.URL.createObjectURL(file) : reader.result;
+            };
 
-                reader.readAsDataURL(file);
-            });
+            reader.readAsDataURL(file);
         });
     }
     load(image, imageInfo) {
@@ -133,12 +136,15 @@ class File {
             if (!layer) return;
             mc.overlay.context.drawImage(layer.canvas, layer.coords.x, layer.coords.y);
         });
+        mc.overlay.state.dirty = true;
 
         mc.overlay.canvas.toBlob((blob) => {
             var url = window.URL.createObjectURL(blob);
             this.a[0].href = url;
             this.a[0].click();
-            setTimeout(() => window.URL.revokeObjectURL(url));
+            setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+            });
             mc.overlay.clear();
         });
     }
