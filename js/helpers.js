@@ -66,7 +66,8 @@ class coords {
         var t0 = performance.now();
         var chosenLayer;
         _.forIn(mc.layers.list, (layer) => {
-            if (!layer.state.removed && layer.state.visible && this.inside(layer.coords) && (chosenLayer === undefined || layer.coords.z > chosenLayer.coords.z)) {
+            var rgba = layer.context.getImageData(this.x - layer.coords.x, this.y - layer.coords.y, 1, 1);
+            if (!layer.state.removed && layer.state.visible && this.inside(layer.coords) && (chosenLayer === undefined || layer.coords.z > chosenLayer.coords.z) && rgba.data[3] != 0) {
                 chosenLayer = layer;
             }
         });
