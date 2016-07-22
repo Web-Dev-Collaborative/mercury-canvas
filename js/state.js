@@ -28,6 +28,9 @@ class State {
             handlerSize: 18,
             menus: [],
             activeTools: [],
+            moveTool: {
+                autoSelect: true
+            },
             eyedropper: {
                 gridSize: 9,
                 gridSpace: 30

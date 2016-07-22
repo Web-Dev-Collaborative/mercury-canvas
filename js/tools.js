@@ -210,7 +210,6 @@ var topbarTools = [
         name: 'eyeDropper',
         icon: 'fa-eyedropper',
         key: 'i',
-        selected: true,
         deselect: function () {
             this.mercuryCanvas.overlay.clear();
         },
@@ -313,9 +312,15 @@ var topbarTools = [
         mouseDown: function (e) {
             var mc = this.mercuryCanvas;
             var selectedLayers = mc.session.selectedLayers;
+            var pos = new coords(e).toCanvasSpace(mc);
+            if (mc.state.moveTool.autoSelect) {
+                mc.session.selectedLayers.deselectAll();
+                var layer = pos.toLayer(mc);
+                if (!layer) return;
+                layer.select();
+            }
             if (!selectedLayers.list.length) return;
 
-            var pos = new coords(e).toCanvasSpace(mc);
 
             _.each(selectedLayers.list, (layer, index) => {
                 this.oldCoords[index] = _.clone(layer.coords);
