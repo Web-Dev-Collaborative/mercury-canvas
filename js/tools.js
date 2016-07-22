@@ -207,9 +207,90 @@ var topbarTools = [
         }
     },
     {
+        name: 'eyeDropper',
+        icon: 'fa-eyedropper',
+        key: 'i',
+        selected: true,
+        deselect: function () {
+            this.mercuryCanvas.overlay.clear();
+        },
+        draw: function (e) {
+            var mc = this.mercuryCanvas;
+            var pos = new coords(e).toCanvasSpace(mc);
+            this.lastPos = pos;
+            var rectDiameter = mc.state.eyedropper.gridSize * mc.state.eyedropper.gridSpace;
+            var radius = Math.ceil(rectDiameter / 2);
+            var radiusPixels = Math.floor(mc.state.eyedropper.gridSize / 2);
+
+            pos.width = pos.height = mc.state.eyedropper.gridSize;
+            mc.overlay.clear();
+
+            var ctx = mc.overlay.context;
+
+            ctx.save();
+            ctx.imageSmoothingEnabled = ctx.mozImageSmoothingEnabled = ctx.webkitImageSmoothingEnabled = false;
+            ctx.beginPath();
+            ctx.arc(pos.x + radius, pos.y + radius, radius, 0, 2 * Math.PI);
+            ctx.clip();
+
+            pos.width += mc.state.eyedropper.gridSize;
+            pos.height += mc.state.eyedropper.gridSize;
+
+            var relevant = [];
+            _.each(mc.layers.list, (layer) => {
+                if (!layer.state.visible || layer.state.removed) return;
+                if (pos.inside(layer.coords, true)) {
+                    relevant[layer.coords.z] = layer;
+                }
+            });
+
+            ctx.drawImage(mc.base.element[0], 0, 0, mc.state.eyedropper.gridSize, mc.state.eyedropper.gridSize, pos.x, pos.y, rectDiameter, rectDiameter);
+            _.each(relevant, (layer) => {
+                if (!layer) return;
+                ctx.drawImage(layer.element[0], pos.x - layer.coords.x - radiusPixels, pos.y - layer.coords.y - radiusPixels, mc.state.eyedropper.gridSize, mc.state.eyedropper.gridSize, pos.x, pos.y, rectDiameter, rectDiameter);
+            });
+
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(224, 224, 224, 0.8)';
+            ctx.beginPath();
+            var x = 0;
+            for (x = 1; x < mc.state.eyedropper.gridSize; x++) {
+                ctx.moveTo(pos.x + x * mc.state.eyedropper.gridSpace, pos.y);
+                ctx.lineTo(pos.x + x * mc.state.eyedropper.gridSpace, pos.y + rectDiameter);
+            }
+            for (x = 1; x < mc.state.eyedropper.gridSize; x++) {
+                ctx.moveTo(pos.x, pos.y + x * mc.state.eyedropper.gridSpace);
+                ctx.lineTo(pos.x + rectDiameter, pos.y + x * mc.state.eyedropper.gridSpace);
+            }
+            ctx.closePath();
+            ctx.stroke();
+
+            ctx.strokeStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(pos.x + rectDiameter / 2, pos.y + rectDiameter / 2, rectDiameter / 2, 0, 2 * Math.PI);
+            ctx.closePath();
+            ctx.stroke();
+
+            ctx.strokeStyle = '#000';
+            ctx.strokeRect(pos.x + rectDiameter / 2 - mc.state.eyedropper.gridSpace / 2, pos.y + rectDiameter / 2 - mc.state.eyedropper.gridSpace / 2, mc.state.eyedropper.gridSpace, mc.state.eyedropper.gridSpace);
+            ctx.strokeStyle = '#FFF';
+            ctx.strokeRect(pos.x + rectDiameter / 2 - mc.state.eyedropper.gridSpace / 2 + 1, pos.y + rectDiameter / 2 - mc.state.eyedropper.gridSpace / 2 + 1, mc.state.eyedropper.gridSpace - 2, mc.state.eyedropper.gridSpace - 2);
+            ctx.restore();
+
+            mc.overlay.state.dirty = true;
+        },
+        mouseDown: function () {
+            var mc = this.mercuryCanvas;
+            var ctx = mc.overlay.context;
+            var temp = Math.floor(mc.state.eyedropper.gridSpace * mc.state.eyedropper.gridSize / 2);
+            var rgb = ctx.getImageData(this.lastPos.x + temp, this.lastPos.y + temp, 1, 1).data;
+
+            mc.state.strokeColor = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+        }
+    },
+    {
         name: 'move',
         icon: 'fa-arrows',
-        selected: true,
         key: 'v',
         load: function () {
             this.oldCoords = [];

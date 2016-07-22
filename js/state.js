@@ -28,6 +28,10 @@ class State {
             handlerSize: 18,
             menus: [],
             activeTools: [],
+            eyedropper: {
+                gridSize: 9,
+                gridSpace: 30
+            },
             snap: {
                 menuDistance: 40,
                 distance: 20,

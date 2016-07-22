@@ -44,9 +44,14 @@ class coords {
         _.merge(this, options);
         this.emit('update');
     }
-    inside(coord) {
+    inside(coord, partial) {
         if (!_.isObject(coord)) return;
-        return this.x >= coord.x && this.x <= coord.x + coord.width && this.y >= coord.y && this.y <= coord.y + coord.height;
+        if (partial) {
+            var x = (this.x >= coord.x || this.x + this.width >= coord.x) && this.x <= coord.x + coord.width;
+            var y = (this.y >= coord.y || this.y + this.height >= coord.y) && this.y <= coord.y + coord.height;
+            return x || y;
+        }
+        else return this.x >= coord.x && this.x <= coord.x + coord.width && this.y >= coord.y && this.y <= coord.y + coord.height;
     }
     toCanvasSpace(mc) {
         var base = mc.layersContainer.coords;
