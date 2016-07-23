@@ -160,16 +160,16 @@ class Layer {
         ctx.restore();
     }
     trim(options) {
-        // if (_.isObject(options) && ['x', 'y', 'x2', 'y2'].every(k => k in options)) {
-        //     this.trimToCoords(options);
-        // }
-        // else {
+        if (_.isObject(options) && ['x', 'y', 'x2', 'y2'].every(k => k in options)) {
+            this.trimToCoords(options);
+        }
+        else {
             this.mercuryCanvas.workerMaster.addAction({
                 type: 'trim',
                 data: this.context.getImageData(0, 0, this.coords.width, this.coords.height),
                 finish: this.trimToCoords.bind(this)
             });
-        // }
+        }
     }
     trimToCoords(bound) {
         var t0 = performance.now();
