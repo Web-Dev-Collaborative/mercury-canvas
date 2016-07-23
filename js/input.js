@@ -9,7 +9,8 @@ class Input {
             required: false,
             type: 'input',
             value: null,
-            message: ''
+            message: '',
+            min: 1
         }, options);
         if (!this.label) this.label = this.name;
 
@@ -21,7 +22,8 @@ class Input {
             type: this.type,
             name: this.name,
             value: this.value,
-            required: this.required
+            required: this.required,
+            min: this.min
         }).appendTo(div);
         $('<span>', {
             class: 'highlight'
