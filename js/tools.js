@@ -406,7 +406,7 @@ var topbarTools = [
             var newImages = [];
             var erased = [];
             async.each(mc.layers.list, (layer, callback) => {
-                if (((mouse.extremes.x > layer.coords.x || mouse.extremes.x2 > layer.coords.x) && mouse.extremes.x2 < layer.coords.x + layer.coords.width) || ((mouse.extremes.y > layer.coords.y || mouse.extremes.y2 > layer.coords.y) && mouse.extremes.y2 < layer.coords.y + layer.coords.height)) {
+                if (mouse.extremes.x > layer.coords.x || mouse.extremes.x2 > layer.coords.x || mouse.extremes.x2 < layer.coords.x + layer.coords.width || mouse.extremes.y > layer.coords.y || mouse.extremes.y2 > layer.coords.y || mouse.extremes.y2 < layer.coords.y + layer.coords.height) {
                     async.waterfall([
                         (cb) => {
                             layer.canvas.toBlob((blob) => {
@@ -423,6 +423,7 @@ var topbarTools = [
                             layer.context.globalCompositeOperation = 'destination-out';
                             layer.context.drawImage(mc.overlay.canvas, -1 * layer.coords.x, -1 * layer.coords.y);
                             layer.context.restore();
+                            layer.trim();
                             cb();
                         },
                         (cb) => {
@@ -443,8 +444,6 @@ var topbarTools = [
                     old: oldImages,
                     new: newImages
                 });
-
-                console.log(mc.session.operations[mc.session.operations.length - 1]);
 
                 mc.overlay.clear();
                 mouse.reset();
