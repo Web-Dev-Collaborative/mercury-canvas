@@ -180,7 +180,11 @@ class Layer {
             width: bound.x2 - bound.x,
             height: bound.y2 - bound.y
         });
-
+        if (bound.x == Infinity || bound.y == Infinity) {
+            this.state.dirty = true;
+            this.clear();
+            return;
+        }
         var trimmed = this.context.getImageData(bound.x, bound.y, this.coords.width, this.coords.height);
 
         this.element.attr({
