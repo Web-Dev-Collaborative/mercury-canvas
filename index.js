@@ -186,6 +186,15 @@ class MercuryCanvas {
             this.overlay.element.css('zIndex', this.session.zIndex);
             this.session.zIndex = this.session.zIndex;
         });
+        this.on('undo.layer.add', (operation) => {
+            operation.layer.remove(true);
+        });
+        this.on('redo.layer.add', (operation) => {
+            operation.layer.restore();
+        });
+        this.on('operationRemove.layer.add', (operation) => {
+            operation.layer.delete();
+        });
         log.debug('Init complete');
     }
     addShortcut(shortcuts, callback) {

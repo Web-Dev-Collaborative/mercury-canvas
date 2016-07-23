@@ -115,10 +115,14 @@ class File {
     }
     load(image, imageInfo) {
         if (imageInfo.size.mb > 0.5) log.warn('The image could slow the app down.');
-        new Layer({
+        var layer = new Layer({
             image: image,
             parent: this.mercuryCanvas,
             name: imageInfo.name
+        });
+        this.mercuryCanvas.session.addOperation({
+            type: 'layer.add',
+            layer: layer
         });
     }
     openUploadDialog() {
@@ -251,8 +255,12 @@ class Session {
     clearOrphanOperations() {
         var removed = this.operations.splice(this.operationIndex);
         _.forIn(removed, (operation) => {
-            if (!_.isObject(operation.tool) || !_.isFunction(operation.tool.operationRemove)) return;
-            operation.tool.operationRemove(operation);
+            if (_.isObject(operation.tool) && _.isFunction(operation.tool.operationRemove)) {
+                operation.tool.operationRemove(operation);
+            }
+            if (_.isString(operation.type)) {
+                this.mercuryCanvas.emit('operationRemove.' + operation.type, operation);
+            }
         });
     }
     toggleButton(e) {
