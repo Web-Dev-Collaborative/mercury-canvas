@@ -406,6 +406,7 @@ class LayersPanel extends Menu {
     constructor(options) {
         super(options);
         var self = this;
+        var mc = this.mercuryCanvas;
         this.element.addClass('layersPanel');
 
         this.layersList = $('<div>', {
@@ -421,6 +422,19 @@ class LayersPanel extends Menu {
                 class: 'fa fa-fw fa-trash'
             })
         }).appendTo(this.buttons.wrapper);
+
+        mc.addShortcut('del', () => {
+            this.buttons.trash.click();
+        });
+        this.buttons.trash.on('click', () => {
+            var toRemove = [];
+            _.each(mc.session.selectedLayers.list, (layer) => {
+                toRemove.push(layer);
+            });
+            _.each(toRemove, (layer) => {
+                layer.remove();
+            });
+        });
 
         this.last = {};
         this.sortable = new sortable(this.layersList[0], {
@@ -486,7 +500,6 @@ class LayersPanel extends Menu {
 
         this.thumbnails = [];
         this.lastID = 0;
-        var mc = this.mercuryCanvas;
 
         mc.on('layer.new', (layer) => {
             this.lastID++;
