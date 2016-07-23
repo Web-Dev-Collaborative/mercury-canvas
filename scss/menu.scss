@@ -4,6 +4,7 @@
     position: absolute;
     border: 1px solid $grey-800;
     background: #535353;
+    color: $white;
     z-index: 1000;
     box-sizing: border-box;
 
@@ -24,7 +25,6 @@
         position: absolute;
         top: 0;
         left: 0;
-        color: $white;
         cursor: grab;
         opacity: 0.5;
 
@@ -135,6 +135,24 @@
         }
         &.selected {
             border-color: $grey-300;
+        }
+    }
+}
+
+.settings{
+    background: #fff;
+    color: $grey-800;
+    padding: 15px 15px 0;
+
+    .settingsParent{
+        padding-left: 20px;
+
+        h6{
+            margin-left: -20px;
+            font-size: 16px;
+            text-transform: capitalize;
+            font-weight: 700;
+            color: $main-500;
         }
     }
 }

@@ -8,6 +8,7 @@ import classnames from 'classnames';
 import sortable from 'sortablejs';
 import {Matrix} from 'transformation-matrix-js';
 import {coords} from './helpers';
+import Input from './input.js';
 
 class Tool {
     constructor(options, parent) {
@@ -83,6 +84,7 @@ class Menu {
     constructor(options) {
         _.merge(this, {
             classes: '',
+            fixable: true,
             fixed: false,
             mouseDown: false,
             orientation: {
@@ -126,6 +128,7 @@ class Menu {
             });
             var mouseup = function () {
                 this.mouseDown = false;
+                if (!this.fixable) return;
                 this.dist = undefined;
                 if (this.clone) {
                     this.removeClone();
@@ -159,6 +162,8 @@ class Menu {
                     x: this.dist.x + e.pageX,
                     y: this.dist.y + e.pageY
                 });
+
+                if (!this.fixable) return;
 
                 var mc = this.mercuryCanvas;
                 var newSnap = this.calculateSnap({
@@ -260,6 +265,78 @@ class Menu {
         }
         else {
             // dragable menu, make sure it stays on screen
+        }
+    }
+}
+
+class Settings extends Menu {
+    constructor(options) {
+        super(options);
+
+        this.fixable = false;
+        this.classes += ' settings';
+        this.element.addClass('settings');
+        this.parseSettings(this.mercuryCanvas.state);
+    }
+    parseSettings(e, parent = '') {
+        var notSettings = ['activeTools', 'local', 'menus'];
+        _.forIn(e, (value, key) => {
+            if (notSettings.indexOf(key) != -1) return;
+            if (_.isObject(value)) {
+                this.parseSettings(value, key);
+                return;
+            }
+            this.addBool({
+                parent: parent,
+                value: value,
+                key: key
+            });
+        });
+    }
+    addBool(options) {
+        var id = options.key;
+        if (options.parent) id = options.parent + '-' + id;
+        id = 'settings-' + id;
+        var div;
+
+        if (typeof options.value == 'number') {
+            div = new Input({
+                id: id,
+                name: options.key,
+                value: options.value,
+                required: true,
+                type: 'number',
+                message: 'Please input a valid number'
+            });
+            div.on('changeVerified', (e, val, id) => {
+                var keys = id.split('-');
+                var key = keys[keys.length - 1];
+                var parent = keys[keys.length - 2];
+                if (parent == 'settings') {
+                    this.mercuryCanvas.state[key] = val;
+                }
+                else {
+                    this.mercuryCanvas.state[parent][key] = val;
+                }
+                this.mercuryCanvas.state.save();
+                this.mercuryCanvas.emit('state.update');
+            });
+        }
+        if (!div) return;
+        if (options.parent) {
+            var temp = $('#settings-' + options.parent);
+            if (!temp.length) {
+                temp = $('<div>', {
+                    class: 'settingsParent',
+                    id: 'settings-' + options.parent
+                });
+                $(`<h6>${options.parent}</h6>`).appendTo(temp);
+                temp.appendTo(this.element);
+            }
+            div.appendTo(temp);
+        }
+        else {
+            div.appendTo(this.element);
         }
     }
 }
@@ -669,4 +746,4 @@ class LayersPanel extends Menu {
     }
 }
 
-export {Toolbar, LayersPanel};
+export {Toolbar, LayersPanel, Settings};

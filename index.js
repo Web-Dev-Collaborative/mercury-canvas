@@ -26,7 +26,7 @@ import Mousetrap from 'mousetrap';
 import {topbarTools} from './js/tools.js';
 import {coords} from './js/helpers.js';
 import Layer from './js/layer.js';
-import {Toolbar, LayersPanel} from './js/toolbar.js';
+import {Toolbar, LayersPanel, Settings} from './js/toolbar.js';
 import WorkerMaster from './js/workerMaster.js';
 import State from './js/state.js';
 import Session from './js/session.js';
@@ -56,6 +56,11 @@ class MercuryCanvas {
             parent: this,
             classes: '',
             fixed: 'right'
+        }));
+        this.state.menus.push(new Settings({
+            parent: this,
+            classes: '',
+            fixed: false
         }));
 
         $('<div>', {
@@ -122,6 +127,7 @@ class MercuryCanvas {
                 this.emit('mousedown', e);
             },
             'mousemove': e => {
+                this.session.mouse.lastEvent = e;
                 _.forIn(this.state.activeTools, (tool) => {
                     if (typeof tool.mouseMove == 'function') tool.mouseMove(e);
                     if (typeof tool.draw == 'function') requestAnimationFrame(tool.draw.bind(tool, e));

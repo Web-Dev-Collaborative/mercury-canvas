@@ -79,6 +79,11 @@ var topbarTools = [
             this.zIndex = 0;
             this.shown = false;
             this.matrix = new Matrix();
+            mc.on('state.update', () => {
+                if (!this.selected) return;
+                this.mouseMove(mc.session.mouse.lastEvent);
+                this.draw();
+            });
         },
         select: function () {
             var mc = this.mercuryCanvas;
@@ -155,6 +160,7 @@ var topbarTools = [
             requestAnimationFrame(this.draw.bind(this, e));
         },
         mouseMove: function (e) {
+            if (!e) return;
             var mc = this.mercuryCanvas;
 
             var css = {};
@@ -244,18 +250,27 @@ var topbarTools = [
         name: 'eyeDropper',
         icon: 'fa-eyedropper',
         key: 'i',
+        load: function () {
+            var mc = this.mercuryCanvas;
+            mc.on('state.update', () => {
+                if (!this.selected) return;
+                this.draw(mc.session.mouse.lastEvent);
+            });
+        },
         deselect: function () {
             this.mercuryCanvas.overlay.clear();
         },
         draw: function (e) {
+            if (!e) return;
             var mc = this.mercuryCanvas;
             var pos = new coords(e).toCanvasSpace(mc);
-            this.lastPos = pos;
-            var rectDiameter = mc.state.eyedropper.gridSize * mc.state.eyedropper.gridSpace;
+            var gridSize = mc.state.eyedropper.gridSize;
+            gridSize = gridSize % 2 == 0 ? gridSize + 1 : gridSize;
+            var rectDiameter = gridSize * mc.state.eyedropper.gridSpace;
             var radius = Math.ceil(rectDiameter / 2);
-            var radiusPixels = Math.floor(mc.state.eyedropper.gridSize / 2);
+            var radiusPixels = Math.floor(gridSize / 2);
 
-            pos.width = pos.height = mc.state.eyedropper.gridSize;
+            pos.width = pos.height = gridSize;
             mc.overlay.clear();
 
             var ctx = mc.overlay.context;
@@ -266,8 +281,8 @@ var topbarTools = [
             ctx.arc(pos.x + radius, pos.y + radius, radius, 0, 2 * Math.PI);
             ctx.clip();
 
-            pos.width += mc.state.eyedropper.gridSize;
-            pos.height += mc.state.eyedropper.gridSize;
+            pos.width += gridSize;
+            pos.height += gridSize;
 
             var relevant = [];
             _.each(mc.layers.list, (layer) => {
@@ -277,21 +292,21 @@ var topbarTools = [
                 }
             });
 
-            ctx.drawImage(mc.base.element[0], 0, 0, mc.state.eyedropper.gridSize, mc.state.eyedropper.gridSize, pos.x, pos.y, rectDiameter, rectDiameter);
+            ctx.drawImage(mc.base.element[0], 0, 0, gridSize, gridSize, pos.x, pos.y, rectDiameter, rectDiameter);
             _.each(relevant, (layer) => {
                 if (!layer) return;
-                ctx.drawImage(layer.element[0], pos.x - layer.coords.x - radiusPixels, pos.y - layer.coords.y - radiusPixels, mc.state.eyedropper.gridSize, mc.state.eyedropper.gridSize, pos.x, pos.y, rectDiameter, rectDiameter);
+                ctx.drawImage(layer.element[0], pos.x - layer.coords.x - radiusPixels, pos.y - layer.coords.y - radiusPixels, gridSize, gridSize, pos.x, pos.y, rectDiameter, rectDiameter);
             });
 
             ctx.lineWidth = 1;
             ctx.strokeStyle = 'rgba(224, 224, 224, 0.8)';
             ctx.beginPath();
             var x = 0;
-            for (x = 1; x < mc.state.eyedropper.gridSize; x++) {
+            for (x = 1; x < gridSize; x++) {
                 ctx.moveTo(pos.x + x * mc.state.eyedropper.gridSpace, pos.y);
                 ctx.lineTo(pos.x + x * mc.state.eyedropper.gridSpace, pos.y + rectDiameter);
             }
-            for (x = 1; x < mc.state.eyedropper.gridSize; x++) {
+            for (x = 1; x < gridSize; x++) {
                 ctx.moveTo(pos.x, pos.y + x * mc.state.eyedropper.gridSpace);
                 ctx.lineTo(pos.x + rectDiameter, pos.y + x * mc.state.eyedropper.gridSpace);
             }
@@ -314,9 +329,12 @@ var topbarTools = [
         },
         mouseDown: function () {
             var mc = this.mercuryCanvas;
+            var lastPos = new coords(mc.session.mouse.lastEvent).toCanvasSpace(mc);
             var ctx = mc.overlay.context;
-            var temp = Math.floor(mc.state.eyedropper.gridSpace * mc.state.eyedropper.gridSize / 2);
-            var rgb = ctx.getImageData(this.lastPos.x + temp, this.lastPos.y + temp, 1, 1).data;
+            var gridSize = mc.state.eyedropper.gridSize;
+            gridSize = gridSize % 2 == 0 ? gridSize + 1 : gridSize;
+            var temp = Math.floor(mc.state.eyedropper.gridSpace * gridSize / 2);
+            var rgb = ctx.getImageData(lastPos.x + temp, lastPos.y + temp, 1, 1).data;
 
             mc.state.strokeColor = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
         }
