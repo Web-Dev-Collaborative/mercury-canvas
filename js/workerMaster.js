@@ -22,12 +22,22 @@ class MercuryWorker {
         this.receive = this.receive.bind(this);
         this.processQueue();
     }
-    send(data) {
-        this.worker.postMessage({
-            type: data.type,
-            id: data.id,
-            data: data.data
-        });
+    send(data, buffer) {
+        if (buffer) {
+            this.worker.postMessage({
+                type: data.type,
+                data: data.data,
+                buffer: buffer,
+                id: data.id
+            }, [buffer]);
+        }
+        else {
+            this.worker.postMessage({
+                type: data.type,
+                data: data.data,
+                id: data.id
+            });
+        }
         this.done = false;
     }
     receive(e) {
@@ -145,12 +155,13 @@ class WorkerMaster {
 
             var last = 0;
             for (var i = 0; i < this.workers.length; i++) {
+                var buffer = pixels.slice(length / this.workers.length * i, length / this.workers.length * (i + 1)).buffer;
                 var temp = {
                     width: data.data.width,
-                    data: pixels.slice(length / this.workers.length * i, length / this.workers.length * (i + 1)),
+                    pixels: buffer,
+                    startIndex: last
                 };
-                temp.startIndex = last;
-                last += temp.data.length;
+                last += buffer.byteLength;
                 data.parts.push(temp);
             }
         }

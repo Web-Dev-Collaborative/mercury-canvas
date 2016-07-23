@@ -1,7 +1,6 @@
 import _ from 'lodash';
 
 global.onmessage = (e) => {
-    // console.log(e);
     if (!e) return;
 
     var data = e.data;
@@ -17,7 +16,7 @@ global.active = (data) => {
     });
 };
 global.trim = (data) => {
-    var pixels = data.data;
+    var pixels = new Uint8Array(data.data.pixels);
     var startIndex = data.data.startIndex;
     var width = data.data.width;
     var bound = {
@@ -28,8 +27,8 @@ global.trim = (data) => {
     };
     var x, y;
 
-    for (var i = 0, l = pixels.data.length; i < l; i += 4) {
-        if (pixels.data[i + 3] === 0) continue;
+    for (var i = 0, l = pixels.length; i < l; i += 4) {
+        if (pixels[i + 3] === 0) continue;
 
         var w = i + startIndex;
         x = (w / 4) % width;
