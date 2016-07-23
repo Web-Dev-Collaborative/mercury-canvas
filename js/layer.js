@@ -100,16 +100,8 @@ class Layer {
         }
 
         if (this.image) {
-            this.resize({
-                width: this.image.width,
-                height: this.image.height
-            });
-            this.context.drawImage(this.image, 0, 0);
-            this.state.dirty = true;
-
-            this.coords.update({
-                x: (this.mercuryCanvas.layersContainer.coords.width - this.image.width) / 2,
-                y: (this.mercuryCanvas.layersContainer.coords.height - this.image.height) / 2
+            this.draw(this.image, {
+                resize: true
             });
             delete this.image;
         }
@@ -168,16 +160,16 @@ class Layer {
         ctx.restore();
     }
     trim(options) {
-        if (_.isObject(options) && ['x', 'y', 'x2', 'y2'].every(k => k in options)) {
-            this.trimToCoords(options);
-        }
-        else {
+        // if (_.isObject(options) && ['x', 'y', 'x2', 'y2'].every(k => k in options)) {
+        //     this.trimToCoords(options);
+        // }
+        // else {
             this.mercuryCanvas.workerMaster.addAction({
                 type: 'trim',
                 data: this.context.getImageData(0, 0, this.coords.width, this.coords.height),
                 finish: this.trimToCoords.bind(this)
             });
-        }
+        // }
     }
     trimToCoords(bound) {
         var t0 = performance.now();
@@ -199,6 +191,16 @@ class Layer {
         this.mercuryCanvas.emit('layer.update', this);
         var t1 = performance.now();
         log.debug('I spent ' + (t1 - t0) + 'ms to trim the layer');
+    }
+    draw(image, options = {}) {
+        if (options.resize) {
+            this.resize({
+                width: image.width,
+                height: image.height
+            });
+        }
+        this.context.drawImage(image, 0, 0);
+        this.state.dirty = true;
     }
     clear() {
         if (!this.state.dirty) return;

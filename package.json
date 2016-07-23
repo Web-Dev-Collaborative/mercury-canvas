@@ -9,6 +9,7 @@
     "watch:scsslint": "nodemon --quiet --watch scss/*.* -x \"npm run scsslint\""
   },
   "devDependencies": {
+    "async": "^2.0.1",
     "autoprefixer": "^6.3.7",
     "babel-core": "^6.10.4",
     "babel-eslint": "^6.1.2",

@@ -4,6 +4,7 @@ var log = require('loglevel-message-prefix')(window.log.getLogger('tools.js'), {
     separator: '/'
 });
 import _ from 'lodash';
+import async from 'async';
 import {Matrix} from 'transformation-matrix-js';
 import {coords} from './helpers.js';
 import Layer from './layer.js';
@@ -244,6 +245,242 @@ var topbarTools = [
         },
         redo: function (e) {
             e.layer.restore();
+        }
+    },
+    {
+        name: 'eraser',
+        icon: 'fa-eraser',
+        key: 'e',
+        load: function () {
+            var mc = this.mercuryCanvas;
+            this.cursor = $('.brushCursor', mc.layersContainer);
+            this.canShow = false;
+            this.zIndex = 0;
+            this.shown = false;
+            this.matrix = new Matrix();
+            mc.on('state.update', () => {
+                if (!this.selected) return;
+                this.mouseMove(mc.session.mouse.lastEvent);
+                this.draw();
+            });
+        },
+        select: function () {
+            var mc = this.mercuryCanvas;
+
+            mc.overlay.clear();
+            this.canShow = true;
+            mc.layersContainer.css({
+                cursor: 'none'
+            });
+        },
+        deselect: function () {
+            var mc = this.mercuryCanvas;
+
+            this.cursor.hide();
+            mc.layersContainer.css({
+                cursor: 'default'
+            });
+            this.shown = false;
+            this.canShow = false;
+        },
+        draw: function () {
+            var t0 = performance.now();
+            var mc = this.mercuryCanvas;
+            var points = mc.session.mouse.points;
+            if (!points.length) return;
+
+            mc.overlay.clear();
+
+            mc.overlay.context.beginPath();
+            mc.overlay.context.moveTo(points[0].x, points[0].y);
+
+            if (points.length < 3) {
+                var b = points[0];
+                mc.overlay.context.beginPath();
+                mc.overlay.context.arc(b.x, b.y, mc.overlay.context.lineWidth / 2, 0, Math.PI * 2, false);
+                mc.overlay.context.fill();
+                mc.overlay.context.closePath();
+                mc.overlay.state.dirty = true;
+                return;
+            }
+
+            for (var i = 0; i < points.length - 2; i++) {
+                var point1 = points[i];
+                var point2 = points[i + 1];
+                var c = (point1.x + point2.x) / 2;
+                var d = (point1.y + point2.y) / 2;
+
+                mc.overlay.context.quadraticCurveTo(point1.x, point1.y, c, d);
+            }
+
+            mc.overlay.context.quadraticCurveTo(
+                points[i].x,
+                points[i].y,
+                points[i + 1].x,
+                points[i + 1].y
+            );
+
+            mc.overlay.context.stroke();
+            mc.overlay.state.dirty = true;
+            var t1 = performance.now();
+            log.debug('I spent ' + (t1 - t0) + 'ms to draw the overlay');
+        },
+        mouseDown: function (e) {
+            var mc = this.mercuryCanvas;
+
+            mc.session.mouse.points = [];
+
+            mc.overlay.context.lineWidth = mc.state.lineWidth;
+            mc.overlay.context.strokeStyle = mc.state.background;
+            mc.overlay.context.fillStyle = mc.state.background;
+            mc.overlay.context.lineCap = mc.overlay.context.lineJoin = 'round';
+
+            this.mouseMove(e);
+            requestAnimationFrame(this.draw.bind(this, e));
+        },
+        mouseMove: function (e) {
+            if (!e) return;
+            var mc = this.mercuryCanvas;
+
+            var css = {};
+            if (this.canShow && !this.shown) {
+                this.shown = true;
+                this.cursor.show();
+            }
+            if (this.zIndex - 1 < mc.session.zIndex) {
+                css.zIndex = mc.session.zIndex + 1;
+                this.zIndex = mc.session.zIndex + 1;
+            }
+            if (mc.state.lineWidth != this.size) {
+                css.width = mc.state.lineWidth;
+                css.height = mc.state.lineWidth;
+                this.size = mc.state.lineWidth;
+            }
+
+            var mouse = mc.session.mouse;
+            var pos = new coords(e).toCanvasSpace(mc);
+
+            this.matrix.translate(pos.x - this.matrix.e, pos.y - this.matrix.f);
+            this.matrix.translate(-mc.state.lineWidth / 2, -mc.state.lineWidth / 2);
+            css.transform = this.matrix.toCSS();
+
+            this.cursor.css(css);
+            if (!mouse.down) return;
+
+            if (mc.session.keys.shift && mouse.points.length) {
+                var initial = mouse.points[0];
+                if (!_.isNumber(mouse.delta.x) || !_.isNumber(mouse.delta.y)) {
+                    mouse.delta = {
+                        x: Math.abs(pos.x - initial.x),
+                        y: Math.abs(pos.y - initial.y)
+                    };
+                }
+
+                if (mouse.delta.x > mouse.delta.y) {
+                    pos.y = initial.y;
+                }
+                else {
+                    pos.x = initial.x;
+                }
+            }
+
+            mouse.points.push(pos);
+            mouse.extremes = {
+                x: Math.min(mouse.extremes.x, pos.x),
+                y: Math.min(mouse.extremes.y, pos.y),
+                x2: Math.max(mouse.extremes.x2, pos.x),
+                y2: Math.max(mouse.extremes.y2, pos.y)
+            };
+        },
+        mouseUp: function () {
+            var mc = this.mercuryCanvas;
+            var mouse = mc.session.mouse;
+            if (!mouse.points.length) return;
+
+            mouse.extremes.x -= mc.state.lineWidth / 2 + 1;
+            mouse.extremes.y -= mc.state.lineWidth / 2 + 1;
+            mouse.extremes.x2 += mc.state.lineWidth / 2 + 1;
+            mouse.extremes.y2 += mc.state.lineWidth / 2 + 1;
+
+            var oldImages = [];
+            var newImages = [];
+            var erased = [];
+            async.each(mc.layers.list, (layer, callback) => {
+                if (((mouse.extremes.x > layer.coords.x || mouse.extremes.x2 > layer.coords.x) && mouse.extremes.x2 < layer.coords.x + layer.coords.width) || ((mouse.extremes.y > layer.coords.y || mouse.extremes.y2 > layer.coords.y) && mouse.extremes.y2 < layer.coords.y + layer.coords.height)) {
+                    async.waterfall([
+                        (cb) => {
+                            layer.canvas.toBlob((blob) => {
+                                oldImages.push({
+                                    element: layer.element,
+                                    image: URL.createObjectURL(blob)
+                                });
+                                cb();
+                            });
+                        },
+                        (cb) => {
+                            erased.push(layer);
+                            layer.context.save();
+                            layer.context.globalCompositeOperation = 'destination-out';
+                            layer.context.drawImage(mc.overlay.canvas, -1 * layer.coords.x, -1 * layer.coords.y);
+                            layer.context.restore();
+                            cb();
+                        },
+                        (cb) => {
+                            layer.canvas.toBlob((blob) => {
+                                newImages.push({
+                                    element: layer.element,
+                                    image: URL.createObjectURL(blob)
+                                });
+                                cb();
+                            });
+                        },
+                    ], callback);
+                }
+            }, () => {
+                mc.session.addOperation({
+                    tool: this,
+                    layers: erased,
+                    old: oldImages,
+                    new: newImages
+                });
+
+                console.log(mc.session.operations[mc.session.operations.length - 1]);
+
+                mc.overlay.clear();
+                mouse.reset();
+            });
+        },
+        operationRemove: function (operation) {
+            _.each(operation.old.concat(operation.new), (e) => {
+                URL.revokeObjectURL(e.image);
+            });
+        },
+        undo: function (operation) {
+            _.each(operation.old, (old) => {
+                var image = new Image();
+                image.addEventListener('load', () => {
+                    var layer = this.elementToLayer(old.element);
+                    layer.clear();
+                    layer.draw(image);
+                });
+
+                image.src = old.image;
+            });
+        },
+        redo: function (operation) {
+            _.each(operation.new, (newImage) => {
+                var image = new Image();
+                image.addEventListener('load', () => {
+                    var layer = this.elementToLayer(newImage.element);
+                    layer.clear();
+                    layer.draw(image);
+                });
+
+                image.src = newImage.image;
+            });
+        },
+        elementToLayer(e) {
+            return _.find(this.mercuryCanvas.layers.list, { element: e });
         }
     },
     {
