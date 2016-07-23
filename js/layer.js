@@ -201,6 +201,7 @@ class Layer {
         }
         this.context.drawImage(image, 0, 0);
         this.state.dirty = true;
+        this.mercuryCanvas.emit('layer.update', this);
     }
     clear() {
         if (!this.state.dirty) return;
