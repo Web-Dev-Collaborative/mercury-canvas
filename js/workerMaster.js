@@ -104,7 +104,6 @@ class WorkerMaster {
         task.finish = _.isFunction(task.finish) ? task.finish : () => { };
 
         task.progress = (data) => {
-            console.log('progress');
             var res = this.results[task.id];
             var que = this.queue[task.id];
 
@@ -137,7 +136,6 @@ class WorkerMaster {
                         y2: max.y
                     };
                 }
-                console.log(temp);
                 if (_.isFunction(task.finish)) task.finish(temp);
             }
         };
