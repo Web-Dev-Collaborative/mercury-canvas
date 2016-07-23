@@ -86,7 +86,7 @@ class Menu {
             classes: '',
             fixable: true,
             fixed: false,
-            mouseDown: false,
+            mouse: {},
             orientation: {
                 horizontal: false,
                 vertical: false
@@ -107,109 +107,50 @@ class Menu {
         this.element = menu;
 
         var mc = this.mercuryCanvas;
+
+        this.mouseDown = this.mouseDown.bind(this);
+        this.mouseUp = this.mouseUp.bind(this);
+        this.mouseMove = this.mouseMove.bind(this);
+        this.element.on('mousedown touchstart', (e) => {
+            if (this.unfixable) return;
+            this.time = setTimeout(() => {
+                this.willUnfix = true;
+                this.mouseDown({
+                    pageX: 10, // handle size / 2
+                    pageY: 20
+                });
+                this.mouseMove(e);
+            }, 1000);
+        });
+
+        this.matrix = new Matrix();
+        this.coords = new coords();
+        this.handle = $('<div>', {
+            class: 'handle',
+            html: $('<i>', {
+                class: 'fa fa-fw fa-bars'
+            })
+        }).prependTo(menu);
+        if (this.fixed) {
+            this.handle.hide();
+        }
+
+        this.handle.on('mousedown touchstart', this.mouseDown);
+
+        mc.on('mouseup', this.mouseUp);
+        mc.on('touchcancel', this.mouseUp);
+        mc.on('touchend', this.mouseUp);
+        mc.on('mousemove', this.mouseMove);
+        mc.on('touchmove', (e) => this.mouseMove(e.originalEvent.touches[0]));
+
+        this.coords.on('update', () => {
+            this.matrix.reset();
+            this.matrix.translate(this.coords.x, this.coords.y);
+            this.element.css({
+                transform: this.matrix.toCSS()
+            });
+        });
         if (this.fixed === false) {
-            this.handle = $('<div>', {
-                class: 'handle',
-                html: $('<i>', {
-                    class: 'fa fa-fw fa-bars'
-                })
-            }).prependTo(menu);
-
-            this.matrix = new Matrix();
-            this.coords = new coords();
-            this.handle.on('mousedown touchstart', (e) => {
-                this.mouseDown = true;
-                if (e.pageX && e.pageY) {
-                    this.dist = {
-                        x: this.coords.x - e.pageX,
-                        y: this.coords.y - e.pageY
-                    };
-                }
-            });
-            var mouseup = function () {
-                this.mouseDown = false;
-                if (!this.fixable) return;
-                this.dist = undefined;
-                if (this.clone) {
-                    this.removeClone();
-                    if (!this.snap) return;
-
-                    this.fixed = this.snap;
-                    this.determineOrientation(true);
-
-                    this.element.removeClass('horizontal vertical left right top bottom').addClass(this.fixed).addClass('fixed').removeAttr('style');
-                    this.element.addClass(this.orientation.horizontal ? 'horizontal' : 'vertical');
-                    mc.resize(true);
-                }
-            };
-            mouseup = mouseup.bind(this);
-            mc.on('mouseup', mouseup);
-            mc.on('touchcancel', mouseup);
-            mc.on('touchend', mouseup);
-
-            var mousemove = function (e) {
-                if (!this.mouseDown) {
-                    return;
-                }
-                if (!this.dist) {
-                    this.dist = {
-                        x: this.coords.x - e.pageX,
-                        y: this.coords.y - e.pageY
-                    };
-                }
-
-                this.coords.update({
-                    x: this.dist.x + e.pageX,
-                    y: this.dist.y + e.pageY
-                });
-
-                if (!this.fixable) return;
-
-                var mc = this.mercuryCanvas;
-                var newSnap = this.calculateSnap({
-                    x: e.pageX,
-                    y: e.pageY
-                });
-
-                if (newSnap) {
-                    if (this.clone && this.snap == newSnap) return;
-                    if (this.snap != newSnap) this.removeClone();
-
-                    this.clone = this.element.clone().removeAttr('style').addClass('fixed');
-                    if (newSnap == 'left') {
-                        this.clone.addClass('left vertical').removeClass('horizontal');
-                    }
-                    if (newSnap == 'right') {
-                        this.clone.addClass('right vertical').removeClass('horizontal');
-                    }
-                    if (newSnap == 'top') {
-                        this.clone.addClass('top horizontal').removeClass('vertical');
-                    }
-                    if (newSnap == 'bottom') {
-                        this.clone.addClass('bottom horizontal').removeClass('vertical');
-                    }
-                    this.clone.css({
-                        zIndex: 1001,
-                        opacity: 0.8
-                    });
-                    this.clone.appendTo(mc.element);
-                }
-                else if (this.clone) {
-                    this.removeClone();
-                }
-                this.snap = newSnap;
-            };
-            mousemove = mousemove.bind(this);
-            mc.on('mousemove', mousemove);
-            mc.on('touchmove', (e) => mousemove(e.originalEvent.touches[0]));
-
-            this.coords.on('update', () => {
-                this.matrix.reset();
-                this.matrix.translate(this.coords.x, this.coords.y);
-                this.element.css({
-                    transform: this.matrix.toCSS()
-                });
-            });
             setTimeout(() => {
                 this.coords.update({
                     width: this.element.width(),
@@ -267,13 +208,116 @@ class Menu {
             // dragable menu, make sure it stays on screen
         }
     }
+    mouseDown(e) {
+        this.mouse.down = true;
+        if (_.isNumber(e.pageX) && _.isNumber(e.pageY) && !this.dist) {
+            this.dist = {
+                x: this.coords.x - e.pageX,
+                y: this.coords.y - e.pageY
+            };
+        }
+        if (this.willUnfix) {
+            this.willUnfix = false;
+            this.unfix();
+        }
+    }
+    mouseMove(e) {
+        if (!this.mouse.down) {
+            return;
+        }
+        if (!this.dist) {
+            this.dist = {
+                x: this.coords.x - e.pageX,
+                y: this.coords.y - e.pageY
+            };
+        }
+
+        this.coords.update({
+            x: this.dist.x + e.pageX,
+            y: this.dist.y + e.pageY
+        });
+
+        if (!this.fixable) return;
+
+        var mc = this.mercuryCanvas;
+        var newSnap = this.calculateSnap({
+            x: e.pageX,
+            y: e.pageY
+        });
+
+        if (newSnap) {
+            if (this.clone && this.snap == newSnap) return;
+            if (this.snap != newSnap) this.removeClone();
+
+            this.clone = this.element.clone().removeAttr('style').addClass('fixed');
+            if (newSnap == 'left') {
+                this.clone.addClass('left vertical').removeClass('horizontal');
+            }
+            if (newSnap == 'right') {
+                this.clone.addClass('right vertical').removeClass('horizontal');
+            }
+            if (newSnap == 'top') {
+                this.clone.addClass('top horizontal').removeClass('vertical');
+            }
+            if (newSnap == 'bottom') {
+                this.clone.addClass('bottom horizontal').removeClass('vertical');
+            }
+            this.clone.css({
+                zIndex: 1001,
+                opacity: 0.8
+            });
+            this.clone.appendTo(mc.element);
+        }
+        else if (this.clone) {
+            this.removeClone();
+        }
+        this.snap = newSnap;
+    }
+    mouseUp() {
+        clearTimeout(this.time);
+        this.mouse.down = false;
+        this.dist = undefined;
+        this.handle.removeClass('active');
+        if (!this.fixable) return;
+
+        if (this.clone) {
+            this.removeClone();
+            if (!this.snap) return;
+
+            this.fix();
+        }
+    }
+    fix() {
+        this.fixed = this.snap;
+        this.determineOrientation(true);
+
+        this.element.removeClass('horizontal vertical left right top bottom').addClass(this.fixed).addClass('fixed').removeAttr('style');
+        this.element.addClass(this.orientation.horizontal ? 'horizontal' : 'vertical');
+        this.handle.hide();
+        this.coords.update({
+            x: 0,
+            y: 0
+        });
+        this.mercuryCanvas.resize(true);
+    }
+    unfix() {
+        this.fixed = false;
+        this.determineOrientation(true);
+        this.element.removeClass('fixed left right top bottom').removeAttr('style');
+        this.handle.show();
+        this.mercuryCanvas.resize(true);
+        this.coords.update({
+            width: this.element.width(),
+            height: this.element.height()
+        });
+        this.handle.addClass('active');
+    }
 }
 
 class Settings extends Menu {
     constructor(options) {
         super(options);
 
-        this.fixable = false;
         this.classes += ' settings';
         this.element.addClass('settings');
         this.parseSettings(this.mercuryCanvas.state);

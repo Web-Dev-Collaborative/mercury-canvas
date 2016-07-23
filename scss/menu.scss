@@ -29,7 +29,8 @@
         cursor: grab;
         opacity: 0.5;
 
-        &:active{
+        &:active,
+        &.active{
             cursor: grabbing;
         }
         .fa{

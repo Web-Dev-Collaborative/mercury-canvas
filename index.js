@@ -49,18 +49,19 @@ class MercuryCanvas {
         this.state.menus.push(new Toolbar({
             parent: this,
             classes: '',
-            fixed: false,
+            fixed: 'top',
             tools: topbarTools
         }));
         this.state.menus.push(new LayersPanel({
             parent: this,
+            unfixable: true,
             classes: '',
             fixed: 'right'
         }));
         this.state.menus.push(new Settings({
             parent: this,
             classes: '',
-            fixed: false
+            fixed: 'left'
         }));
 
         $('<div>', {
