@@ -279,49 +279,53 @@ class Settings extends Menu {
         this.parseSettings(this.mercuryCanvas.state);
     }
     parseSettings(e, parent = '') {
-        var notSettings = ['activeTools', 'local', 'menus'];
+        var notSettings = ['activeTools', 'local', 'menus', 'strokeColor', 'background', 'handlerSize', 'color', 'toLayer', 'toWindowMargin'];
         _.forIn(e, (value, key) => {
             if (notSettings.indexOf(key) != -1) return;
             if (_.isObject(value)) {
                 this.parseSettings(value, key);
                 return;
             }
-            this.addBool({
+            this.addVariable({
                 parent: parent,
                 value: value,
                 key: key
             });
         });
     }
-    addBool(options) {
+    addVariable(options) {
         var id = options.key;
         if (options.parent) id = options.parent + '-' + id;
         id = 'settings-' + id;
         var div;
 
+        var obj = {
+            id: id,
+            name: options.key,
+            value: options.value
+        };
         if (typeof options.value == 'number') {
-            div = new Input({
-                id: id,
-                name: options.key,
-                value: options.value,
-                required: true,
-                type: 'number',
-                message: 'Please input a valid number'
-            });
-            div.on('changeVerified', (e, val, id) => {
-                var keys = id.split('-');
-                var key = keys[keys.length - 1];
-                var parent = keys[keys.length - 2];
-                if (parent == 'settings') {
-                    this.mercuryCanvas.state[key] = val;
-                }
-                else {
-                    this.mercuryCanvas.state[parent][key] = val;
-                }
-                this.mercuryCanvas.state.save();
-                this.mercuryCanvas.emit('state.update');
-            });
+            obj.required = true;
+            obj.type = 'number';
+            obj.message = 'Please input a valid number';
         }
+        else if (typeof options.value == 'boolean') {
+            obj.type = 'boolean';
+        }
+        div = new Input(obj);
+        div.on('changeVerified', (e, val, id) => {
+            var keys = id.split('-');
+            var key = keys[keys.length - 1];
+            var parent = keys[keys.length - 2];
+            if (parent == 'settings') {
+                this.mercuryCanvas.state[key] = val;
+            }
+            else {
+                this.mercuryCanvas.state[parent][key] = val;
+            }
+            this.mercuryCanvas.state.save();
+            this.mercuryCanvas.emit('state.update');
+        });
         if (!div) return;
         if (options.parent) {
             var temp = $('#settings-' + options.parent);

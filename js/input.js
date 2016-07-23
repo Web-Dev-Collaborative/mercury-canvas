@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import classnames from 'classnames';
 import '../scss/input.scss';
 
 class Input {
@@ -16,33 +17,60 @@ class Input {
 
         var div = $('<div>', {
             id: this.id,
-            class: 'materialInput'
+            class: classnames({
+                materialInput: true,
+                checkbox: this.type == 'boolean'
+            })
         });
-        var input = $('<input>', {
-            type: this.type,
-            name: this.name,
-            value: this.value,
-            required: this.required,
-            min: this.min
-        }).appendTo(div);
-        $('<span>', {
-            class: 'highlight'
-        }).appendTo(div);
-        $('<span>', {
-            class: 'bar'
-        }).appendTo(div);
-        $('<label>', {
-            for: this.name,
-            html: this.label
-        }).appendTo(div);
-        $('<div>', {
-            class: 'message',
-            html: this.message
-        }).appendTo(div);
-        input.on('change input verify', () => {
-            var val = input.val().trim();
+        var input;
+        if (this.type == 'boolean') {
+            $('<label>', {
+                for: this.name,
+                html: this.label + ':'
+            }).appendTo(div);
+            input = $('<input>', {
+                type: 'checkbox',
+                name: this.name,
+                checked: this.value
+            }).appendTo(div);
+        }
+        else {
+            input = $('<input>', {
+                type: this.type,
+                name: this.name,
+                value: this.value,
+                required: this.required,
+                min: this.min
+            }).appendTo(div);
+            $('<span>', {
+                class: 'highlight'
+            }).appendTo(div);
+            $('<span>', {
+                class: 'bar'
+            }).appendTo(div);
+            $('<label>', {
+                for: this.name,
+                html: this.label
+            }).appendTo(div);
+            $('<div>', {
+                class: 'message',
+                html: this.message
+            }).appendTo(div);
+        }
 
-            if (this.verify(val)) {
+        input.on('change input verify', () => {
+            var val;
+            if (this.type == 'boolean') {
+                val = input.is(':checked');
+            }
+            else {
+                val = input.val().trim();
+            }
+
+            if (this.type == 'boolean') {
+                div.trigger('changeVerified', [val, this.id]);
+            }
+            else if (this.verify(val)) {
                 div.removeClass('error empty');
                 if (this.type == 'number') val = parseFloat(val);
                 if (this.value != val) {

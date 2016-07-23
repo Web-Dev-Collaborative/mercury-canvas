@@ -7,6 +7,7 @@
     color: $white;
     z-index: 1000;
     box-sizing: border-box;
+    overflow: auto;
 
     &.top {
         top: 0;
@@ -148,6 +149,7 @@
         padding-left: 20px;
 
         h6{
+            margin-bottom: 0;
             margin-left: -20px;
             font-size: 16px;
             text-transform: capitalize;

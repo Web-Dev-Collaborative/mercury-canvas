@@ -19,6 +19,20 @@
         box-sizing: border-box;
     }
 
+    &.checkbox{
+        input{
+            display: inline-block;
+            width: auto;
+        }
+        label{
+            position: initial;
+            opacity: 1;
+            pointer-events: all;
+            color: $main-500;
+            padding-right: 5px;
+        }
+    }
+
     input {
         display: block;
         width: 100%;
