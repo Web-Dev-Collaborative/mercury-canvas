@@ -671,13 +671,13 @@ var topbarTools = [
         select: function () {
             var mc = this.mercuryCanvas;
             mc.overlay.clear();
-            mc.session.operationIndex = 0;
-            mc.session.clearOrphanOperations();
-            mc.session.updateMenus();
 
             _.forIn(_.clone(mc.layers.list), (layer) => {
                 layer.remove();
             });
+            mc.session.operationIndex = 0;
+            mc.session.clearOrphanOperations();
+            mc.session.updateMenus();
         }
     },
     {
