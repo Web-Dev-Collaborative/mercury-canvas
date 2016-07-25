@@ -8,7 +8,10 @@
 		"node_modules",
 		"bower_components",
 		"jspm_packages",
+		"./js/mercuryCanvas.js",
+		"./js/mercuryCanvas-modular.js",
 		"tmp",
-		"temp"
+		"temp",
+		".vscode"
 	]
 }

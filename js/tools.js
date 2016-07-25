@@ -67,7 +67,6 @@ var topbarTools = [
     {
         name: 'brush',
         icon: 'fa-paint-brush',
-        selected: true,
         key: 'b',
         load: function () {
             var mc = this.mercuryCanvas;
@@ -578,6 +577,7 @@ var topbarTools = [
     {
         name: 'move',
         icon: 'fa-arrows',
+        selected: true,
         key: 'v',
         load: function () {
             this.oldCoords = [];
@@ -621,7 +621,7 @@ var topbarTools = [
         },
         mouseMove: function (e) {
             var mc = this.mercuryCanvas;
-            if (!mc.session.mouse.down || !mc.session.mouse.initial) return;
+            if (mc.session.selectedLayers.state.transform || !mc.session.mouse.down || !mc.session.mouse.initial) return;
 
             var mouse = mc.session.mouse;
             var pos = new coords(e).toCanvasSpace(mc);

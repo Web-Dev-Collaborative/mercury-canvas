@@ -20,22 +20,50 @@ class layerCoords {
         this.matrix.translate(this.x, this.y);
         this.layer = layer;
     }
-    update(options) {
+    update(options, updateCSS = true) {
         if (_.isObject(options)) {
             var oldZ = this.z;
-            if (_.has(options, 'x')) {
-                this.matrix.translateX(options.x - this.x);
-                this.x = options.x;
+            if (options.scale) {
+                this.matrix.reset();
+
+                if (_.has(options, 'width')) {
+                    this.matrix.a = 1;
+                    this.matrix.scaleX(options.scaleX);
+                    this.width = options.width;
+                }
+                if (_.has(options, 'height')) {
+                    this.matrix.d = 1;
+                    this.matrix.scaleY(options.scaleY);
+                    this.height = options.height;
+                }
+                if (_.has(options, 'x')) {
+                    this.matrix.translateX(options.x / options.scaleX);
+                    this.x = options.x;
+                }
+                if (_.has(options, 'y')) {
+                    this.matrix.translateY(options.y / options.scaleY);
+                    this.y = options.y;
+                }
             }
-            if (_.has(options, 'y')) {
-                this.matrix.translateY(options.y - this.y);
-                this.y = options.y;
+            else {
+                if (_.has(options, 'width')) {
+                    this.width = options.width;
+                }
+                if (_.has(options, 'height')) {
+                    this.height = options.height;
+                }
+                if (_.has(options, 'x')) {
+                    this.matrix.translateX(options.x - this.x);
+                    this.x = options.x;
+                }
+                if (_.has(options, 'y')) {
+                    this.matrix.translateY(options.y - this.y);
+                    this.y = options.y;
+                }
             }
             if (_.has(options, 'z')) this.z = options.z;
-            if (_.has(options, 'width')) this.width = options.width;
-            if (_.has(options, 'height')) this.height = options.height;
         }
-        this.updateCSS();
+        if (updateCSS) this.updateCSS();
         if (options.z && options.z != oldZ) {
             this.layer.mercuryCanvas.emit('layer.z.update', {
                 z: options.z,
@@ -58,6 +86,10 @@ class layerCoords {
             if (_.has(options, 'height')) this.height += options.height;
         }
         this.updateCSS();
+    }
+    updateAttr() {
+        this.layer.element.attr('width', this.width);
+        this.layer.element.attr('height', this.height);
     }
     updateCSS() {
         this.layer.element.css({
@@ -130,6 +162,19 @@ class Layer {
             y: options.y
         });
     }
+    scale(newCoords, callback = () => { }) {
+        this.coords.update(newCoords, false);
+        this.coords.matrix.a = this.coords.matrix.d = 1;
+
+        var image = new Image();
+        image.onload = () => {
+            this.coords.updateCSS();
+            this.coords.updateAttr();
+            this.context.drawImage(image, 0, 0, newCoords.width, newCoords.height);
+            callback();
+        };
+        image.src = this.canvas.toDataURL();
+    }
     select(type) {
         this.selected = true;
         this.mercuryCanvas.session.selectedLayers.select(this, type);
@@ -150,7 +195,7 @@ class Layer {
         this.coords.update({
             width: options.width,
             height: options.height
-        });
+        }, options.update);
 
         if (_.has(this.options, 'background')) {
             ctx.fillStyle = this.options.background;
@@ -198,10 +243,11 @@ class Layer {
     }
     draw(image, options = {}) {
         if (options.resize) {
+            if (_.isUndefined(options.update)) options.update = true;
             this.resize({
                 width: image.width,
                 height: image.height
-            });
+            }, options.update);
         }
         this.context.drawImage(image, 0, 0);
         this.state.dirty = true;

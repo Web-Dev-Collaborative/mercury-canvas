@@ -1,4 +1,4 @@
-var loggingLevel = 'info';
+var loggingLevel = 'trace';
 
 import 'script!loglevel';
 var log = require('loglevel-message-prefix')(window.log, {
@@ -35,6 +35,10 @@ class MercuryCanvas {
     constructor(element) {
         _.merge(this, new EventEmitter());
         this.element = element;
+        this.layersContainer = $('<div>', {
+            class: 'layersContainer'
+        }).appendTo(this.element);
+
         this.layers = {
             fitToWindow: [],
             list: []
@@ -58,19 +62,15 @@ class MercuryCanvas {
             classes: '',
             fixed: 'right'
         }));
-        this.state.menus.push(new Settings({
-            parent: this,
-            classes: '',
-            fixed: 'left'
-        }));
+        // this.state.menus.push(new Settings({
+        //     parent: this,
+        //     classes: '',
+        //     fixed: 'left'
+        // }));
 
         $('<div>', {
             class: 'dropText',
             html: 'Drop to load'
-        }).appendTo(this.element);
-
-        this.layersContainer = $('<div>', {
-            class: 'layersContainer'
         }).appendTo(this.element);
 
         this.base = new Layer({
@@ -169,10 +169,14 @@ class MercuryCanvas {
             });
             img.on('load', () => {
                 for (var i = 0; i < 1; i++) {
-                    new Layer({
+                    var layer = new Layer({
                         image: img[0],
                         parent: self,
                         name: temp.name + ' ' + i
+                    });
+                    layer.coords.update({
+                        x: (this.base.coords.width - layer.coords.width) / 2,
+                        y: (this.base.coords.height - layer.coords.height) / 2
                     });
                 }
             });
