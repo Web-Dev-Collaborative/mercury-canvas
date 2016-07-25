@@ -518,7 +518,9 @@ class LayerThumbnail {
             selected: this.layer.selected
         }));
 
-        this.thumbnail.css('background-image', `url("${this.layer.canvas.toDataURL()}")`);
+        var bg = this.layer.noThumbnail ? './img/imageTooBig.png' : this.layer.canvas.toDataURL();
+        this.thumbnail.css('background-image', `url("${bg}")`);
+
         this.name.html(this.layer.name);
     }
     delete() {

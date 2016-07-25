@@ -620,8 +620,8 @@ class File {
                         height: image.height,
                         type: file.type,
                         size: {
-                            mb: Math.round(file.size / 1024 / 1024),
-                            kb: Math.round(file.size / 1024),
+                            mb: file.size / 1024 / 1024,
+                            kb: file.size / 1024,
                             b: file.size
                         }
                     });
@@ -634,11 +634,12 @@ class File {
         });
     }
     load(image, imageInfo) {
-        if (imageInfo.size.mb > 0.5) log.warn('The image could slow the app down.');
+        if (imageInfo.size.mb > this.mercuryCanvas.state.bigImageSizeMb) log.warn('The image could slow the app down.');
         var layer = new Layer({
             image: image,
             parent: this.mercuryCanvas,
-            name: imageInfo.name
+            name: imageInfo.name,
+            noThumbnail: imageInfo.size.mb > this.mercuryCanvas.state.bigImageSizeMb
         });
         this.mercuryCanvas.session.addOperation({
             type: 'layer.add',
