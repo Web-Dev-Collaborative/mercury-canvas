@@ -1,5 +1,22 @@
 var loggingLevel = 'info';
 
+window.blobs = [];
+class blobURL {
+    constructor() {
+        this.URL = window.URL || window.webkitURL;
+    }
+    createObjectURL(e) {
+        var url = this.URL.createObjectURL(e);
+        window.blobs.push(url);
+        return url;
+    }
+    revokeObjectURL(url) {
+        this.URL.revokeObjectURL(url);
+        _.remove(window.blobs, e => e == url);
+    }
+}
+window.URL = new blobURL();
+
 import 'script!loglevel';
 var log = require('loglevel-message-prefix')(window.log, {
     prefixes: ['level'],

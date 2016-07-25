@@ -68,14 +68,6 @@ class SelectedLayers {
         mc.addShortcut('mod + enter', () => {
             this.exitTransform();
         });
-
-        setTimeout(() => {
-            if (!mc.layers.list.length) return;
-            _.forIn(mc.layers.list, (layer) => {
-                layer.select('append');
-            });
-            this.enterTransform();
-        }, 1000);
     }
     makeBox() {
         var rect = new coords({
@@ -605,7 +597,6 @@ class File {
             download: mc.state.downloadName
         }).appendTo(mc.element);
 
-        window.URL = window.URL || window.webkitURL;
         this.useBlob = window.URL;
 
         this.input.on('change', () => {
