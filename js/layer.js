@@ -90,8 +90,8 @@ class layerCoords {
         this.updateCSS();
     }
     updateAttr() {
-        this.layer.element.attr('width', this.width);
-        this.layer.element.attr('height', this.height);
+        this.layer.element.attr('width', Math.round(this.width));
+        this.layer.element.attr('height', Math.round(this.height));
     }
     updateCSS() {
         this.layer.element.css({
@@ -171,6 +171,7 @@ class Layer {
         this.coords.updateCSS();
         this.coords.updateAttr();
         this.context.drawImage(this.original.image, 0, 0, newCoords.width, newCoords.height);
+
         this.mercuryCanvas.emit('layer.update', this);
     }
     select(type) {
