@@ -171,6 +171,7 @@ class Layer {
         this.coords.updateCSS();
         this.coords.updateAttr();
         this.context.drawImage(this.original.image, 0, 0, newCoords.width, newCoords.height);
+        this.mercuryCanvas.emit('layer.update', this);
     }
     select(type) {
         this.selected = true;
@@ -181,9 +182,7 @@ class Layer {
         this.selected = false;
         this.mercuryCanvas.emit('layer.deselect', this);
     }
-    updateOriginal() {
-        if (this.original) URL.revokeObjectURL(this.original.url);
-
+    updateOriginal(callback = () => { }) {
         this.canvas.toBlob((blob) => {
             var url = URL.createObjectURL(blob);
             var image = new Image();
@@ -194,6 +193,8 @@ class Layer {
                     image: image,
                     url: url
                 };
+                callback();
+                this.mercuryCanvas.emit('layer.update', this);
             };
             image.src = url;
         });
@@ -226,7 +227,10 @@ class Layer {
             this.mercuryCanvas.workerMaster.addAction({
                 type: 'trim',
                 data: this.context.getImageData(0, 0, this.coords.width, this.coords.height),
-                finish: this.trimToCoords.bind(this)
+                finish: (e) => {
+                    e.callback = options.callback;
+                    this.trimToCoords(e);
+                }
             });
         }
     }
@@ -254,7 +258,7 @@ class Layer {
         this.mercuryCanvas.emit('layer.update', this);
         var t1 = performance.now();
         log.debug('I spent ' + (t1 - t0) + 'ms to trim the layer');
-        this.updateOriginal();
+        this.updateOriginal(bound.callback);
     }
     draw(image, options = {}) {
         if (options.resize) {
