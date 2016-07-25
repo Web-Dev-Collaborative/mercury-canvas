@@ -4,7 +4,6 @@ var log = require('loglevel-message-prefix')(window.log.getLogger('session.js'),
     separator: '/'
 });
 import _ from 'lodash';
-import async from 'async';
 import {Matrix} from 'transformation-matrix-js';
 import {coords} from './helpers.js';
 import Layer from './layer.js';
@@ -15,6 +14,7 @@ class SelectedLayers {
         this.list = [];
         this.rect = {};
         this.state = {
+            startupDone: true,
             transform: false
         };
 
@@ -71,7 +71,9 @@ class SelectedLayers {
 
         setTimeout(() => {
             if (!mc.layers.list.length) return;
-            mc.layers.list[0].select();
+            _.forIn(mc.layers.list, (layer) => {
+                layer.select('append');
+            });
             this.enterTransform();
         }, 1000);
     }
@@ -310,6 +312,7 @@ class SelectedLayers {
     }
     mouseDown(e) {
         if (!this.state.transform) return;
+        this.state.startupDone = false;
         var mc = this.mercuryCanvas;
         var mouse = mc.session.mouse;
         var pos = new coords(e).toCanvasSpace(mc);
@@ -331,31 +334,30 @@ class SelectedLayers {
             };
 
             if (layer.original) {
-                var image = new Image();
-                image.onload = () => {
-                    dist[index].image = {
-                        width: image.width,
-                        height: image.height
-                    };
-
-                    var coords = _.clone(layer.coords);
-                    layer.draw(image, {
-                        resize: true,
-                        update: false
-                    });
-                    coords.scale = true;
-                    coords.scaleX = coords.width / image.width;
-                    coords.scaleY = coords.height / image.height;
-
-                    layer.coords.update(coords);
+                var image = layer.original.image;
+                dist[index].image = {
+                    width: image.width,
+                    height: image.height
                 };
-                image.src = layer.original;
+
+                var coords = _.clone(layer.coords);
+                layer.draw(image, {
+                    resize: true,
+                    update: false
+                });
+                coords.scale = true;
+                coords.scaleX = coords.width / image.width;
+                coords.scaleY = coords.height / image.height;
+
+                layer.coords.update(coords);
             }
         });
-        requestAnimationFrame(this.draw.bind(this, e));
+        this.state.startupDone = true;
+        this.mouseMove(e);
+        requestAnimationFrame(this.draw.bind(this));
     }
     mouseMove(e) {
-        if (!this.state.transform) return;
+        if (!this.state.transform || !this.state.startupDone) return;
         var mc = this.mercuryCanvas;
         var mouse = mc.session.mouse;
         var pos = new coords(e).toCanvasSpace(mc);
@@ -442,8 +444,6 @@ class SelectedLayers {
                         case 'nw-resize':
                             coords.width = original.width + delta.x * -1;
                             coords.height = original.height + delta.y * -1;
-                            coords.x = pos.x;
-                            coords.y = pos.y;
 
                             if (mc.session.keys.shift) {
                                 var wProp = coords.width / original.width;
@@ -562,58 +562,32 @@ class SelectedLayers {
                 old: this.oldCoords,
                 new: newCoords
             });
-            this.actioned = false;
-            this.oldCoords = [];
-            mc.session.mouse.reset();
-            requestAnimationFrame(this.draw.bind(this, e));
         }
         else {
-            var oldImages = [];
-            var newImages = [];
-            async.each(this.list, (layer, callback) => {
-                newCoords[this.list.indexOf(layer)] = _.clone(layer.coords);
-                async.waterfall([
-                    (cb) => {
-                        layer.canvas.toBlob((blob) => {
-                            var url = URL.createObjectURL(blob);
-                            if (!layer.original) layer.original = url;
-                            oldImages.push({
-                                element: layer.element,
-                                image: url
-                            });
-                            cb();
-                        });
-                    },
-                    (cb) => layer.scale(layer.coords, cb),
-                    (cb) => {
-                        layer.canvas.toBlob((blob) => {
-                            newImages.push({
-                                element: layer.element,
-                                image: URL.createObjectURL(blob)
-                            });
-                            cb();
-                        });
-                    },
-                ], callback);
-            }, () => {
-                mc.session.addOperation({
-                    type: 'transform',
-                    layers: _.clone(selectedLayers.list),
-                    coords: {
-                        old: this.oldCoords,
-                        new: newCoords
-                    },
-                    images: {
-                        old: oldImages,
-                        new: newImages
-                    }
+            var originals = [];
+            _.each(this.list, (layer, index) => {
+                newCoords[index] = _.clone(layer.coords);
+
+                originals.push({
+                    element: layer.element,
+                    original: _.clone(layer.original)
                 });
-                this.actioned = false;
-                this.oldCoords = [];
-                mc.session.mouse.reset();
-                requestAnimationFrame(this.draw.bind(this, e));
+                layer.scale(layer.coords);
+            });
+            mc.session.addOperation({
+                type: 'transform',
+                layers: _.clone(selectedLayers.list),
+                coords: {
+                    old: this.oldCoords,
+                    new: newCoords
+                },
+                originals: originals
             });
         }
+        this.actioned = false;
+        this.oldCoords = [];
+        mc.session.mouse.reset();
+        requestAnimationFrame(this.draw.bind(this, e));
     }
 }
 class File {
@@ -692,7 +666,7 @@ class File {
 
         mc.overlay.context.drawImage(mc.base.canvas, 0, 0);
         _.each(zSorted, (layer) => {
-            if (!layer) return;
+            if (!layer || !layer.state.visible || layer.state.removed) return;
             mc.overlay.context.drawImage(layer.canvas, layer.coords.x, layer.coords.y);
         });
         mc.overlay.state.dirty = true;

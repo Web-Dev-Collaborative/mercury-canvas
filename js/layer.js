@@ -9,13 +9,15 @@ import {Matrix} from 'transformation-matrix-js';
 
 class layerCoords {
     constructor(options = {}, layer) {
-        _.merge(this, {
+        var defaults = {
             x: 0,
             y: 0,
             z: layer.mercuryCanvas.session.zIndex,
             width: 0,
             height: 0
-        }, options);
+        };
+        _.merge(this, defaults, _.pick(options, Object.keys(defaults)));
+
         this.matrix = new Matrix();
         this.matrix.translate(this.x, this.y);
         this.layer = layer;
@@ -162,18 +164,13 @@ class Layer {
             y: options.y
         });
     }
-    scale(newCoords, callback = () => { }) {
+    scale(newCoords) {
         this.coords.update(newCoords, false);
         this.coords.matrix.a = this.coords.matrix.d = 1;
 
-        var image = new Image();
-        image.onload = () => {
-            this.coords.updateCSS();
-            this.coords.updateAttr();
-            this.context.drawImage(image, 0, 0, newCoords.width, newCoords.height);
-            callback();
-        };
-        image.src = this.canvas.toDataURL();
+        this.coords.updateCSS();
+        this.coords.updateAttr();
+        this.context.drawImage(this.original.image, 0, 0, newCoords.width, newCoords.height);
     }
     select(type) {
         this.selected = true;
@@ -183,6 +180,23 @@ class Layer {
     deselect() {
         this.selected = false;
         this.mercuryCanvas.emit('layer.deselect', this);
+    }
+    updateOriginal() {
+        if (this.original) URL.revokeObjectURL(this.original.url);
+
+        this.canvas.toBlob((blob) => {
+            var url = URL.createObjectURL(blob);
+            var image = new Image();
+            image.onload = () => {
+                this.original = {
+                    width: image.width,
+                    height: image.height,
+                    image: image,
+                    url: url
+                };
+            };
+            image.src = url;
+        });
     }
     resize(options) {
         if (!_.isObject(options) || !_.isNumber(options.width) || !_.isNumber(options.height)) return;
@@ -240,6 +254,7 @@ class Layer {
         this.mercuryCanvas.emit('layer.update', this);
         var t1 = performance.now();
         log.debug('I spent ' + (t1 - t0) + 'ms to trim the layer');
+        this.updateOriginal();
     }
     draw(image, options = {}) {
         if (options.resize) {
@@ -251,6 +266,8 @@ class Layer {
         }
         this.context.drawImage(image, 0, 0);
         this.state.dirty = true;
+        if (!options.update) return;
+        this.updateOriginal();
         this.mercuryCanvas.emit('layer.update', this);
     }
     clear() {

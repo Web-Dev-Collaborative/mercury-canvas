@@ -401,35 +401,23 @@ var topbarTools = [
             var erased = [];
             async.each(mc.layers.list, (layer, callback) => {
                 if (mouse.extremes.x > layer.coords.x || mouse.extremes.x2 > layer.coords.x || mouse.extremes.x2 < layer.coords.x + layer.coords.width || mouse.extremes.y > layer.coords.y || mouse.extremes.y2 > layer.coords.y || mouse.extremes.y2 < layer.coords.y + layer.coords.height) {
-                    async.waterfall([
-                        (cb) => {
-                            layer.canvas.toBlob((blob) => {
-                                oldImages.push({
-                                    element: layer.element,
-                                    image: URL.createObjectURL(blob)
-                                });
-                                cb();
-                            });
-                        },
-                        (cb) => {
-                            erased.push(layer);
-                            layer.context.save();
-                            layer.context.globalCompositeOperation = 'destination-out';
-                            layer.context.drawImage(mc.overlay.canvas, -1 * layer.coords.x, -1 * layer.coords.y);
-                            layer.context.restore();
-                            layer.trim();
-                            cb();
-                        },
-                        (cb) => {
-                            layer.canvas.toBlob((blob) => {
-                                newImages.push({
-                                    element: layer.element,
-                                    image: URL.createObjectURL(blob)
-                                });
-                                cb();
-                            });
-                        },
-                    ], callback);
+                    oldImages.push({
+                        layer: layer,
+                        original: _.clone(layer.original)
+                    });
+
+                    erased.push(layer);
+                    layer.context.save();
+                    layer.context.globalCompositeOperation = 'destination-out';
+                    layer.context.drawImage(mc.overlay.canvas, -1 * layer.coords.x, -1 * layer.coords.y);
+                    layer.context.restore();
+                    layer.updateOriginal(() => {
+                        newImages.push({
+                            layer: layer,
+                            original: _.clone(layer.original)
+                        });
+                        callback();
+                    });
                 }
             }, () => {
                 mc.session.addOperation({
@@ -444,36 +432,25 @@ var topbarTools = [
             });
         },
         operationRemove: function (operation) {
-            _.each(operation.old.concat(operation.new), (e) => {
-                URL.revokeObjectURL(e.image);
+            _.each(operation.new, (e) => {
+                URL.revokeObjectURL(e.original.url);
             });
         },
         undo: function (operation) {
-            _.each(operation.old, (old) => {
-                var image = new Image();
-                image.addEventListener('load', () => {
-                    var layer = this.elementToLayer(old.element);
-                    layer.clear();
-                    layer.draw(image);
-                });
+            _.each(operation.old, (obj) => {
+                var layer = obj.layer;
 
-                image.src = old.image;
+                layer.clear();
+                layer.draw(obj.original.image);
             });
         },
         redo: function (operation) {
-            _.each(operation.new, (newImage) => {
-                var image = new Image();
-                image.addEventListener('load', () => {
-                    var layer = this.elementToLayer(newImage.element);
-                    layer.clear();
-                    layer.draw(image);
-                });
+            _.each(operation.new, (obj) => {
+                var layer = obj.layer;
 
-                image.src = newImage.image;
+                layer.clear();
+                layer.draw(obj.original.image);
             });
-        },
-        elementToLayer(e) {
-            return _.find(this.mercuryCanvas.layers.list, { element: e });
         }
     },
     {
