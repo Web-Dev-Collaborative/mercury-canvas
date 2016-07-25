@@ -1,4 +1,4 @@
-var loggingLevel = 'trace';
+var loggingLevel = 'info';
 
 import 'script!loglevel';
 var log = require('loglevel-message-prefix')(window.log, {
@@ -62,11 +62,11 @@ class MercuryCanvas {
             classes: '',
             fixed: 'right'
         }));
-        // this.state.menus.push(new Settings({
-        //     parent: this,
-        //     classes: '',
-        //     fixed: 'left'
-        // }));
+        this.state.menus.push(new Settings({
+            parent: this,
+            classes: '',
+            fixed: 'left'
+        }));
 
         $('<div>', {
             class: 'dropText',

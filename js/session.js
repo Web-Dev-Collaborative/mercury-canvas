@@ -65,6 +65,9 @@ class SelectedLayers {
         mc.addShortcut('mod + alt + t', () => {
             this.enterTransform();
         });
+        mc.addShortcut('mod + enter', () => {
+            this.exitTransform();
+        });
 
         setTimeout(() => {
             if (!mc.layers.list.length) return;
@@ -115,18 +118,35 @@ class SelectedLayers {
     enterTransform() {
         if (this.state.transform) return;
         this.state.transform = true;
-        this.mouseMove(this.mercuryCanvas.session.mouse.lastEvent);
+
+        var mc = this.mercuryCanvas;
+        this.lastActiveTools = mc.state.activeTools;
+        _.forIn(mc.state.activeTools, (tool) => {
+            tool.deselect();
+        });
+        mc.state.activeTools = [];
+
+        this.mouseMove(mc.session.mouse.lastEvent);
     }
     exitTransform() {
-        if (this.state.transform) return;
+        if (!this.state.transform) return;
         this.state.transform = false;
-        this.mouseMove(this.mercuryCanvas.session.mouse.lastEvent);
+
+        var mc = this.mercuryCanvas;
+        this.cursor.element.hide();
+        mc.layersContainer.css({
+            cursor: 'default'
+        });
+        _.forIn(this.lastActiveTools, (tool) => {
+            tool.select();
+        });
+        mc.state.activeTools = this.lastActiveTools;
+        mc.overlay.clear();
     }
     chooseCursor(e) {
         var mc = this.mercuryCanvas;
         var layerCoords = mc.session.selectedLayers.rect;
 
-        if (mc.session.keys.ctrl) return 'copy';
         if (!layerCoords) return 'default';
 
         var pos = new coords(e).toCanvasSpace(mc);
@@ -210,6 +230,7 @@ class SelectedLayers {
         }
     }
     draw() {
+        if (!this.state.transform) return;
         var mc = this.mercuryCanvas;
         this.makeBox();
         mc.overlay.clear();
@@ -295,11 +316,28 @@ class SelectedLayers {
 
         if (_.isUndefined(mouse.action)) return;
 
+        mc.session.mouse.initial = {
+            dist: [],
+            mouse: _.clone(pos),
+            selectedLayers: this.list.map(layer => _.clone(layer.coords))
+        };
+        var dist = mc.session.mouse.initial.dist;
         _.each(this.list, (layer, index) => {
             this.oldCoords[index] = _.clone(layer.coords);
+
+            dist[index] = {
+                x: mouse.initial.mouse.x - layer.coords.x,
+                y: mouse.initial.mouse.y - layer.coords.y
+            };
+
             if (layer.original) {
                 var image = new Image();
                 image.onload = () => {
+                    dist[index].image = {
+                        width: image.width,
+                        height: image.height
+                    };
+
                     var coords = _.clone(layer.coords);
                     layer.draw(image, {
                         resize: true,
@@ -308,16 +346,12 @@ class SelectedLayers {
                     coords.scale = true;
                     coords.scaleX = coords.width / image.width;
                     coords.scaleY = coords.height / image.height;
+
                     layer.coords.update(coords);
                 };
                 image.src = layer.original;
             }
         });
-        mc.session.mouse.initial = {
-            dist: [],
-            mouse: _.clone(pos),
-            selectedLayers: this.list.map(layer => _.clone(layer.coords))
-        };
         requestAnimationFrame(this.draw.bind(this, e));
     }
     mouseMove(e) {
@@ -363,18 +397,12 @@ class SelectedLayers {
             if (mouse.action == 'move') {
                 _.each(this.list, (layer, index) => {
                     var dist = mouse.initial.dist[index];
-                    if (!_.isObject(dist)) {
-                        dist = {
-                            x: mouse.initial.mouse.x - mouse.initial.selectedLayers[index].x,
-                            y: mouse.initial.mouse.y - mouse.initial.selectedLayers[index].y
-                        };
-                    }
                     var coords = {
                         x: pos.x - dist.x,
                         y: pos.y - dist.y
                     };
                     if (mc.session.keys.shift) {
-                        var original = mouse.initial.selectedLayers[index];
+                        var original = this.oldCoords[index];
                         var delta = {
                             x: Math.abs(pos.x - mouse.initial.mouse.x),
                             y: Math.abs(pos.y - mouse.initial.mouse.y)
@@ -401,17 +429,6 @@ class SelectedLayers {
                 _.each(this.list, (layer, index) => {
                     var original = this.oldCoords[index];
                     var dist = mouse.initial.dist[index];
-                    if (!_.isObject(dist)) {
-                        dist = {
-                            x: mouse.initial.mouse.x - original.x,
-                            y: mouse.initial.mouse.y - original.y
-                        };
-                        if (layer.original) {
-                            console.log(original.matrix, layer.coords.matrix);
-                            original.width = layer.coords.width * layer.coords.matrix.a;
-                            original.height = layer.coords.height * layer.coords.matrix.d;
-                        }
-                    }
                     var coords = {
                         x: pos.x - dist.x,
                         y: pos.y - dist.y
@@ -520,8 +537,10 @@ class SelectedLayers {
 
                     newCoords[index] = _.clone(coords);
                     coords.scale = true;
-                    coords.scaleX = coords.width / original.width;
-                    coords.scaleY = coords.height / original.height;
+                    var oW = dist.image ? dist.image.width : original.width;
+                    var oH = dist.image ? dist.image.height : original.height;
+                    coords.scaleX = coords.width / oW;
+                    coords.scaleY = coords.height / oH;
                     layer.coords.update(coords, true);
                 });
             }

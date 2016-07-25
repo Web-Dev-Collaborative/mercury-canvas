@@ -430,7 +430,12 @@ class Toolbar extends Menu {
         });
     }
     selectTool(e) {
+        var mc = this.mercuryCanvas;
+        if (mc.session.selectedLayers.state.transform) {
+            mc.session.selectedLayers.exitTransform();
+        }
         var activeTools = this.parent.state.activeTools;
+
         if (this.lastTool) {
             this.lastTool.selected = false;
             activeTools.splice(activeTools.indexOf(this.lastTool), 1);

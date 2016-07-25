@@ -53,11 +53,11 @@ class layerCoords {
                     this.height = options.height;
                 }
                 if (_.has(options, 'x')) {
-                    this.matrix.translateX(options.x - this.x);
+                    this.matrix.translateX((options.x - this.x) / this.matrix.a);
                     this.x = options.x;
                 }
                 if (_.has(options, 'y')) {
-                    this.matrix.translateY(options.y - this.y);
+                    this.matrix.translateY((options.y - this.y) / this.matrix.d);
                     this.y = options.y;
                 }
             }

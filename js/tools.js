@@ -75,7 +75,6 @@ var topbarTools = [
             }).hide();
             cursor.appendTo(mc.layersContainer);
             this.cursor = cursor;
-            this.canShow = false;
             this.zIndex = 0;
             this.shown = false;
             this.matrix = new Matrix();
@@ -89,10 +88,7 @@ var topbarTools = [
             var mc = this.mercuryCanvas;
 
             mc.overlay.clear();
-            this.canShow = true;
-            mc.layersContainer.css({
-                cursor: 'none'
-            });
+            this.mouseMove(mc.session.mouse.lastEvent);
         },
         deselect: function () {
             var mc = this.mercuryCanvas;
@@ -102,7 +98,6 @@ var topbarTools = [
                 cursor: 'default'
             });
             this.shown = false;
-            this.canShow = false;
         },
         draw: function () {
             var t0 = performance.now();
@@ -164,9 +159,12 @@ var topbarTools = [
             var mc = this.mercuryCanvas;
 
             var css = {};
-            if (this.canShow && !this.shown) {
+            if (!this.shown) {
                 this.shown = true;
                 this.cursor.show();
+                mc.layersContainer.css({
+                    cursor: 'none'
+                });
             }
             if (this.zIndex - 1 < mc.session.zIndex) {
                 css.zIndex = mc.session.zIndex + 1;
@@ -253,7 +251,6 @@ var topbarTools = [
         load: function () {
             var mc = this.mercuryCanvas;
             this.cursor = $('.brushCursor', mc.layersContainer);
-            this.canShow = false;
             this.zIndex = 0;
             this.shown = false;
             this.matrix = new Matrix();
@@ -267,10 +264,6 @@ var topbarTools = [
             var mc = this.mercuryCanvas;
 
             mc.overlay.clear();
-            this.canShow = true;
-            mc.layersContainer.css({
-                cursor: 'none'
-            });
         },
         deselect: function () {
             var mc = this.mercuryCanvas;
@@ -280,7 +273,6 @@ var topbarTools = [
                 cursor: 'default'
             });
             this.shown = false;
-            this.canShow = false;
         },
         draw: function () {
             var t0 = performance.now();
@@ -342,9 +334,12 @@ var topbarTools = [
             var mc = this.mercuryCanvas;
 
             var css = {};
-            if (this.canShow && !this.shown) {
+            if (!this.shown) {
                 this.shown = true;
                 this.cursor.show();
+                mc.layersContainer.css({
+                    cursor: 'none'
+                });
             }
             if (this.zIndex - 1 < mc.session.zIndex) {
                 css.zIndex = mc.session.zIndex + 1;
@@ -621,7 +616,7 @@ var topbarTools = [
         },
         mouseMove: function (e) {
             var mc = this.mercuryCanvas;
-            if (mc.session.selectedLayers.state.transform || !mc.session.mouse.down || !mc.session.mouse.initial) return;
+            if (!mc.session.mouse.down || !mc.session.mouse.initial) return;
 
             var mouse = mc.session.mouse;
             var pos = new coords(e).toCanvasSpace(mc);
