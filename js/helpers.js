@@ -76,13 +76,7 @@ class coords {
         return chosenLayer;
     }
     print() {
-        return {
-            x: this.x,
-            y: this.y,
-            z: this.z,
-            width: this.width,
-            height: this.height
-        };
+        return _.omit(this, ['toLayer', 'toCanvasSpace', 'inside', 'update', 'divide', 'add', 'on', 'off', 'once', 'emit', 'addListener', 'eventNames', 'listeners', 'removeListener', 'removeAllListeners', 'setMaxListeners']);
     }
 }
 
