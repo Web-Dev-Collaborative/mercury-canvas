@@ -100,6 +100,6 @@ var rotatePoint = function (pivot, point, angle) {
     y = (pivot.y + dist * Math.sin(na) + 0.5) | 0;
 
     return { x: x, y: y };
-}
+};
 
 export {coords, rotatePoint};

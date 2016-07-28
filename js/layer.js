@@ -180,7 +180,6 @@ class Layer {
         });
     }
     applyRotation(pivot) {
-        var mc = this.mercuryCanvas;
         var angle = this.coords.angle;
         this.clear();
         var c1, c2, c3, c4;
