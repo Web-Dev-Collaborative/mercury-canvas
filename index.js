@@ -17,6 +17,13 @@ class blobURL {
 }
 window.URL = new blobURL();
 
+Number.prototype.toPi = function () {
+    return this * Math.PI / 180;
+}
+Number.prototype.toDeg = function () {
+    return this / Math.PI * 180;
+}
+
 import 'script!loglevel';
 var log = require('loglevel-message-prefix')(window.log, {
     prefixes: ['level'],
@@ -174,7 +181,7 @@ class MercuryCanvas {
             },
             'touchcancel': e => {
                 this.mouseUp(e);
-                this.emit('touchcancel', e);
+                this.emit('touchend', e);
             }
         });
 

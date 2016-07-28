@@ -138,7 +138,6 @@ class Menu {
         this.handle.on('mousedown touchstart', this.mouseDown);
 
         mc.on('mouseup', this.mouseUp);
-        mc.on('touchcancel', this.mouseUp);
         mc.on('touchend', this.mouseUp);
         mc.on('mousemove', this.mouseMove);
         mc.on('touchmove', (e) => this.mouseMove(e.originalEvent.touches[0]));
