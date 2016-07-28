@@ -80,4 +80,26 @@ class coords {
     }
 }
 
-export {coords};
+var rotatePoint = function (pivot, point, angle) {
+    var x, y, dist, diffX, diffY, ca, na;
+
+    /// get distance from center to point
+    diffX = point.x - pivot.x;
+    diffY = point.y - pivot.y;
+    dist = Math.sqrt(diffX * diffX + diffY * diffY);
+
+    /// find angle from pivot to corner
+    ca = Math.atan2(diffY, diffX).toDeg();
+    angle = angle.toDeg();
+
+    /// get new angle based on old + current delta angle
+    na = ((ca + angle) % 360).toPi();
+
+    /// get new x and y and round it off to integer
+    x = (pivot.x + dist * Math.cos(na) + 0.5) | 0;
+    y = (pivot.y + dist * Math.sin(na) + 0.5) | 0;
+
+    return { x: x, y: y };
+}
+
+export {coords, rotatePoint};

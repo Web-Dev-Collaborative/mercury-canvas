@@ -5,6 +5,7 @@ var log = require('loglevel-message-prefix')(window.log.getLogger('layer.js'), {
 });
 import _ from 'lodash';
 import classnames from 'classnames';
+import {rotatePoint} from './helpers.js';
 import {Matrix} from 'transformation-matrix-js';
 
 class layerCoords {
@@ -14,7 +15,9 @@ class layerCoords {
             y: 0,
             z: layer.mercuryCanvas.session.zIndex,
             width: 0,
-            height: 0
+            height: 0,
+            angle: 0,
+            savedAngle: 0
         };
         _.merge(this, defaults, _.pick(options, Object.keys(defaults)));
 
@@ -63,6 +66,15 @@ class layerCoords {
                     this.y = options.y;
                 }
             }
+            if (_.has(options, 'angle')) {
+                this.matrix.reset();
+                if (_.has(options, 'pivot')) this.matrix.translate(options.pivot.x, options.pivot.y);
+                options.angle = options.angle.toDeg() % 360;
+                this.matrix.rotateDeg(options.angle);
+                this.angle = options.angle.toPi();
+                if (_.has(options, 'pivot')) this.matrix.translate(-options.pivot.x, -options.pivot.y);
+                this.matrix.translate(this.x, this.y);
+            }
             if (_.has(options, 'z')) this.z = options.z;
         }
         if (updateCSS) this.updateCSS();
@@ -88,6 +100,9 @@ class layerCoords {
             if (_.has(options, 'height')) this.height += options.height;
         }
         this.updateCSS();
+    }
+    updateMatrix() {
+
     }
     updateAttr() {
         this.layer.element.attr('width', Math.round(this.width));
@@ -164,13 +179,73 @@ class Layer {
             y: options.y
         });
     }
-    scale(newCoords) {
-        this.coords.update(newCoords, false);
+    applyRotation(pivot) {
+        var mc = this.mercuryCanvas;
+        var angle = this.coords.angle;
+        this.clear();
+        var c1, c2, c3, c4;
+
+        c1 = rotatePoint(pivot, {
+            x: this.coords.x,
+            y: this.coords.y
+        }, angle);
+        c2 = rotatePoint(pivot, {
+            x: this.coords.x + this.coords.width,
+            y: this.coords.y
+        }, angle);
+        c3 = rotatePoint(pivot, {
+            x: this.coords.x + this.coords.width,
+            y: this.coords.y + this.coords.height
+        }, angle);
+        c4 = rotatePoint(pivot, {
+            x: this.coords.x,
+            y: this.coords.y + this.coords.height
+        }, angle);
+
+        var bounds = {
+            x: Math.min(c1.x, c2.x, c3.x, c4.x),
+            y: Math.min(c1.y, c2.y, c3.y, c4.y),
+            x2: Math.max(c1.x, c2.x, c3.x, c4.x),
+            y2: Math.max(c1.y, c2.y, c3.y, c4.y)
+        };
+
+        var movement = {
+            x: this.coords.x - bounds.x,
+            y: this.coords.y - bounds.y
+        };
+        var draw = {
+            x: this.original.image.width / 2 + movement.x,
+            y: this.original.image.height / 2 + movement.y
+        };
+
+        this.resize({
+            width: bounds.x2 - bounds.x,
+            height: bounds.y2 - bounds.y,
+            update: false
+        });
+        this.coords.update({
+            x: bounds.x,
+            y: bounds.y
+        }, false);
+
+        this.context.save();
+        this.context.translate(draw.x, draw.y);
+        this.context.rotate(angle);
+        this.context.drawImage(this.original.image, movement.x - draw.x, movement.y - draw.y);
+        this.context.restore();
+
+        this.coords.savedAngle = this.coords.angle;
+        this.coords.update({
+            angle: 0
+        });
+        this.trim();
+    }
+    applyScale() {
         this.coords.matrix.a = this.coords.matrix.d = 1;
 
         this.coords.updateCSS();
         this.coords.updateAttr();
-        this.context.drawImage(this.original.image, 0, 0, newCoords.width, newCoords.height);
+        this.context.drawImage(this.original.image, 0, 0, this.coords.width, this.coords.height);
 
         this.mercuryCanvas.emit('layer.update', this);
     }
@@ -229,7 +304,7 @@ class Layer {
                 type: 'trim',
                 data: this.context.getImageData(0, 0, this.coords.width, this.coords.height),
                 finish: (e) => {
-                    e.callback = options.callback;
+                    e.callback = options && options.callback ? options.callback : () => { };
                     this.trimToCoords(e);
                 }
             });
@@ -257,6 +332,7 @@ class Layer {
         });
         this.context.putImageData(trimmed, 0, 0);
         this.mercuryCanvas.emit('layer.update', this);
+        this.mercuryCanvas.emit('layer.trim', this);
         var t1 = performance.now();
         log.debug('I spent ' + (t1 - t0) + 'ms to trim the layer');
         this.updateOriginal(bound.callback);
@@ -275,12 +351,12 @@ class Layer {
         this.updateOriginal();
         this.mercuryCanvas.emit('layer.update', this);
     }
-    clear() {
+    clear(update = true) {
         if (!this.state.dirty) return;
 
         this.state.dirty = false;
         this.context.clearRect(0, 0, this.element.attr('width'), this.element.attr('height'));
-        this.mercuryCanvas.emit('layer.update', this);
+        if (update) this.mercuryCanvas.emit('layer.update', this);
     }
     copyTo(targetLayer, trimOptions) {
         targetLayer.resize(this.coords);

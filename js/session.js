@@ -12,7 +12,7 @@ class SelectedLayers {
     constructor(mc) {
         this.mercuryCanvas = mc;
         this.list = [];
-        this.rect = {};
+        this.rect = new coords();
         this.state = {
             startupDone: true,
             transform: false
@@ -53,6 +53,9 @@ class SelectedLayers {
             this.makeBox();
             this.mouseMove(mc.session.mouse.last);
         });
+        mc.on('layer.trim', () => {
+            requestAnimationFrame(this.draw.bind(this, mc.session.mouse.last));
+        });
         mc.on('key.up', () => this.mouseMove(mc.session.mouse.last));
         mc.on('key.down', () => this.mouseMove(mc.session.mouse.last));
 
@@ -62,12 +65,26 @@ class SelectedLayers {
             if (!this.state.transform) return;
             this.mouseMove(e);
         });
+        mc.on('touchstart', e => this.mouseDown(e.originalEvent.touches[0]));
+        mc.on('touchmove', (e) => {
+            if (!this.state.transform) return;
+            this.mouseMove(e.originalEvent.touches[0]);
+        });
+        mc.on('touchend', e => this.mouseUp(e.originalEvent.touches[0]));
         mc.addShortcut('mod + alt + t', () => {
             this.enterTransform();
         });
         mc.addShortcut('mod + enter', () => {
             this.exitTransform();
         });
+
+        setTimeout(() => {
+            if (!mc.layers.list.length) return;
+            _.forIn(mc.layers.list, (layer) => {
+                layer.select('append');
+            });
+            this.enterTransform();
+        }, 1000);
     }
     makeBox() {
         var rect = new coords({
@@ -88,7 +105,7 @@ class SelectedLayers {
         });
         rect.width = rect.x2 - rect.x;
         rect.height = rect.y2 - rect.y;
-        this.rect = rect;
+        this.rect.update(rect);
     }
     select(layer, type = 'only') {
         if (type == 'append') {
@@ -147,41 +164,45 @@ class SelectedLayers {
         var selectedRect = _.clone(layerCoords);
         var handlerSize = mc.state.handlerSize;
         var sh = handlerSize / 2;
+        var ret;
 
+        if (pos.x > selectedRect.x && pos.x < selectedRect.x + selectedRect.width && pos.y > selectedRect.y && pos.y < selectedRect.y + selectedRect.height) {
+            ret = 'move';
+        }
         if (pos.x > selectedRect.x - sh && pos.x < selectedRect.x + sh &&
             pos.y > selectedRect.y - sh && pos.y < selectedRect.y + sh) {
-            return 'nw-resize';
+            ret = 'nw-resize';
         }
         if (pos.x > selectedRect.x + selectedRect.width - sh && pos.x < selectedRect.x + selectedRect.width + sh &&
             pos.y > selectedRect.y - sh && pos.y < selectedRect.y + sh) {
-            return 'ne-resize';
+            ret = 'ne-resize';
         }
         if (pos.x > selectedRect.x + selectedRect.width - sh && pos.x < selectedRect.x + selectedRect.width + sh &&
             pos.y > selectedRect.y + selectedRect.height - sh && pos.y < selectedRect.y + selectedRect.height + sh) {
-            return 'se-resize';
+            ret = 'se-resize';
         }
         if (pos.x > selectedRect.x - sh && pos.x < selectedRect.x + sh &&
             pos.y > selectedRect.y + selectedRect.height - sh && pos.y < selectedRect.y + selectedRect.height + sh) {
-            return 'sw-resize';
+            ret = 'sw-resize';
         }
         if (pos.x >= selectedRect.x + sh && pos.x <= selectedRect.x + selectedRect.width - sh &&
             pos.y > selectedRect.y - handlerSize / 3 && pos.y < selectedRect.y + handlerSize / 3) {
-            return 'n-resize';
+            ret = 'n-resize';
         }
         if (pos.x > selectedRect.x + selectedRect.width - handlerSize / 3 && pos.x < selectedRect.x + selectedRect.width + handlerSize / 3 &&
             pos.y >= selectedRect.y + sh && pos.y <= selectedRect.y + selectedRect.height - sh) {
-            return 'e-resize';
+            ret = 'e-resize';
         }
         if (pos.x >= selectedRect.x + sh && pos.x <= selectedRect.x + selectedRect.width - sh &&
             pos.y > selectedRect.y + selectedRect.height - handlerSize / 3 && pos.y < selectedRect.y + selectedRect.height + handlerSize / 3) {
-            return 's-resize';
+            ret = 's-resize';
         }
         if (pos.x > selectedRect.x - handlerSize / 3 && pos.x < selectedRect.x + handlerSize / 3 &&
             pos.y >= selectedRect.y + sh && pos.y <= selectedRect.y + selectedRect.height - sh) {
-            return 'w-resize';
+            ret = 'w-resize';
         }
-        if (pos.x > selectedRect.x && pos.x < selectedRect.x + selectedRect.width && pos.y > selectedRect.y && pos.y < selectedRect.y + selectedRect.height) {
-            return 'move';
+        if (!(mc.session.mouse.down && _.isObject(mc.session.mouse.action) && mc.session.mouse.action.cursor == 'rotate') && (pos.x > selectedRect.x - sh && pos.y > selectedRect.y - sh && pos.x < selectedRect.x + selectedRect.width + sh && pos.y < selectedRect.y + selectedRect.height + sh)) {
+            return ret;
         }
 
         var angle;
@@ -203,6 +224,12 @@ class SelectedLayers {
             else if (pos.y > selectedRect.y + selectedRect.height * 3 / 4) {
                 angle = -135;
             }
+            else if (pos.x < selectedRect.x + selectedRect.width / 2) {
+                angle = -45;
+            }
+            else {
+                angle = 135;
+            }
         }
         else if (pos.y < selectedRect.y + selectedRect.height / 4) {
             angle = 90;
@@ -219,9 +246,7 @@ class SelectedLayers {
                 angle: angle
             };
         }
-        else {
-            return undefined;
-        }
+        return ret;
     }
     draw() {
         if (!this.state.transform) return;
@@ -311,7 +336,7 @@ class SelectedLayers {
 
         if (_.isUndefined(mouse.action)) return;
 
-        mc.session.mouse.initial = {
+        mouse.initial = {
             dist: [],
             mouse: _.clone(pos),
             selectedLayers: this.list.map(layer => _.clone(layer.coords))
@@ -340,10 +365,17 @@ class SelectedLayers {
                 coords.scale = true;
                 coords.scaleX = coords.width / image.width;
                 coords.scaleY = coords.height / image.height;
+                // coords.angle = coords.savedAngle;
 
                 layer.coords.update(coords);
             }
         });
+        if (_.isObject(mouse.action) && mouse.action.cursor == 'rotate') {
+            this.rect.pivot = {
+                x: this.rect.x + this.rect.width / 2,
+                y: this.rect.y + this.rect.height / 2
+            };
+        }
         this.state.startupDone = true;
         this.mouseMove(e);
         requestAnimationFrame(this.draw.bind(this));
@@ -357,31 +389,7 @@ class SelectedLayers {
 
         if (!mouse.down) {
             mouse.action = this.chooseCursor(e);
-            if (_.isObject(mouse.action) && mouse.action.cursor == 'rotate') {
-                this.cursor.matrix.reset();
-                this.cursor.matrix.translate(pos.x, pos.y);
-                this.cursor.matrix.rotateDeg(mouse.action.angle);
-
-                if (!this.cursor.shown) {
-                    this.cursor.shown = true;
-                    this.cursor.element.show();
-                }
-                this.cursor.element.css({
-                    transform: this.cursor.matrix.toCSS()
-                });
-                mc.layersContainer.css({
-                    cursor: 'none'
-                });
-            }
-            else {
-                if (this.cursor.shown) {
-                    this.cursor.shown = false;
-                    this.cursor.element.hide();
-                }
-                mc.layersContainer.css({
-                    cursor: mouse.action
-                });
-            }
+            this.updateCursor(mouse.action, e);
         }
         else if (mouse.action) {
             this.actioned = true;
@@ -419,6 +427,25 @@ class SelectedLayers {
                     layer.coords.update(coords);
                 });
             }
+            else if (_.isObject(mouse.action) && mouse.action.cursor == 'rotate') {
+                var angle = Math.atan2(pos.y - this.rect.pivot.y, pos.x - this.rect.pivot.x);
+                var initialAngle = Math.atan2(mouse.initial.mouse.y - this.rect.pivot.y, mouse.initial.mouse.x - this.rect.pivot.x);
+
+                angle = angle - initialAngle;
+                _.each(this.list, (layer, index) => {
+                    layer.coords.update({
+                        angle: angle + this.oldCoords[index].angle,
+                        pivot: this.rect.pivot
+                    });
+                });
+                var matrix = new Matrix();
+                matrix.rotateDeg(angle.toDeg());
+                mc.overlay.element.css({
+                    transform: matrix.toCSS(),
+                    transformOrigin: this.rect.pivot.x + 'px ' + this.rect.pivot.y + 'px'
+                });
+                this.updateCursor(this.chooseCursor(e), e);
+            }
             else {
                 _.each(this.list, (layer, index) => {
                     var original = this.oldCoords[index];
@@ -438,8 +465,8 @@ class SelectedLayers {
                             coords.height = original.height + delta.y * -1;
 
                             if (mc.session.keys.shift) {
-                                var wProp = coords.width / original.width;
-                                var hProp = coords.height / original.height;
+                                let wProp = coords.width / original.width;
+                                let hProp = coords.height / original.height;
                                 coords.height = original.height * (wProp + hProp) / 2;
                                 coords.width = original.width * (wProp + hProp) / 2;
 
@@ -456,72 +483,109 @@ class SelectedLayers {
                             coords.y = Math.min(coords.y, original.y + original.height);
                             break;
                         case 'ne-resize':
-                            coords.width = original.width + pos.x - original.x - original.width;
+                            coords.width = pos.x - original.x;
                             coords.height = original.height - pos.y + original.y;
+                            coords.x = original.x;
+                            coords.y = Math.min(pos.y, original.y + original.height);
                             if (mc.session.keys.shift) {
-                                wProp = coords.width / original.width;
-                                hProp = coords.height / original.height;
-                                coords.height = original.height * (wProp + hProp) / 2;
+                                let wProp = coords.width / original.width;
+                                let hProp = coords.height / original.height;
                                 coords.width = original.width * (wProp + hProp) / 2;
+                                coords.height = original.height * (wProp + hProp) / 2;
 
                                 coords.y = Math.min(original.y + original.height - coords.height, original.y + original.height);
                             }
-                            else {
-                                coords.y = Math.min(pos.y, original.y + original.height);
+                            else if (mc.session.keys.alt) {
+                                coords.x = Math.min(coords.x - delta.x, original.x + original.width / 2);
+                                coords.y = Math.min(coords.y, original.y + original.height / 2);
+                                coords.width = coords.width - Math.sign(coords.x - original.x) * Math.abs(original.width - coords.width);
+                                coords.height = coords.height - Math.sign(coords.y - original.y) * Math.abs(original.height - coords.height);
                             }
-                            coords.x = original.x;
                             break;
                         case 'se-resize':
-                            coords.width = original.width + (pos.x - original.x - original.width);
-                            coords.height = original.height + (pos.y - original.y - original.height);
+                            coords.x = original.x;
+                            coords.y = original.y;
+                            coords.width = pos.x - original.x;
+                            coords.height = pos.y - original.y;
                             if (mc.session.keys.shift) {
-                                wProp = coords.width / original.width;
-                                hProp = coords.height / original.height;
+                                let wProp = coords.width / original.width;
+                                let hProp = coords.height / original.height;
                                 coords.height = original.height * (wProp + hProp) / 2;
                                 coords.width = original.width * (wProp + hProp) / 2;
                             }
-                            coords.x = original.x;
-                            coords.y = original.y;
+                            else if (mc.session.keys.alt) {
+                                coords.x -= delta.x;
+                                coords.y -= delta.y;
+                                coords.x = Math.min(coords.x, original.x + original.width / 2);
+                                coords.y = Math.min(coords.y, original.y + original.height / 2);
+
+                                coords.width += delta.x;
+                                coords.height += delta.y;
+                            }
                             break;
                         case 'sw-resize':
                             coords.width = original.width + (original.x - pos.x);
                             coords.height = original.height + (pos.y - original.y - original.height);
+                            coords.x = Math.min(pos.x, original.x + original.width);
+                            coords.y = original.y;
                             if (mc.session.keys.shift) {
-                                wProp = coords.width / original.width;
-                                hProp = coords.height / original.height;
+                                let wProp = coords.width / original.width;
+                                let hProp = coords.height / original.height;
                                 coords.height = original.height * (wProp + hProp) / 2;
                                 coords.width = original.width * (wProp + hProp) / 2;
 
                                 coords.x = Math.min(original.x + original.width - coords.width, original.x + original.width);
                             }
-                            else {
-                                coords.x = Math.min(pos.x, original.x + original.width);
+                            else if (mc.session.keys.alt) {
+                                coords.x = Math.min(coords.x, original.x + original.width / 2);
+                                coords.y -= delta.y;
+                                coords.y = Math.min(coords.y, original.y + original.height / 2);
+
+                                coords.width = coords.width - Math.sign(coords.x - original.x) * Math.abs(original.width - coords.width);
+                                coords.height += delta.y;
                             }
-                            coords.y = original.y;
                             break;
                         case 'n-resize':
                             coords.width = original.width;
                             coords.height = original.height + (original.y - pos.y);
                             coords.x = original.x;
                             coords.y = Math.min(pos.y, original.y + original.height);
-                            break;
-                        case 'w-resize':
-                            coords.width = original.width + (original.x - pos.x);
-                            coords.height = original.height;
-                            coords.x = Math.min(pos.x, original.x + original.width);
-                            coords.y = original.y;
-                            break;
-                        case 's-resize':
-                            coords.width = original.width;
-                            coords.height = original.height + (pos.y - original.y - original.height);
-                            coords.x = original.x;
-                            coords.y = original.y;
+                            if (mc.session.keys.alt) {
+                                coords.y = Math.min(coords.y, original.y + original.height / 2);
+                                coords.height -= delta.y;
+                            }
                             break;
                         case 'e-resize':
                             coords.width = original.width + (pos.x - (original.x + original.width));
                             coords.height = original.height;
                             coords.x = original.x;
                             coords.y = original.y;
+                            if (mc.session.keys.alt) {
+                                coords.x -= delta.x;
+                                coords.x = Math.min(coords.x, original.x + original.width / 2);
+                                coords.width += delta.x;
+                            }
+                            break;
+                        case 's-resize':
+                            coords.width = original.width;
+                            coords.height = original.height + (pos.y - original.y - original.height);
+                            coords.x = original.x;
+                            coords.y = original.y;
+                            if (mc.session.keys.alt) {
+                                coords.y -= delta.y;
+                                coords.y = Math.min(coords.y, original.y + original.height / 2);
+                                coords.height += delta.y;
+                            }
+                            break;
+                        case 'w-resize':
+                            coords.width = original.width + (original.x - pos.x);
+                            coords.height = original.height;
+                            coords.x = Math.min(pos.x, original.x + original.width);
+                            coords.y = original.y;
+                            if (mc.session.keys.alt) {
+                                coords.x = Math.min(coords.x, original.x + original.width / 2);
+                                coords.width -= delta.x;
+                            }
                             break;
                     }
                     coords.width = Math.max(0, coords.width);
@@ -542,15 +606,31 @@ class SelectedLayers {
     mouseUp(e) {
         if (!this.state.transform) return;
         var mc = this.mercuryCanvas;
-        var selectedLayers = mc.session.selectedLayers;
+        var mouse = mc.session.mouse;
         var newCoords = [];
-        if (this.actioned == 'move') {
-            _.each(selectedLayers.list, (layer, index) => {
+        if (mouse.action == 'move') {
+            _.each(this.list, (layer, index) => {
                 newCoords[index] = _.clone(layer.coords);
             });
             mc.session.addOperation({
                 type: 'layer.move',
-                layers: _.clone(selectedLayers.list),
+                layers: _.clone(this.list),
+                old: this.oldCoords,
+                new: newCoords
+            });
+        }
+        else if (_.isObject(mouse.action) && mouse.action.cursor == 'rotate') {
+            mc.overlay.element.css({
+                transform: new Matrix().toCSS(),
+                transformOrigin: '0 0'
+            });
+            _.each(this.list, (layer, index) => {
+                newCoords[index] = _.clone(layer.coords);
+                layer.applyRotation(this.rect.pivot);
+            });
+            mc.session.addOperation({
+                type: 'layer.rotate',
+                layers: _.clone(this.list),
                 old: this.oldCoords,
                 new: newCoords
             });
@@ -564,11 +644,11 @@ class SelectedLayers {
                     element: layer.element,
                     original: _.clone(layer.original)
                 });
-                layer.scale(layer.coords);
+                layer.applyScale(this.rect.pivot);
             });
             mc.session.addOperation({
                 type: 'transform',
-                layers: _.clone(selectedLayers.list),
+                layers: _.clone(this.list),
                 coords: {
                     old: this.oldCoords,
                     new: newCoords
@@ -576,10 +656,52 @@ class SelectedLayers {
                 originals: originals
             });
         }
-        this.actioned = false;
+        mouse.action = undefined;
         this.oldCoords = [];
         mc.session.mouse.reset();
         requestAnimationFrame(this.draw.bind(this, e));
+    }
+    updateCursor(action, e) {
+        var mc = this.mercuryCanvas;
+        var pos = new coords(e).toCanvasSpace(mc);
+        var mouse = mc.session.mouse;
+        if (mouse.down) {
+            if (_.isObject(mouse.action) && mouse.action.cursor == 'rotate') {
+                this.cursor.matrix.reset();
+                this.cursor.matrix.translate(pos.x, pos.y);
+                this.cursor.matrix.rotateDeg(action.angle);
+
+                this.cursor.element.css({
+                    transform: this.cursor.matrix.toCSS()
+                });
+            }
+        }
+        else if (_.isObject(action) && action.cursor == 'rotate') {
+            this.cursor.matrix.reset();
+            this.cursor.matrix.translate(pos.x, pos.y);
+            this.cursor.matrix.rotateDeg(action.angle);
+
+            if (!this.cursor.shown) {
+                this.cursor.shown = true;
+                this.cursor.element.show();
+            }
+            this.cursor.element.css({
+                transform: this.cursor.matrix.toCSS()
+            });
+
+            mc.layersContainer.css({
+                cursor: 'none'
+            });
+        }
+        else {
+            if (this.cursor.shown) {
+                this.cursor.shown = false;
+                this.cursor.element.hide();
+            }
+            mc.layersContainer.css({
+                cursor: action
+            });
+        }
     }
 }
 class File {
