@@ -21,7 +21,6 @@ class SelectedLayers {
         this.oldCoords = [];
         this.cursor = {
             shown: false,
-            canShow: false,
             matrix: new Matrix()
         };
 
@@ -36,7 +35,7 @@ class SelectedLayers {
 
         mc.on('layer.remove', () => {
             this.makeBox();
-            requestAnimationFrame(this.draw.bind(this, mc.session.mouse.last));
+            requestAnimationFrame(this.draw.bind(this));
         });
 
         mc.on('undo.layer.move', (operation) => {
@@ -54,7 +53,7 @@ class SelectedLayers {
             this.mouseMove(mc.session.mouse.last);
         });
         mc.on('layer.trim', () => {
-            requestAnimationFrame(this.draw.bind(this, mc.session.mouse.last));
+            requestAnimationFrame(this.draw.bind(this));
         });
         mc.on('key.up', () => this.mouseMove(mc.session.mouse.last));
         mc.on('key.down', () => this.mouseMove(mc.session.mouse.last));
@@ -659,7 +658,7 @@ class SelectedLayers {
         mouse.action = undefined;
         this.oldCoords = [];
         mc.session.mouse.reset();
-        requestAnimationFrame(this.draw.bind(this, e));
+        requestAnimationFrame(this.draw.bind(this));
     }
     updateCursor(action, e) {
         var mc = this.mercuryCanvas;
