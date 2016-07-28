@@ -19,10 +19,10 @@ window.URL = new blobURL();
 
 Number.prototype.toPi = function () {
     return this * Math.PI / 180;
-}
+};
 Number.prototype.toDeg = function () {
     return this / Math.PI * 180;
-}
+};
 
 import 'script!loglevel';
 var log = require('loglevel-message-prefix')(window.log, {
@@ -132,12 +132,14 @@ class MercuryCanvas {
             'keydown': e => {
                 var key = keys(e.which);
                 if (key === false || this.session.keys[key]) return;
+                if (key == 'alt') e.preventDefault();
                 this.session.keys[key] = true;
                 this.emit('key.down');
             },
             'keyup': e => {
                 var key = keys(e.which);
                 if (key === false || !this.session.keys[key]) return;
+                if (key == 'alt') e.preventDefault();
                 this.session.keys[key] = false;
                 this.emit('key.up');
             },
