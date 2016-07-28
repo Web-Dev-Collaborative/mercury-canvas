@@ -1,40 +1,42 @@
 @import 'variables';
 @import 'menu';
 
-html, body, #wrapper {
+html,
+body,
+#wrapper {
     width: 100%;
     height: 100%;
-    margin: 0;
     padding: 0;
+    margin: 0;
     overflow: hidden;
 }
 
 #wrapper {
     user-select: none;
 
-    &.over{
-        &:after{
-            content: '';
+    &.over {
+        &:after {
             position: absolute;
             top: 0;
             left: 0;
+            z-index: 9999;
             width: 100%;
             height: 100%;
-            background: rgba($blue-300, 0.5);
             pointer-events: none;
-            z-index: 9999;
+            background: rgba($blue-300, 0.5);
+            content: '';
         }
-        .dropText{
+        .dropText {
             display: block;
         }
     }
 }
-.dropText{
-    z-index: 10000;
-    display: none;
+.dropText {
     position: absolute;
     top: 50%;
     left: 50%;
+    z-index: 10000;
+    display: none;
     font-size: 40px;
     color: $white;
     text-shadow: 0 0 4px rgba($black, 0.5);
@@ -42,7 +44,6 @@ html, body, #wrapper {
 }
 
 .layersContainer {
-    background: red;
     position: absolute;
     top: 0;
     left: 0;
@@ -51,6 +52,7 @@ html, body, #wrapper {
     padding: 0;
     margin: 0;
     overflow: hidden;
+    background: $accent-500;
 
     .layer {
         position: absolute;
@@ -63,21 +65,20 @@ html, body, #wrapper {
         position: absolute;
         top: 0;
         left: 0;
+        display: none;
         width: 10px;
         height: 10px;
-        border-radius: 50%;
         border: 1px solid $black;
-        display: none;
+        border-radius: 50%;
         box-shadow: inset 0 0 0 1px $white;
     }
-    .selectCursor{
+    .selectCursor {
         position: absolute;
         top: -10px;
         left: -10px;
+        display: none;
         width: 20px;
         height: 20px;
-        display: none;
-        background-color: red;
         background: url('../img/rotateCursor.png') no-repeat;
         background-size: contain;
     }

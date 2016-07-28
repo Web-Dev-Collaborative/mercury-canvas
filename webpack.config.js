@@ -6,12 +6,14 @@ var path = require('path');
 var exp = {
     devServer: {
         host: '0.0.0.0',
-        port: 80,
+        port: 81,
         historyApiFallback: {
             index: '/'
         }
     },
     entry: {
+        webpack: 'webpack-dev-server/client?http://0.0.0.0:81',
+        webpackHot: 'webpack/hot/only-dev-server',
         bundle: './index.js'
     },
     output: {

@@ -2,7 +2,7 @@
   "name": "mercury-canvas",
   "version": "0.1.0",
   "scripts": {
-    "start": "npm run webpackDevServer",
+    "start": "npm-run-all --parallel webpackDevServer watch:scsslint",
     "build": "node build.js --webpack",
     "scsslint": "sass-lint -v --no-exit || true",
     "webpackDevServer": "webpack-dev-server --colors --progress --inline",
@@ -39,6 +39,7 @@
     "rimraf": "^2.5.3",
     "sass-lint": "^1.8.2",
     "sass-loader": "^4.0.0",
+    "sasslint-webpack-plugin": "^1.0.4",
     "script-loader": "^0.7.0",
     "simple-color-picker": "^0.1.0",
     "socket.io": "^1.4.8",

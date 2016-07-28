@@ -1,8 +1,5 @@
 files:
-    include: 'www/scss/*.scss'
-    ignore:
-        - 'www/scss/materialIcons.scss'
-        - 'www/scss/_roboto.scss'
+    include: 'scss/*.scss'
 rules:
     no-color-literals:
         - 0
@@ -28,3 +25,4 @@ rules:
         - 2
         - max-depth: 4
     no-ids: 0
+    pseudo-element: 0

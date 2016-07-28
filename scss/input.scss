@@ -9,27 +9,27 @@
 }
 
 .materialInput {
-    font-size: 14px;
     position: relative;
     margin: 20px 0 35px;
-    transition: margin 0.3s;
+    font-size: 14px;
     box-sizing: border-box;
+    transition: margin 0.3s;
 
     * {
         box-sizing: border-box;
     }
 
-    &.checkbox{
-        input{
+    &.checkbox {
+        input {
             display: inline-block;
             width: auto;
         }
-        label{
+        label {
             position: initial;
-            opacity: 1;
-            pointer-events: all;
-            color: $main-500;
             padding-right: 5px;
+            color: $main-500;
+            pointer-events: all;
+            opacity: 1;
         }
     }
 
@@ -78,16 +78,16 @@
         position: absolute;
         top: 10px;
         left: 5px;
-        font-size: 18px;
-        font-weight: normal;
-        color: #000;
-        pointer-events: none;
-        opacity: 0.38;
-        transition: 0.2s opacity, 0.2s top, color 0.2s, font-size 0.2s;
         display: inline-block;
         max-width: 100%;
         margin-bottom: 5px;
+        font-size: 18px;
+        font-weight: normal;
+        color: #000;
         text-transform: capitalize;
+        pointer-events: none;
+        opacity: 0.38;
+        transition: 0.2s opacity, 0.2s top, color 0.2s, font-size 0.2s;
     }
 
     .bar {
