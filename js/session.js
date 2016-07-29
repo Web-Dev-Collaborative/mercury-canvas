@@ -470,19 +470,12 @@ class SelectedLayers {
                             coords.height = original.height + delta.y * -1;
 
                             if (mc.session.keys.shift) {
-                                let wProp = coords.width / original.width;
-                                let hProp = coords.height / original.height;
-                                coords.height = original.height * (wProp + hProp) / 2;
-                                coords.width = original.width * (wProp + hProp) / 2;
-
+                                this.symmetricScale(coords, original);
                                 coords.x = Math.min(original.x + original.width - coords.width, original.x + original.width);
                                 coords.y = Math.min(original.y + original.height - coords.height, original.y + original.height);
                             }
                             if (mc.session.keys.alt) {
-                                coords.x = Math.min(coords.x, original.x + original.width / 2);
-                                coords.y = Math.min(coords.y, original.y + original.height / 2);
-                                coords.width = coords.width - Math.sign(coords.x - original.x) * Math.abs(original.width - coords.width);
-                                coords.height = coords.height - Math.sign(coords.y - original.y) * Math.abs(original.height - coords.height);
+                                this.mirrorScale(coords, original);
                             }
                             coords.x = Math.min(coords.x, original.x + original.width);
                             coords.y = Math.min(coords.y, original.y + original.height);
@@ -493,18 +486,11 @@ class SelectedLayers {
                             coords.x = original.x;
                             coords.y = Math.min(pos.y, original.y + original.height);
                             if (mc.session.keys.shift) {
-                                let wProp = coords.width / original.width;
-                                let hProp = coords.height / original.height;
-                                coords.width = original.width * (wProp + hProp) / 2;
-                                coords.height = original.height * (wProp + hProp) / 2;
-
+                                this.symmetricScale(coords, original);
                                 coords.y = Math.min(original.y + original.height - coords.height, original.y + original.height);
                             }
-                            else if (mc.session.keys.alt) {
-                                coords.x = Math.min(coords.x - delta.x, original.x + original.width / 2);
-                                coords.y = Math.min(coords.y, original.y + original.height / 2);
-                                coords.width = coords.width - Math.sign(coords.x - original.x) * Math.abs(original.width - coords.width);
-                                coords.height = coords.height - Math.sign(coords.y - original.y) * Math.abs(original.height - coords.height);
+                            if (mc.session.keys.alt) {
+                                this.mirrorScale(coords, original);
                             }
                             break;
                         case 'se-resize':
@@ -513,19 +499,10 @@ class SelectedLayers {
                             coords.width = pos.x - original.x;
                             coords.height = pos.y - original.y;
                             if (mc.session.keys.shift) {
-                                let wProp = coords.width / original.width;
-                                let hProp = coords.height / original.height;
-                                coords.height = original.height * (wProp + hProp) / 2;
-                                coords.width = original.width * (wProp + hProp) / 2;
+                                this.symmetricScale(coords, original);
                             }
-                            else if (mc.session.keys.alt) {
-                                coords.x -= delta.x;
-                                coords.y -= delta.y;
-                                coords.x = Math.min(coords.x, original.x + original.width / 2);
-                                coords.y = Math.min(coords.y, original.y + original.height / 2);
-
-                                coords.width += delta.x;
-                                coords.height += delta.y;
+                            if (mc.session.keys.alt) {
+                                this.mirrorScale(coords, original);
                             }
                             break;
                         case 'sw-resize':
@@ -534,20 +511,11 @@ class SelectedLayers {
                             coords.x = Math.min(pos.x, original.x + original.width);
                             coords.y = original.y;
                             if (mc.session.keys.shift) {
-                                let wProp = coords.width / original.width;
-                                let hProp = coords.height / original.height;
-                                coords.height = original.height * (wProp + hProp) / 2;
-                                coords.width = original.width * (wProp + hProp) / 2;
-
+                                this.symmetricScale(coords, original);
                                 coords.x = Math.min(original.x + original.width - coords.width, original.x + original.width);
                             }
-                            else if (mc.session.keys.alt) {
-                                coords.x = Math.min(coords.x, original.x + original.width / 2);
-                                coords.y -= delta.y;
-                                coords.y = Math.min(coords.y, original.y + original.height / 2);
-
-                                coords.width = coords.width - Math.sign(coords.x - original.x) * Math.abs(original.width - coords.width);
-                                coords.height += delta.y;
+                            if (mc.session.keys.alt) {
+                                this.mirrorScale(coords, original);
                             }
                             break;
                         case 'n-resize':
@@ -556,8 +524,7 @@ class SelectedLayers {
                             coords.x = original.x;
                             coords.y = Math.min(pos.y, original.y + original.height);
                             if (mc.session.keys.alt) {
-                                coords.y = Math.min(coords.y, original.y + original.height / 2);
-                                coords.height -= delta.y;
+                                this.mirrorScale(coords, original);
                             }
                             break;
                         case 'e-resize':
@@ -566,9 +533,7 @@ class SelectedLayers {
                             coords.x = original.x;
                             coords.y = original.y;
                             if (mc.session.keys.alt) {
-                                coords.x -= delta.x;
-                                coords.x = Math.min(coords.x, original.x + original.width / 2);
-                                coords.width += delta.x;
+                                this.mirrorScale(coords, original);
                             }
                             break;
                         case 's-resize':
@@ -577,9 +542,7 @@ class SelectedLayers {
                             coords.x = original.x;
                             coords.y = original.y;
                             if (mc.session.keys.alt) {
-                                coords.y -= delta.y;
-                                coords.y = Math.min(coords.y, original.y + original.height / 2);
-                                coords.height += delta.y;
+                                this.mirrorScale(coords, original);
                             }
                             break;
                         case 'w-resize':
@@ -588,8 +551,7 @@ class SelectedLayers {
                             coords.x = Math.min(pos.x, original.x + original.width);
                             coords.y = original.y;
                             if (mc.session.keys.alt) {
-                                coords.x = Math.min(coords.x, original.x + original.width / 2);
-                                coords.width -= delta.x;
+                                this.mirrorScale(coords, original);
                             }
                             break;
                     }
@@ -607,6 +569,21 @@ class SelectedLayers {
             }
         }
         requestAnimationFrame(this.draw.bind(this));
+    }
+    mirrorScale(coords, original) {
+        var delta = {};
+        delta.width = coords.width - original.width;
+        delta.height = coords.height - original.height;
+        coords.width += delta.width;
+        coords.height += delta.height;
+        coords.x = Math.min(original.x - delta.width, original.x + original.width / 2);
+        coords.y = Math.min(original.y - delta.height, original.y + original.height / 2);
+    }
+    symmetricScale(coords, original) {
+        let wProp = coords.width / original.width;
+        let hProp = coords.height / original.height;
+        coords.height = original.height * (wProp + hProp) / 2;
+        coords.width = original.width * (wProp + hProp) / 2;
     }
     mouseUp(e) {
         if (!this.state.transform) return;
