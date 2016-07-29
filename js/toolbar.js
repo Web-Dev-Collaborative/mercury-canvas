@@ -190,6 +190,7 @@ class Menu {
         return false;
     }
     resize(options) {
+        console.log(options);
         if (this.fixed.length > 0) {
             if (this.orientation.horizontal) {
                 this.element.css({
@@ -197,15 +198,43 @@ class Menu {
                 });
             }
             else {
-                this.element.css({
-                    top: options.topHeight,
+                this.coords.update({
+                    x: 0,
+                    y: options.topHeight,
+                    width: this.element.outerWidth(),
                     height: options.height - options.menuHeight
                 });
+                this.element.css({
+                    height: options.height - options.menuHeight
+                });
+                var x = 0;
+                var x2 = 0;
+                _.each(this.mercuryCanvas.state.menus, (menu) => {
+                    if (menu == this) return false;
+                    if (menu.fixed == 'left') {
+                        x += menu.coords.width;
+                    }
+                    if (menu.fixed == 'right') {
+                        x2 -= menu.coords.width;
+                    }
+                });
+
+                if (this.fixed == 'left') {
+                    this.coords.update({
+                        x: x
+                    });
+                }
+                if (this.fixed == 'right') {
+                    this.coords.update({
+                        x: x2
+                    });
+                }
             }
         }
         else {
             // dragable menu, make sure it stays on screen
         }
+
     }
     mouseDown(e) {
         this.mouse.down = true;
@@ -291,6 +320,7 @@ class Menu {
         this.determineOrientation(true);
 
         this.element.removeClass('horizontal vertical left right top bottom').addClass(this.fixed).addClass('fixed').removeAttr('style');
+
         this.element.addClass(this.orientation.horizontal ? 'horizontal' : 'vertical');
         this.handle.hide();
         this.coords.update({
