@@ -431,12 +431,18 @@ class SelectedLayers {
                 var initialAngle = Math.atan2(mouse.initial.mouse.y - this.rect.pivot.y, mouse.initial.mouse.x - this.rect.pivot.x);
 
                 angle = angle - initialAngle;
+
+                if (mc.session.keys.shift) {
+                    angle = (Math.round(angle.toDeg() / 15) * 15).toPi();
+                }
+
                 _.each(this.list, (layer, index) => {
                     layer.coords.update({
                         angle: angle + this.oldCoords[index].angle,
                         pivot: this.rect.pivot
                     });
                 });
+
                 var matrix = new Matrix();
                 matrix.rotateDeg(angle.toDeg());
                 mc.overlay.element.css({
