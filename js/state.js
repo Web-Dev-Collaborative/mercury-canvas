@@ -26,6 +26,7 @@ class State {
             background: '#fff',
             strokeColor: '#000',
             workers: 1,
+            workerMultiplier: 1,
             lineWidth: 20,
             handlerSize: 18,
             menus: [],
