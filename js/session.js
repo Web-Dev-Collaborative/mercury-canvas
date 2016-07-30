@@ -14,7 +14,6 @@ class SelectedLayers {
         this.list = [];
         this.rect = new coords();
         this.state = {
-            startupDone: true,
             transform: false
         };
 
@@ -89,13 +88,13 @@ class SelectedLayers {
             this.exitTransform();
         });
 
-        setTimeout(() => {
-            if (!mc.layers.list.length) return;
-            _.forIn(mc.layers.list, (layer) => {
-                layer.select('append');
-            });
-            this.enterTransform();
-        }, 1000);
+        // setTimeout(() => {
+        //     if (!mc.layers.list.length) return;
+        //     _.forIn(mc.layers.list, (layer) => {
+        //         layer.select('append');
+        //     });
+        //     this.enterTransform();
+        // }, 1000);
     }
     makeBox() {
         var rect = new coords({
@@ -340,7 +339,6 @@ class SelectedLayers {
     }
     mouseDown(e) {
         if (!this.state.transform) return;
-        this.state.startupDone = false;
         var mc = this.mercuryCanvas;
         var mouse = mc.session.mouse;
         var pos = new coords(e).toCanvasSpace(mc);
@@ -376,7 +374,6 @@ class SelectedLayers {
                 coords.scale = true;
                 coords.scaleX = coords.width / image.width;
                 coords.scaleY = coords.height / image.height;
-                // coords.angle = coords.savedAngle;
 
                 layer.coords.update(coords);
             }
@@ -387,12 +384,11 @@ class SelectedLayers {
                 y: this.rect.y + this.rect.height / 2
             };
         }
-        this.state.startupDone = true;
         this.mouseMove(e);
         requestAnimationFrame(this.draw.bind(this));
     }
     mouseMove(e) {
-        if (!this.state.transform || !this.state.startupDone) return;
+        if (!this.state.transform) return;
         var mc = this.mercuryCanvas;
         var mouse = mc.session.mouse;
         var pos = new coords(e).toCanvasSpace(mc);
