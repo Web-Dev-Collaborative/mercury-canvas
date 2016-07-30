@@ -55,8 +55,10 @@ class MercuryWorker {
                     this.queue[data.id].progress(data);
                 }
 
-                delete this.queue[data.id];
-                this.processQueue();
+                if (data.done) {
+                    delete this.queue[data.id];
+                    this.processQueue();
+                }
             }
             if (data.event == 'log') log.info(this.id + ':', data.data);
         }
@@ -140,7 +142,10 @@ class WorkerMaster {
     addAction(task) {
         task.type = _.isString(task.type) ? task.type : '';
         task.originalProgress = _.isFunction(task.progress) ? task.progress : () => { };
-        task.finish = _.isFunction(task.finish) ? task.finish : () => { };
+        task.originalFinish = _.isFunction(task.finish) ? task.finish : () => { };
+        task.finish = (e) => {
+            task.originalFinish(e);
+        };
 
         task.progress = this.progress.bind(this, task);
 
@@ -149,30 +154,48 @@ class WorkerMaster {
         this.results[task.id] = [];
         this.splitToWorkers(task);
     }
-    splitToWorkers(data) {
-        if (data.type == 'trim') {
-            data.parts = [];
-            var pixels = data.data.data;
-            var last = 0;
-            var workerPart = Math.round(pixels.length / this.workers.length / this.mercuryCanvas.state.workerMultiplier);
-            for (var i = 0; i < this.workers.length * this.mercuryCanvas.state.workerMultiplier; i++) {
-                var buffer = pixels.slice(workerPart * i, workerPart * (i + 1)).buffer;
-                var temp = {
-                    width: data.data.width,
+    splitToWorkers(task) {
+        var pixels = task.data.data;
+        var last = 0;
+        var workerPart = Math.round(pixels.length / this.workers.length / this.mercuryCanvas.state.workerMultiplier);
+
+        if (task.type == 'trim') {
+            task.parts = [];
+            for (let i = 0; i < this.workers.length * this.mercuryCanvas.state.workerMultiplier; i++) {
+                let buffer = pixels.slice(workerPart * i, workerPart * (i + 1)).buffer;
+                let temp = {
+                    width: task.data.width,
                     pixels: buffer,
                     startIndex: last
                 };
+                console.log(temp);
                 last += buffer.byteLength;
-                data.parts.push(temp);
+                task.parts.push(temp);
             }
         }
-        _.each(data.parts, (part, index) => {
+        else if (task.type == 'kernelConvolution') {
+            task.parts = [];
+            for (let i = 0; i < this.workers.length * this.mercuryCanvas.state.workerMultiplier; i++) {
+                let buffer = pixels.slice(workerPart * i, workerPart * (i + 1)).buffer;
+                let temp = {
+                    kernel: task.kernel,
+                    width: task.data.width,
+                    pixels: buffer,
+                    progressSpeed: 5,
+                    startIndex: last
+                };
+                last += buffer.byteLength;
+                task.parts.push(temp);
+            }
+        }
+
+        _.each(task.parts, (part, index) => {
             this.workers[index % this.workers.length].addAction({
-                type: 'trim',
-                taskID: data.id,
-                data: data.parts[index],
-                progress: data.progress,
-                finish: data.finish
+                type: task.type,
+                taskID: task.id,
+                data: task.parts[index],
+                progress: task.progress,
+                finish: task.finish
             });
         });
     }

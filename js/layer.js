@@ -248,6 +248,26 @@ class Layer {
 
         this.mercuryCanvas.emit('layer.update', this);
     }
+    applyFilter(filter, callback = () => { }) {
+        this.mercuryCanvas.workerMaster.addAction({
+            type: 'kernelConvolution',
+            kernel: filter,
+            data: this.context.getImageData(0, 0, this.coords.width, this.coords.height),
+            progress: (data) => {
+                data = data.data;
+
+                var image = this.context.getImageData(Math.floor(data.startIndex / 4) % data.width, Math.floor(data.startIndex / 4 / data.width), data.width, Math.ceil(data.data.length / 4 / data.width));
+                for (let i = 0; i < data.data.length; i++) {
+                    image.data[i] = data.data[i];
+                }
+                console.log(image);
+                var x = (data.startIndex / 4) % data.width;
+                var y = Math.floor(data.startIndex / 4) / data.width;
+                this.context.putImageData(image, x, y);
+            },
+            finish: callback
+        });
+    }
     select(type) {
         this.selected = true;
         this.mercuryCanvas.session.selectedLayers.select(this, type);
