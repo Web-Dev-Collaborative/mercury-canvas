@@ -30,7 +30,7 @@ var log = require('loglevel-message-prefix')(window.log, {
     staticPrefixes: ['index'],
     separator: '/'
 });
-var loggers = ['toolbar.js', 'tools.js', 'layer.js', 'helpers.js', 'worker.js'];
+var loggers = ['toolbar.js', 'tools.js', 'layer.js', 'helpers.js', 'worker.js', 'workerMaster.js'];
 for (var i = 0; i < loggers.length; i++) {
     window.log.getLogger(loggers[i]).setLevel(loggingLevel);
 }
@@ -309,14 +309,6 @@ class MercuryCanvas {
 
         this.session.width = width;
         this.session.height = height;
-    }
-    saveState() {
-        var layer = this.layers.list[0];
-        localStorage.setItem('layer', layer.context.getImageData(0, 0, layer.width, layer.height));
-    }
-    error(e) {
-        console.error(e);
-        return false;
     }
 }
 
