@@ -38,16 +38,28 @@ class SelectedLayers {
             requestAnimationFrame(this.draw.bind(this));
         });
 
-        mc.on('undo.layer.move', (operation) => {
+        mc.on('undo.transform', (operation) => {
+            console.log(operation);
             _.each(operation.layers, (layer, index) => {
-                layer.coords.update(operation.old[index]);
+                layer.draw(layer.original.image, {
+                    update: false
+                });
+                layer.coords.update(operation.coords.old[index]);
+                layer.applyScale();
+                layer.applyRotation(operation.coords.old[index].pivot);
             });
             this.makeBox();
             this.mouseMove(mc.session.mouse.last);
         });
-        mc.on('redo.layer.move', (operation) => {
+        mc.on('redo.transform', (operation) => {
+            console.log(operation);
             _.each(operation.layers, (layer, index) => {
-                layer.coords.update(operation.new[index]);
+                layer.draw(layer.original.image, {
+                    update: false
+                });
+                layer.coords.update(operation.coords.new[index]);
+                layer.applyScale();
+                layer.applyRotation(operation.coords.new[index].pivot);
             });
             this.makeBox();
             this.mouseMove(mc.session.mouse.last);
@@ -585,59 +597,41 @@ class SelectedLayers {
         coords.height = original.height * (wProp + hProp) / 2;
         coords.width = original.width * (wProp + hProp) / 2;
     }
-    mouseUp(e) {
+    mouseUp() {
         if (!this.state.transform) return;
         var mc = this.mercuryCanvas;
         var mouse = mc.session.mouse;
         var newCoords = [];
-        if (mouse.action == 'move') {
-            _.each(this.list, (layer, index) => {
-                newCoords[index] = _.clone(layer.coords);
-            });
-            mc.session.addOperation({
-                type: 'layer.move',
-                layers: _.clone(this.list),
-                old: this.oldCoords,
-                new: newCoords
-            });
-        }
-        else if (_.isObject(mouse.action) && mouse.action.cursor == 'rotate') {
+        if (_.isObject(mouse.action) && mouse.action.cursor == 'rotate') {
             mc.overlay.element.css({
                 transform: new Matrix().toCSS(),
                 transformOrigin: '0 0'
             });
-            _.each(this.list, (layer, index) => {
-                newCoords[index] = _.clone(layer.coords);
-                layer.applyRotation(this.rect.pivot);
+        }
+        var originals = [];
+        _.each(this.list, (layer, index) => {
+            newCoords[index] = _.clone(layer.coords);
+
+            originals.push({
+                element: layer.element,
+                original: _.clone(layer.original)
             });
-            mc.session.addOperation({
-                type: 'layer.rotate',
-                layers: _.clone(this.list),
+            if (_.isObject(mouse.action) && mouse.action.cursor == 'rotate') {
+                layer.applyRotation(this.rect.pivot);
+            }
+            else {
+                layer.applyScale(this.rect.pivot);
+            }
+        });
+        mc.session.addOperation({
+            type: 'transform',
+            layers: _.clone(this.list),
+            coords: {
                 old: this.oldCoords,
                 new: newCoords
-            });
-        }
-        else {
-            var originals = [];
-            _.each(this.list, (layer, index) => {
-                newCoords[index] = _.clone(layer.coords);
-
-                originals.push({
-                    element: layer.element,
-                    original: _.clone(layer.original)
-                });
-                layer.applyScale(this.rect.pivot);
-            });
-            mc.session.addOperation({
-                type: 'transform',
-                layers: _.clone(this.list),
-                coords: {
-                    old: this.oldCoords,
-                    new: newCoords
-                },
-                originals: originals
-            });
-        }
+            },
+            originals: originals
+        });
         mouse.action = undefined;
         this.oldCoords = [];
         mc.session.mouse.reset();
