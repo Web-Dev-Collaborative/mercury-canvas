@@ -190,7 +190,6 @@ class Menu {
         return false;
     }
     resize(options) {
-        console.log(options);
         if (this.fixed.length > 0) {
             if (this.orientation.horizontal) {
                 this.element.css({
@@ -236,9 +235,9 @@ class Menu {
         }
 
     }
-    mouseDown(e) {
+    mouseDown(e, t = false) {
         this.mouse.down = true;
-        if (_.isNumber(e.pageX) && _.isNumber(e.pageY) && !this.dist) {
+        if (_.isNumber(e.pageX) && _.isNumber(e.pageY) && (!this.dist || t)) {
             this.dist = {
                 x: this.coords.x - e.pageX,
                 y: this.coords.y - e.pageY
@@ -340,6 +339,12 @@ class Menu {
             height: this.element.height()
         });
         this.handle.addClass('active');
+        var menus = this.mercuryCanvas.state.menus;
+        menus.unshift(menus.splice(menus.indexOf(this), 1)[0]);
+        this.dist = {
+            x: -this.handle.outerWidth() / 2,
+            y: -this.handle.outerHeight() / 2
+        };
     }
 }
 
