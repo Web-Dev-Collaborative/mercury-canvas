@@ -46,6 +46,8 @@ class State {
                 toLayer: false
             }
         }, this.local);
+        this.workers = 1;
+        this.workerMultiplier = 1;
         if (saveDefaults) this.save();
     }
     save() {
