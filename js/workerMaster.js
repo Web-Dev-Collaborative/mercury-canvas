@@ -18,6 +18,7 @@ class MercuryWorker {
             type: 'active'
         });
         this.done = true;
+        this.id = _.uniqueId('worker_');
 
         this.receive = this.receive.bind(this);
         this.processQueue();
@@ -27,7 +28,6 @@ class MercuryWorker {
             this.worker.postMessage({
                 type: data.type,
                 data: data.data,
-                buffer: buffer,
                 id: data.id
             }, [buffer]);
         }
@@ -58,7 +58,7 @@ class MercuryWorker {
                 delete this.queue[data.id];
                 this.processQueue();
             }
-            if (data.event == 'log') log.info('Worker log', data.data);
+            if (data.event == 'log') log.info(this.id + ':', data.data);
         }
     }
     addAction(data) {
@@ -98,47 +98,51 @@ class WorkerMaster {
             }
         }
     }
+    progress(task, data) {
+        var res = this.results[task.id];
+
+        res.push(data.data);
+
+        if (_.isFunction(task.originalProgress)) task.originalProgress(data);
+
+        if (res.length == this.queue[task.id].parts.length) {
+            var temp = {};
+            if (task.type == 'trim') {
+                var max = {
+                    x: 0,
+                    y: 0
+                };
+                var min = {
+                    x: Infinity,
+                    y: Infinity
+                };
+                var mc = this.mercuryCanvas;
+                var x = mc.layers.list[0].coords.x;
+                var y = mc.layers.list[0].coords.y;
+                var colors = ['rgba(255, 0, 0, 0.5)', 'rgba(255, 128, 0, 0.8)', 'rgba(0, 255, 0, 0.5)', 'rgba(0, 255, 255, 0.8)', 'rgba(0, 0, 255, 0.5)', 'rgba(255, 0, 255, 0.8)', 'rgba(0, 0, 0, 0.5)', 'rgba(255, 255, 0, 0.8)'];
+                var i = 0;
+                _.each(res, (part) => {
+                    min.x = Math.min(min.x, part.bound.x);
+                    min.y = Math.min(min.y, part.bound.y);
+                    max.x = Math.max(max.x, part.bound.x2);
+                    max.y = Math.max(max.y, part.bound.y2);
+                });
+                temp = {
+                    x: min.x,
+                    y: min.y,
+                    x2: max.x,
+                    y2: max.y
+                };
+            }
+            if (_.isFunction(task.finish)) task.finish(temp);
+        }
+    }
     addAction(task) {
         task.type = _.isString(task.type) ? task.type : '';
         task.originalProgress = _.isFunction(task.progress) ? task.progress : () => { };
         task.finish = _.isFunction(task.finish) ? task.finish : () => { };
 
-        task.progress = (data) => {
-            var res = this.results[task.id];
-            var que = this.queue[task.id];
-
-            res.push(data.data);
-
-            if (_.isFunction(task.originalProgress)) task.originalProgress(data);
-
-            if (res.length == que.parts.length) {
-                var temp = {};
-                if (task.type == 'trim') {
-                    var max = {
-                        x: 0,
-                        y: 0
-                    };
-                    var min = {
-                        x: Infinity,
-                        y: Infinity
-                    };
-
-                    _.each(res, (part) => {
-                        min.x = Math.min(min.x, part.bound.x);
-                        min.y = Math.min(min.y, part.bound.y);
-                        max.x = Math.max(max.x, part.bound.x2);
-                        max.y = Math.max(max.y, part.bound.y2);
-                    });
-                    temp = {
-                        x: min.x,
-                        y: min.y,
-                        x2: max.x,
-                        y2: max.y
-                    };
-                }
-                if (_.isFunction(task.finish)) task.finish(temp);
-            }
-        };
+        task.progress = this.progress.bind(this, task);
 
         task.id = _.uniqueId('action_');
         this.queue[task.id] = task;
@@ -149,11 +153,10 @@ class WorkerMaster {
         if (data.type == 'trim') {
             data.parts = [];
             var pixels = data.data.data;
-            var length = data.data.data.length;
-
             var last = 0;
-            for (var i = 0; i < this.workers.length; i++) {
-                var buffer = pixels.slice(length / this.workers.length * i, length / this.workers.length * (i + 1)).buffer;
+            var workerPart = Math.round(pixels.length / this.workers.length / this.mercuryCanvas.state.workerMultiplier);
+            for (var i = 0; i < this.workers.length * this.mercuryCanvas.state.workerMultiplier; i++) {
+                var buffer = pixels.slice(workerPart * i, workerPart * (i + 1)).buffer;
                 var temp = {
                     width: data.data.width,
                     pixels: buffer,
