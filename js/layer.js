@@ -27,6 +27,12 @@ class layerCoords {
     }
     update(options, updateCSS = true) {
         if (_.isObject(options)) {
+            if (_.has(options, 'x')) {
+                options.x = parseInt(options.x);
+            }
+            if (_.has(options, 'y')) {
+                options.y = parseInt(options.y);
+            }
             var oldZ = this.z;
             if (_.has(options, 'angle')) {
                 this.matrix.reset();
