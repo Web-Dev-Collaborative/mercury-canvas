@@ -83,6 +83,19 @@ var topbarTools = [
                 this.mouseMove(mc.session.mouse.lastEvent);
                 this.draw();
             });
+            mc.addShortcut('[', () => {
+                if (mc.session.mouse.down) return;
+                mc.state.lineWidth--;
+                mc.state.lineWidth = Math.max(0, mc.state.lineWidth);
+                mc.state.save();
+                mc.emit('state.update');
+            });
+            mc.addShortcut(']', () => {
+                if (mc.session.mouse.down) return;
+                mc.state.lineWidth++;
+                mc.state.save();
+                mc.emit('state.update');
+            });
         },
         select: function () {
             var mc = this.mercuryCanvas;
@@ -544,6 +557,10 @@ var topbarTools = [
             var rgb = ctx.getImageData(lastPos.x + temp, lastPos.y + temp, 1, 1).data;
 
             mc.state.strokeColor = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+            _.each(this.parent.tools, (tool) => {
+                if (tool.name != 'colorPicker') return;
+                tool.colorPicker.setColor(mc.state.strokeColor);
+            })
         }
     },
     {
@@ -701,6 +718,7 @@ var topbarTools = [
                 el: this.colorPickerWrapper[0]
             });
             this.colorPicker.onChange((color) => {
+                this.element.css('color', color);
                 this.mercuryCanvas.state.strokeColor = color;
             });
             this.colorPickerWrapper.on('mouseup touchend', () => {
