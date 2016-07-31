@@ -533,7 +533,7 @@ class LayerThumbnail {
 
         this.update();
 
-        this.visibleIconWrapper.on('click', (e) => {
+        this.visibleIconWrapper.on('click touchend', (e) => {
             e.stopPropagation();
             var old = this.layer.state.visible;
             this.layer.toggleVisibility();
