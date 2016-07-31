@@ -329,6 +329,9 @@ class Menu {
         this.mercuryCanvas.resize(true);
     }
     unfix() {
+        _.each(this.tools, (tool) => {
+            if (_.isFunction(tool.menuUnfix)) tool.menuUnfix();
+        });
         this.fixed = false;
         this.determineOrientation(true);
         this.element.removeClass('fixed left right top bottom').removeAttr('style');

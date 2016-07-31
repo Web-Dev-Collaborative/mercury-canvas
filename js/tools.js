@@ -687,18 +687,14 @@ var topbarTools = [
         end: true,
         load: function () {
             this.visible = false;
-            this.element.css({
-                position: 'relative',
-                overflow: 'visible'
-            });
             this.colorPickerWrapper = $('<div>', {
+                class: 'menuCollider',
                 css: {
                     position: 'absolute',
-                    top: -60,
-                    left: 40,
+                    zIndex: 1010,
                     display: 'none'
                 }
-            }).appendTo(this.element);
+            }).appendTo(this.mercuryCanvas.element);
             this.colorPicker = new colorPicker({
                 color: this.mercuryCanvas.state.strokeColor,
                 background: '#454545',
@@ -709,22 +705,47 @@ var topbarTools = [
             });
             this.colorPickerWrapper.on('mouseup touchend', () => {
                 this.mercuryCanvas.state.save();
-                setTimeout(() => this.mercuryCanvas.session.undo());
             });
+        },
+        menuUnfix: function (e) {
+            this.visible = false;
+            this.colorPickerWrapper.hide();
         },
         select: function (e) {
             if (e.target.className.indexOf('colorPicker') == -1 && e.target.className.indexOf('fa') == -1) return;
             this.visible = !this.visible;
             if (this.visible) {
                 this.colorPickerWrapper.show();
+                var topOffset = 0;
+                var leftOffset = 0;
+                if (this.parent.fixed == 'top' || !this.parent.fixed) {
+                    topOffset = 40;
+                    leftOffset = 0;
+                }
+                else if (this.parent.fixed == 'left') {
+                    topOffset = 0;
+                    leftOffset = 40;
+                }
+                else if (this.parent.fixed == 'right') {
+                    topOffset = 0;
+                    leftOffset = -40;
+                }
+                else if (this.parent.fixed == 'bottom') {
+                    topOffset = -40;
+                    leftOffset = 0;
+                }
+                this.colorPickerWrapper.css({
+                    top: this.element.offset().top,
+                    left: this.element.offset().left,
+                });
                 var visible = this.colorPickerWrapper.visible();
                 visible.top = visible.top != 0 ? visible.top - 5 : 0;
                 visible.bottom = visible.bottom != 0 ? visible.bottom + 5 : 0;
                 visible.left = visible.left != 0 ? visible.left - 5 : 0;
                 visible.right = visible.right != 0 ? visible.right + 5 : 0;
 
-                this.colorPickerWrapper.css('top', '+=' + (visible.top - visible.bottom));
-                this.colorPickerWrapper.css('left', '+=' + (visible.left - visible.right));
+                this.colorPickerWrapper.css('top', '+=' + (visible.top - visible.bottom + topOffset));
+                this.colorPickerWrapper.css('left', '+=' + (visible.left - visible.right + leftOffset));
             }
             else {
                 this.colorPickerWrapper.hide();
