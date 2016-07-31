@@ -64,6 +64,9 @@ class Tool {
         if (this.action) return;
 
         if (this.parent.lastTool) {
+            if (this.mercuryCanvas.session.mouse.down) {
+                this.parent.lastTool.mouseUp(this.mercuryCanvas.session.mouse.lastEvent);
+            }
             this.parent.lastTool.deselect();
         }
         this.parent.element.children('div').removeClass('selected');

@@ -77,6 +77,7 @@ var topbarTools = [
             this.cursor = cursor;
             this.zIndex = 0;
             this.shown = false;
+            this.started = false;
             this.matrix = new Matrix();
             mc.on('state.update', () => {
                 if (!this.selected) return;
@@ -97,10 +98,10 @@ var topbarTools = [
                 mc.emit('state.update');
             });
         },
-        select: function () {
+        select: function (e) {
             var mc = this.mercuryCanvas;
 
-            mc.overlay.clear();
+            if (e !== true) mc.overlay.clear();
             this.mouseMove(mc.session.mouse.lastEvent);
         },
         deselect: function () {
@@ -113,6 +114,7 @@ var topbarTools = [
             this.shown = false;
         },
         draw: function () {
+            if (!this.started) return;
             var t0 = performance.now();
             var mc = this.mercuryCanvas;
             var points = mc.session.mouse.points;
@@ -163,6 +165,7 @@ var topbarTools = [
             mc.overlay.context.strokeStyle = mc.state.strokeColor;
             mc.overlay.context.fillStyle = mc.state.strokeColor;
             mc.overlay.context.lineCap = mc.overlay.context.lineJoin = 'round';
+            this.started = true;
 
             this.mouseMove(e);
             requestAnimationFrame(this.draw.bind(this, e));
@@ -197,7 +200,7 @@ var topbarTools = [
             css.transform = this.matrix.toCSS();
 
             this.cursor.css(css);
-            if (!mouse.down) return;
+            if (!mouse.down || !this.started) return;
 
             if (mc.session.keys.shift && mouse.points.length) {
                 var initial = mouse.points[0];
@@ -225,6 +228,7 @@ var topbarTools = [
             };
         },
         mouseUp: function () {
+            this.started = false;
             var mc = this.mercuryCanvas;
             var mouse = mc.session.mouse;
             if (!mouse.points.length) return;
@@ -266,6 +270,7 @@ var topbarTools = [
             this.cursor = $('.brushCursor', mc.layersContainer);
             this.zIndex = 0;
             this.shown = false;
+            this.started = false;
             this.matrix = new Matrix();
             mc.on('state.update', () => {
                 if (!this.selected) return;
@@ -273,10 +278,10 @@ var topbarTools = [
                 this.draw();
             });
         },
-        select: function () {
+        select: function (e) {
             var mc = this.mercuryCanvas;
 
-            mc.overlay.clear();
+            if (e !== true) mc.overlay.clear();
         },
         deselect: function () {
             var mc = this.mercuryCanvas;
@@ -288,6 +293,7 @@ var topbarTools = [
             this.shown = false;
         },
         draw: function () {
+            if (!this.started) return;
             var t0 = performance.now();
             var mc = this.mercuryCanvas;
             var points = mc.session.mouse.points;
@@ -338,12 +344,13 @@ var topbarTools = [
             mc.overlay.context.strokeStyle = mc.state.background;
             mc.overlay.context.fillStyle = mc.state.background;
             mc.overlay.context.lineCap = mc.overlay.context.lineJoin = 'round';
+            this.started = true;
 
             this.mouseMove(e);
             requestAnimationFrame(this.draw.bind(this, e));
         },
         mouseMove: function (e) {
-            if (!e) return;
+            if (!e || !this.selected) return;
             var mc = this.mercuryCanvas;
 
             var css = {};
@@ -372,7 +379,7 @@ var topbarTools = [
             css.transform = this.matrix.toCSS();
 
             this.cursor.css(css);
-            if (!mouse.down) return;
+            if (!mouse.down || !this.started) return;
 
             if (mc.session.keys.shift && mouse.points.length) {
                 var initial = mouse.points[0];
@@ -400,6 +407,7 @@ var topbarTools = [
             };
         },
         mouseUp: function () {
+            this.started = false;
             var mc = this.mercuryCanvas;
             var mouse = mc.session.mouse;
             if (!mouse.points.length) return;
@@ -557,10 +565,13 @@ var topbarTools = [
             var rgb = ctx.getImageData(lastPos.x + temp, lastPos.y + temp, 1, 1).data;
 
             mc.state.strokeColor = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+            var t;
             _.each(this.parent.tools, (tool) => {
+                if (tool.name == 'brush') t = tool;
                 if (tool.name != 'colorPicker') return;
                 tool.colorPicker.setColor(mc.state.strokeColor);
-            })
+            });
+            t.onClick();
         }
     },
     {
