@@ -36,7 +36,7 @@ class Input {
         }
         else {
             input = $('<input>', {
-                type: this.type,
+                type: 'text',
                 name: this.name,
                 value: this.value,
                 required: this.required,
