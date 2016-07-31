@@ -260,10 +260,6 @@ class MercuryCanvas {
         return isInMenu;
     }
     mouseDown(e) {
-        var mouseCoords = new coords({
-            x: e.clientX,
-            y: e.clientY
-        });
         this.session.mouse.down = true;
         if (this.inMenu(e)) return;
         _.forIn(this.state.activeTools, (tool) => {
