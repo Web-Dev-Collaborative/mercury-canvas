@@ -524,7 +524,15 @@ class LayerThumbnail {
 
         this.visibleIconWrapper.on('click', (e) => {
             e.stopPropagation();
-            this.layer.toggleVisibility(e);
+            var old = this.layer.state.visible;
+            this.layer.toggleVisibility();
+
+            this.layer.mercuryCanvas.session.addOperation({
+                type: 'layer.visibility',
+                layer: this.layer,
+                old: old,
+                new: this.layer.state.visible
+            });
         });
         this.wrapper.on('click', () => {
             if (this.layer.mercuryCanvas.session.keys['ctrl']) {
@@ -760,6 +768,8 @@ class LayersPanel extends Menu {
         mc.on('redo.layer.remove', (operation) => {
             operation.layer.remove(true);
         });
+        mc.on('undo.layer.visibility', (operation) => operation.layer.toggleVisibility(operation.old));
+        mc.on('redo.layer.visibility', (operation) => operation.layer.toggleVisibility(operation.new));
     }
     elementToThumbnail(options) {
         if (!_.isObject(options) || (!_.has(options, 'layer') && !_.has(options, 'element'))) return false;

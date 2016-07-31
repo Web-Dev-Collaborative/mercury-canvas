@@ -28,6 +28,15 @@ class layerCoords {
     update(options, updateCSS = true) {
         if (_.isObject(options)) {
             var oldZ = this.z;
+            if (_.has(options, 'angle')) {
+                this.matrix.reset();
+                if (_.has(options, 'pivot')) this.matrix.translate(options.pivot.x, options.pivot.y);
+                options.angle = options.angle.toDeg() % 360;
+                this.matrix.rotateDeg(options.angle);
+                this.angle = options.angle.toPi();
+                if (_.has(options, 'pivot')) this.matrix.translate(-options.pivot.x, -options.pivot.y);
+                this.matrix.translate(this.x, this.y);
+            }
             if (options.scale) {
                 this.matrix.reset();
 
@@ -65,15 +74,6 @@ class layerCoords {
                     this.matrix.translateY((options.y - this.y) / this.matrix.d);
                     this.y = options.y;
                 }
-            }
-            if (_.has(options, 'angle')) {
-                this.matrix.reset();
-                if (_.has(options, 'pivot')) this.matrix.translate(options.pivot.x, options.pivot.y);
-                options.angle = options.angle.toDeg() % 360;
-                this.matrix.rotateDeg(options.angle);
-                this.angle = options.angle.toPi();
-                if (_.has(options, 'pivot')) this.matrix.translate(-options.pivot.x, -options.pivot.y);
-                this.matrix.translate(this.x, this.y);
             }
             if (_.has(options, 'z')) this.z = options.z;
         }
@@ -159,9 +159,13 @@ class Layer {
 
         this.mercuryCanvas.emit('layer.new', this);
     }
-    toggleVisibility() {
-        if (this.state.visible) this.hide();
-        else this.show();
+    toggleVisibility(e) {
+        if (_.isUndefined(e)) {
+            if (this.state.visible) this.hide();
+            else this.show();
+        }
+        else if (e) this.show();
+        else this.hide();
     }
     hide(e) {
         this.state.visible = false;
@@ -233,6 +237,7 @@ class Layer {
         this.context.drawImage(this.original.image, movement.x - draw.x, movement.y - draw.y);
         this.context.restore();
 
+        this.coords.pivot = pivot;
         this.coords.savedAngle = this.coords.angle;
         this.coords.update({
             angle: 0
@@ -303,6 +308,7 @@ class Layer {
                 type: 'trim',
                 data: this.context.getImageData(0, 0, this.coords.width, this.coords.height),
                 finish: (e) => {
+                    e.updateOriginal = options && options.updateOriginal === false ? false : true;
                     e.callback = options && options.callback ? options.callback : () => { };
                     this.trimToCoords(e);
                 }
@@ -334,7 +340,7 @@ class Layer {
         this.mercuryCanvas.emit('layer.trim', this);
         var t1 = performance.now();
         log.debug('I spent ' + (t1 - t0) + 'ms to trim the layer');
-        this.updateOriginal(bound.callback);
+        if (bound.updateOriginal) this.updateOriginal(bound.callback);
     }
     draw(image, options = {}) {
         if (options.resize) {
