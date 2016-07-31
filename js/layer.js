@@ -51,11 +51,11 @@ class layerCoords {
                     this.height = options.height;
                 }
                 if (_.has(options, 'x')) {
-                    this.matrix.translateX(options.x / options.scaleX);
+                    if (this.matrix.a != 0 && this.matrix.d != 0) this.matrix.translateX(options.x / options.scaleX);
                     this.x = options.x;
                 }
                 if (_.has(options, 'y')) {
-                    this.matrix.translateY(options.y / options.scaleY);
+                    if (this.matrix.a != 0 && this.matrix.d != 0) this.matrix.translateY(options.y / options.scaleY);
                     this.y = options.y;
                 }
             }
@@ -67,11 +67,11 @@ class layerCoords {
                     this.height = options.height;
                 }
                 if (_.has(options, 'x')) {
-                    this.matrix.translateX((options.x - this.x) / this.matrix.a);
+                    if (this.matrix.a != 0 && this.matrix.d != 0) this.matrix.translateX((options.x - this.x) / this.matrix.a);
                     this.x = options.x;
                 }
                 if (_.has(options, 'y')) {
-                    this.matrix.translateY((options.y - this.y) / this.matrix.d);
+                    if (this.matrix.a != 0 && this.matrix.d != 0) this.matrix.translateY((options.y - this.y) / this.matrix.d);
                     this.y = options.y;
                 }
             }
