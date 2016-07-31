@@ -368,6 +368,7 @@ class Layer {
         targetLayer.context.drawImage(this.element[0], 0, 0);
         targetLayer.state.dirty = true;
         if (this.name == 'overlay') targetLayer.trim(trimOptions);
+        targetLayer.updateOriginal();
         this.mercuryCanvas.emit('layer.update', targetLayer);
     }
     delete() {
