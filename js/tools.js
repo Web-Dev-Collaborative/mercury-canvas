@@ -707,45 +707,57 @@ var topbarTools = [
                 this.mercuryCanvas.state.save();
             });
         },
-        menuUnfix: function (e) {
-            this.visible = false;
-            this.colorPickerWrapper.hide();
+        menuUnfix: function () {
+            this.menuMove();
+        },
+        menuMove: function () {
+            var topOffset = 0;
+            var leftOffset = 0;
+            if (!this.parent.fixed) {
+                if (this.parent.orientation.vertical) {
+                    topOffset = 0;
+                    leftOffset = 40;
+                }
+                else if (this.parent.orientation.horizontal) {
+                    topOffset = 40;
+                    leftOffset = 0;
+                }
+            }
+            if (this.parent.fixed == 'top') {
+                topOffset = 40;
+                leftOffset = 0;
+            }
+            else if (this.parent.fixed == 'left') {
+                topOffset = 0;
+                leftOffset = 40;
+            }
+            else if (this.parent.fixed == 'right') {
+                topOffset = 0;
+                leftOffset = -10 - this.colorPickerWrapper.outerWidth();
+            }
+            else if (this.parent.fixed == 'bottom') {
+                topOffset = -10 - this.colorPickerWrapper.outerHeight();
+                leftOffset = 0;
+            }
+            this.colorPickerWrapper.css({
+                top: this.element.offset().top + topOffset,
+                left: this.element.offset().left + leftOffset,
+            });
+            var visible = this.colorPickerWrapper.visible();
+            visible.top = visible.top != 0 ? visible.top - 5 : 0;
+            visible.bottom = visible.bottom != 0 ? visible.bottom + 5 : 0;
+            visible.left = visible.left != 0 ? visible.left - 5 : 0;
+            visible.right = visible.right != 0 ? visible.right + 5 : 0;
+
+            this.colorPickerWrapper.css('top', '+=' + (visible.top - visible.bottom));
+            this.colorPickerWrapper.css('left', '+=' + (visible.left - visible.right));
         },
         select: function (e) {
             if (e.target.className.indexOf('colorPicker') == -1 && e.target.className.indexOf('fa') == -1) return;
             this.visible = !this.visible;
             if (this.visible) {
                 this.colorPickerWrapper.show();
-                var topOffset = 0;
-                var leftOffset = 0;
-                if (this.parent.fixed == 'top' || !this.parent.fixed) {
-                    topOffset = 40;
-                    leftOffset = 0;
-                }
-                else if (this.parent.fixed == 'left') {
-                    topOffset = 0;
-                    leftOffset = 40;
-                }
-                else if (this.parent.fixed == 'right') {
-                    topOffset = 0;
-                    leftOffset = -40;
-                }
-                else if (this.parent.fixed == 'bottom') {
-                    topOffset = -40;
-                    leftOffset = 0;
-                }
-                this.colorPickerWrapper.css({
-                    top: this.element.offset().top,
-                    left: this.element.offset().left,
-                });
-                var visible = this.colorPickerWrapper.visible();
-                visible.top = visible.top != 0 ? visible.top - 5 : 0;
-                visible.bottom = visible.bottom != 0 ? visible.bottom + 5 : 0;
-                visible.left = visible.left != 0 ? visible.left - 5 : 0;
-                visible.right = visible.right != 0 ? visible.right + 5 : 0;
-
-                this.colorPickerWrapper.css('top', '+=' + (visible.top - visible.bottom + topOffset));
-                this.colorPickerWrapper.css('left', '+=' + (visible.left - visible.right + leftOffset));
+                this.menuMove();
             }
             else {
                 this.colorPickerWrapper.hide();

@@ -148,6 +148,9 @@ class Menu {
             this.element.css({
                 transform: this.matrix.toCSS()
             });
+            _.each(this.tools, (tool) => {
+                if (_.isFunction(tool.menuMove)) tool.menuMove();
+            });
         });
         if (this.fixed === false) {
             setTimeout(() => {
@@ -236,6 +239,7 @@ class Menu {
 
     }
     mouseDown(e, t = false) {
+        this.element.css('z-index', 1002);
         this.mouse.down = true;
         if (_.isNumber(e.pageX) && _.isNumber(e.pageY) && (!this.dist || t)) {
             this.dist = {
@@ -305,6 +309,7 @@ class Menu {
         this.mouse.down = false;
         this.dist = undefined;
         this.handle.removeClass('active');
+        this.element.css('z-index', '');
         if (!this.fixable) return;
 
         if (this.clone) {
