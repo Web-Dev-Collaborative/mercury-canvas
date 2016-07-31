@@ -150,20 +150,21 @@ class MercuryCanvas {
                 this.emit('mouseout', e);
             },
             'mousedown': e => {
-                this.mouseDown(e);
                 this.emit('mousedown', e);
+                if (!this.mouseDown(e)) return;
             },
             'mousemove': e => {
+                this.emit('mousemove', e);
+                if (this.inMenu(e)) return;
                 this.session.mouse.lastEvent = e;
                 _.forIn(this.state.activeTools, (tool) => {
                     if (typeof tool.mouseMove == 'function') tool.mouseMove(e);
                     if (typeof tool.draw == 'function') requestAnimationFrame(tool.draw.bind(tool, e));
                 });
-                this.emit('mousemove', e);
             },
             'mouseup': e => {
-                this.mouseUp(e);
                 this.emit('mouseup', e);
+                if (!this.mouseUp(e)) return;
             },
             'touchstart': e => {
                 this.mouseDown(e.originalEvent.touches[0]);
@@ -241,29 +242,42 @@ class MercuryCanvas {
         if (!temp) return;
         Mousetrap.bind(temp, callback);
     }
+    inMenu(e) {
+        var menuParent = e.target.className.indexOf('menu') != -1 ? $(e.target) : $(e.target).parents('.menu');
+        if (!menuParent.length) menuParent = $(e.target).parents('.menuCollider');
+        var isInMenu = menuParent.length >= 1 ? true : false;
+
+        if (this.session.mouse.down) {
+            isInMenu = this.session.mouse.inMenu;
+        }
+        else {
+            this.session.mouse.inMenu = isInMenu;
+        }
+        if ((e.type == 'mouseup' || e.type == 'touchend' || e.type == 'touchcancel') && !this.session.mouse.down) {
+            isInMenu = false;
+        }
+
+        return isInMenu;
+    }
     mouseDown(e) {
         var mouseCoords = new coords({
             x: e.clientX,
             y: e.clientY
         });
-        var ok = true;
-        _.each(this.state.menus, (menu) => {
-            if (mouseCoords.inside(menu.coords)) {
-                ok = false;
-                return false;
-            }
-        });
-        if (!mouseCoords.inside(this.layersContainer.coords) || !ok) return;
         this.session.mouse.down = true;
+        if (this.inMenu(e)) return;
         _.forIn(this.state.activeTools, (tool) => {
             tool.mouseDown(e);
         });
+        return true;
     }
     mouseUp(e) {
         this.session.mouse.down = false;
+        if (this.inMenu(e)) return;
         _.forIn(this.state.activeTools, (tool) => {
             tool.mouseUp(e);
         });
+        return true;
     }
     resize(forced) {
         let width = document.body.clientWidth;
