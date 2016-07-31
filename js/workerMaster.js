@@ -100,7 +100,7 @@ class WorkerMaster {
     }
     progress(task, data) {
         var res = this.results[task.id];
-
+        data.data.id = parseInt(data.id.slice(-2).replace('_', ''));
         res.push(data.data);
 
         if (_.isFunction(task.originalProgress)) task.originalProgress(data);
@@ -116,16 +116,25 @@ class WorkerMaster {
                     x: Infinity,
                     y: Infinity
                 };
-                var mc = this.mercuryCanvas;
-                var x = mc.layers.list[0].coords.x;
-                var y = mc.layers.list[0].coords.y;
-                var colors = ['rgba(255, 0, 0, 0.5)', 'rgba(255, 128, 0, 0.8)', 'rgba(0, 255, 0, 0.5)', 'rgba(0, 255, 255, 0.8)', 'rgba(0, 0, 255, 0.5)', 'rgba(255, 0, 255, 0.8)', 'rgba(0, 0, 0, 0.5)', 'rgba(255, 255, 0, 0.8)'];
-                var i = 0;
+                // var mc = this.mercuryCanvas;
+                // var x = mc.layers.list[0].coords.x;
+                // var y = mc.layers.list[0].coords.y;
+                // var colors = ['rgba(255, 0, 0, 0.5)', 'rgba(255, 128, 0, 0.8)', 'rgba(0, 255, 0, 0.5)', 'rgba(0, 255, 255, 0.8)', 'rgba(0, 0, 255, 0.5)', 'rgba(255, 0, 255, 0.8)', 'rgba(0, 0, 0, 0.5)', 'rgba(255, 255, 0, 0.8)'];
+                // var i = 0;
+                res = _.sortBy(res, ['id']);
                 _.each(res, (part) => {
                     min.x = Math.min(min.x, part.bound.x);
                     min.y = Math.min(min.y, part.bound.y);
                     max.x = Math.max(max.x, part.bound.x2);
                     max.y = Math.max(max.y, part.bound.y2);
+
+                    // mc.base.context.fillStyle = colors[i++];
+                    // i = i % colors.length;
+                    // mc.base.context.fillRect(x, y + part.start.y, part.width, part.end.y - part.start.y);
+                    // console.log('%c actionPart_' + part.id + ', i: ' + i + '\nbound: \n' + JSON.stringify(part.bound, null, 4) + '\nstart:\n' + JSON.stringify(part.start, null, 4) + '\nend:\n' + JSON.stringify(part.end, null, 4), 'color: ' + colors[i].slice(0, colors[i].indexOf('0.')) + '1)');
+                    // mc.base.context.fillStyle = colors[i++];
+                    // mc.base.context.fillRect(x + part.bound.x, y + part.bound.y, part.bound.x2 - part.bound.x, part.bound.y2 - part.bound.y);
+                    // mc.base.element.css('z-index', 1005);
                 });
                 temp = {
                     x: min.x,
