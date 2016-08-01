@@ -635,33 +635,6 @@ class LayersPanel extends Menu {
             onEnd: this.onEnd.bind(this),
             onStart: (event) => {
                 this.last.oldIndex = event.oldIndex;
-            },
-            onMove: (event) => {
-                var t0 = performance.now();
-                var dragged = event.dragged;
-                var related = event.related;
-
-                if (dragged == related || !dragged.className.indexOf('layerThumbnail') || !related.className.indexOf('layerThumbnail')) return;
-
-                _.each(this.thumbnails, (thumbnail) => {
-                    if (!thumbnail) return;
-                    if (thumbnail.wrapper[0] == dragged) {
-                        dragged = thumbnail.layer.coords;
-                    }
-                    if (thumbnail.wrapper[0] == related) {
-                        related = thumbnail.layer.coords;
-                    }
-                });
-                var a = dragged.z;
-                dragged.update({
-                    z: related.z
-                });
-                related.update({
-                    z: a
-                });
-
-                var t1 = performance.now();
-                log.debug('I spent ' + (t1 - t0) + 'ms to switch the z-indexes between the dragged layers');
             }
         });
         this.trashSortable = new sortable(this.buttons.trash[0], {
@@ -821,7 +794,7 @@ class LayersPanel extends Menu {
         return a;
     }
     onEnd(event) {
-        if (!_.isNumber(event.oldIndex) || !_.isNumber(event.newIndex) || _.isNaN(event.oldIndex) || _.isNaN(event.newIndex) || event.oldIndex == event.newIndex || !event.explicitOriginalTarget || !event.explicitOriginalTarget.className || event.explicitOriginalTarget.className.indexOf('fa-fw') != -1) return;
+        if (!_.isNumber(event.oldIndex) || !_.isNumber(event.newIndex) || _.isNaN(event.oldIndex) || _.isNaN(event.newIndex) || event.oldIndex == event.newIndex) return;
 
         var thumbnail = this.thumbnails.splice(event.oldIndex, 1)[0];
         this.thumbnails.splice(event.newIndex, 0, thumbnail);
