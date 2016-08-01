@@ -211,7 +211,7 @@ class SelectedLayers {
             pos.y >= selectedRect.y + sh && pos.y <= selectedRect.y + selectedRect.height - sh) {
             ret = 'w-resize';
         }
-        if (!(mc.session.mouse.down && _.isObject(mc.session.mouse.action) && mc.session.mouse.action.cursor == 'rotate') && (pos.x > selectedRect.x - sh && pos.y > selectedRect.y - sh && pos.x < selectedRect.x + selectedRect.width + sh && pos.y < selectedRect.y + selectedRect.height + sh)) {
+        if (!mc.state.debugRotate || (!(mc.session.mouse.down && _.isObject(mc.session.mouse.action) && mc.session.mouse.action.cursor == 'rotate') && (pos.x > selectedRect.x - sh && pos.y > selectedRect.y - sh && pos.x < selectedRect.x + selectedRect.width + sh && pos.y < selectedRect.y + selectedRect.height + sh))) {
             return ret;
         }
 
@@ -671,7 +671,7 @@ class SelectedLayers {
                 this.cursor.element.hide();
             }
             mc.layersContainer.css({
-                cursor: action
+                cursor: action ? action : 'default'
             });
         }
     }
