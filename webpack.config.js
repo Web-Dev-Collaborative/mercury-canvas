@@ -9,20 +9,18 @@ var exp = {
         port: 8080,
         historyApiFallback: {
             index: '/'
-        },
-        headers: {
-            'Access-Control-Allow-Origin': '*',
-        },
+        }
     },
+    devtool: 'source-map',
     entry: {
         webpack: 'webpack-dev-server/client?http://0.0.0.0:81',
         webpackHot: 'webpack/hot/only-dev-server',
-        bundle: './index.js'
+        bundle: './index.jsx'
     },
     output: {
         path: path.join(__dirname, 'assets'),
         filename: '[name].js',
-        publicPath: 'assets/',
+        publicPath: '/assets/'
     },
     amd: {
         jQuery: true
