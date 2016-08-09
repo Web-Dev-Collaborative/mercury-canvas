@@ -18,22 +18,6 @@ var topbarTools = [
         icon: 'fa-folder',
         action: true,
         key: 'mod + o',
-        load: function () {
-            $(window).on('dragenter dragover', (e) => {
-                e.preventDefault();
-                this.mercuryCanvas.element.addClass('over');
-            });
-            $(window).on('dragexit', (e) => {
-                e.preventDefault();
-                this.mercuryCanvas.element.removeClass('over');
-            });
-            this.mercuryCanvas.element.on('drop', (e) => {
-                e.preventDefault();
-                this.mercuryCanvas.element.removeClass('over');
-
-                this.mercuryCanvas.session.file.readFiles(e.originalEvent.dataTransfer.files);
-            });
-        },
         select: function () {
             this.mercuryCanvas.session.file.openUploadDialog();
         }
