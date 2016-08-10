@@ -347,13 +347,15 @@ class MercuryCanvas extends React.Component {
 
     }
     render() {
-        var wrapperClasses = classnames({
+        var dropzoneClasses = classnames({
+            dropWrapper: true,
             over: this.state.drag
         });
+
         return (
-            <div id="wrapper" ref="wrapper" className={wrapperClasses}>
+            <div id="wrapper" ref="wrapper">
                 <div className="layerContainer"></div>
-                <div className="dropText">Drop to load</div>
+                <div className={dropzoneClasses}><div className="dropText">Drop to load</div></div>
             </div>
         );
     }
