@@ -19,7 +19,7 @@ var exp = {
     output: {
         path: path.join(__dirname, 'assets'),
         filename: '[name].js',
-        publicPath: '/assets/'
+        publicPath: 'assets/'
     },
     amd: {
         jQuery: true
