@@ -81,10 +81,11 @@ class SelectedLayers {
             this.mouseMove(e.originalEvent.touches[0]);
         });
         mc.on('touchend', e => this.mouseUp(e.originalEvent.touches[0]));
-        mc.addShortcut('mod + alt + t', () => {
+        mc.addShortcut('mod + m', () => {
             this.enterTransform();
+            return false;
         });
-        mc.addShortcut('mod + enter', () => {
+        mc.addShortcut(['mod + enter', 'esc'], () => {
             this.exitTransform();
         });
 
