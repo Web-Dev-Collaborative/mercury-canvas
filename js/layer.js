@@ -190,6 +190,7 @@ class Layer {
         });
     }
     applyRotation(pivot) {
+        if (!pivot) return;
         var angle = this.coords.angle;
         this.clear();
         var c1, c2, c3, c4;
