@@ -57,9 +57,12 @@ import {coords} from './js/helpers.js';
 // import WorkerMaster from './js/workerMaster.jsx';
 // import State from './js/state.jsx';
 // import Session from './js/session.jsx';
+import LayersContainer from './js/components/layersContainer.jsx';
 
 import React from 'react';
 import ReactDOM from 'react-dom';
+import { Provider } from 'react-redux';
+import store from './js/store.js';
 
 class MercuryCanvas extends React.Component {
     constructor(props) {
@@ -351,14 +354,18 @@ class MercuryCanvas extends React.Component {
             dropWrapper: true,
             over: this.state.drag
         });
-
         return (
             <div id="wrapper" ref="wrapper">
-                <div className="layerContainer"></div>
+                <LayersContainer />
                 <div className={dropzoneClasses}><div className="dropText">Drop to load</div></div>
             </div>
         );
     }
 }
 
-ReactDOM.render(<MercuryCanvas />, document.body);
+ReactDOM.render(
+    <Provider store={store}>
+        <MercuryCanvas />
+    </Provider>, document.getElementById('wrapper'));
+
+window.store = store;
