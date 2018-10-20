@@ -17,6 +17,7 @@
     "@babel/preset-react": "^7.0.0",
     "async": "^2.0.1",
     "autoprefixer": "^9.2.1",
+    "babel-loader": "^8.0.4",
     "classnames": "^2.2.5",
     "css-loader": "^1.0.0",
     "eslint": "^5.7.0",
@@ -38,8 +39,8 @@
     "path": "^0.12.7",
     "postcss-loader": "^3.0.0",
     "precss": "^3.1.2",
-    "react": "^15.3.0",
-    "react-dom": "^15.3.0",
+    "react": "^16.5.2",
+    "react-dom": "^16.5.2",
     "rimraf": "^2.5.3",
     "sass-lint": "^1.8.2",
     "sass-loader": "^7.1.0",
@@ -57,7 +58,7 @@
     "worker-loader": "^2.0.0"
   },
   "dependencies": {
-    "react-redux": "^4.4.5",
-    "redux": "^3.5.2"
+    "react-redux": "^5.0.7",
+    "redux": "^4.0.1"
   }
 }

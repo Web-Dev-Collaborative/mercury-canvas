@@ -13,7 +13,7 @@ var exp = {
     },
     devtool: 'source-map',
     entry: {
-        webpack: 'webpack-dev-server/client?http://0.0.0.0:81',
+        webpack: 'webpack-dev-server/client?http://0.0.0.0:8080',
         webpackHot: 'webpack/hot/only-dev-server',
         bundle: './index.jsx'
     },

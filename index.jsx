@@ -26,7 +26,7 @@ Number.prototype.toDeg = function () {
     return this / Math.PI * 180;
 };
 
-import 'script!loglevel';
+import 'script-loader!loglevel';
 var log = require('loglevel-message-prefix')(window.log, {
     prefixes: ['level'],
     staticPrefixes: ['index'],
