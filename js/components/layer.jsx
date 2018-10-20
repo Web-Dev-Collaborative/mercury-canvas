@@ -1,4 +1,5 @@
 'use strict';
+import PropTypes from 'prop-types';
 import React from 'react';
 import classnames from 'classnames';
 import {Matrix} from 'transformation-matrix-js';
@@ -43,7 +44,7 @@ class Layer extends React.Component {
     }
 }
 Layer.propTypes = {
-    layerObject: React.PropTypes.object
+    layerObject: PropTypes.object
 };
 
 export default Layer;

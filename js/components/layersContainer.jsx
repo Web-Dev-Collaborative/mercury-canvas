@@ -1,4 +1,5 @@
 'use strict';
+import PropTypes from 'prop-types';
 import React from 'react';
 import store from '../store.js';
 import Layer from './layer.jsx';
@@ -29,7 +30,7 @@ class LayersContainer extends React.Component {
     }
 }
 LayersContainer.propTypes = {
-    layers: React.PropTypes.object
+    layers: PropTypes.object
 };
 
 export default LayersContainer;
