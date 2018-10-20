@@ -10,7 +10,7 @@ import {coords} from './helpers.js';
 import Layer from './layer.js';
 
 import colorPicker from 'simple-color-picker';
-import 'simple-color-picker/simple-color-picker.css';
+import 'simple-color-picker/src/simple-color-picker.css';
 
 var topbarTools = [
     {

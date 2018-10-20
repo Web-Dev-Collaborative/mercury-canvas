@@ -4,7 +4,7 @@ var log = require('loglevel-message-prefix')(window.log.getLogger('workerMaster.
     separator: '/'
 });
 import _ from 'lodash';
-var MWorker = window.MWorker = require('worker!./worker.js');
+var MWorker = window.MWorker = require('worker-loader!./worker.js');
 
 class MercuryWorker {
     constructor() {
